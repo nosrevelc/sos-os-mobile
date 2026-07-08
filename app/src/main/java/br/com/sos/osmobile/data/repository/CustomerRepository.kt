@@ -13,6 +13,8 @@ class CustomerRepository(
 
     fun search(query: String): Flow<List<CustomerEntity>> = customerDao.search(query, includeInactive = false)
 
+    suspend fun findById(id: Long): CustomerEntity? = customerDao.findById(id)
+
     suspend fun create(
         name: String,
         phone: String,
@@ -38,9 +40,28 @@ class CustomerRepository(
         return id
     }
 
-    suspend fun update(customer: CustomerEntity) {
-        customerDao.update(customer.copy(updatedAt = Clock.nowMillis()))
-        auditRepository.record("Clientes", "Cliente atualizado", "clientes", customer.id)
+    suspend fun update(
+        id: Long,
+        name: String,
+        phone: String,
+        cpfCnpj: String?,
+        email: String?,
+        address: String?,
+        notes: String?,
+    ) {
+        val current = customerDao.findById(id) ?: return
+        customerDao.update(
+            current.copy(
+                nome = name.trim(),
+                telefone = phone.trim(),
+                cpfCnpj = cpfCnpj?.trim()?.takeIf { it.isNotBlank() },
+                email = email?.trim()?.takeIf { it.isNotBlank() },
+                endereco = address?.trim()?.takeIf { it.isNotBlank() },
+                observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
+                updatedAt = Clock.nowMillis(),
+            ),
+        )
+        auditRepository.record("Clientes", "Cliente atualizado", "clientes", id)
     }
 
     suspend fun archive(id: Long) {

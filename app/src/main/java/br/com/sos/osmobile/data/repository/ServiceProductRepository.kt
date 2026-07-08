@@ -11,11 +11,51 @@ class ServiceProductRepository(
 ) {
     fun observeActive(): Flow<List<ServiceProductEntity>> = serviceProductDao.observeActive()
 
-    suspend fun create(item: ServiceProductEntity): Long {
+    fun search(query: String): Flow<List<ServiceProductEntity>> = serviceProductDao.search(query)
+
+    suspend fun create(
+        code: String,
+        name: String,
+        category: String?,
+        description: String?,
+        unitPrice: Double,
+    ): Long {
         val now = Clock.nowMillis()
-        val id = serviceProductDao.insert(item.copy(createdAt = now, updatedAt = now))
+        val id = serviceProductDao.insert(
+            ServiceProductEntity(
+                codigo = code.trim(),
+                nome = name.trim(),
+                categoria = category?.trim()?.takeIf { it.isNotBlank() },
+                descricao = description?.trim()?.takeIf { it.isNotBlank() },
+                unitPrice = unitPrice,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
         auditRepository.record("Servicos", "Servico/produto criado", "servicos_produtos", id)
         return id
+    }
+
+    suspend fun update(
+        id: Long,
+        code: String,
+        name: String,
+        category: String?,
+        description: String?,
+        unitPrice: Double,
+    ) {
+        val current = serviceProductDao.findById(id) ?: return
+        serviceProductDao.update(
+            current.copy(
+                codigo = code.trim(),
+                nome = name.trim(),
+                categoria = category?.trim()?.takeIf { it.isNotBlank() },
+                descricao = description?.trim()?.takeIf { it.isNotBlank() },
+                unitPrice = unitPrice,
+                updatedAt = Clock.nowMillis(),
+            ),
+        )
+        auditRepository.record("Servicos", "Servico/produto atualizado", "servicos_produtos", id)
     }
 
     suspend fun archive(id: Long) {

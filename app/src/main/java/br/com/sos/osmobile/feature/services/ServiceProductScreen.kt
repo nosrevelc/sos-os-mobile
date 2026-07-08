@@ -1,4 +1,4 @@
-package br.com.sos.osmobile.feature.customers
+package br.com.sos.osmobile.feature.services
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,11 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import br.com.sos.osmobile.data.local.entity.CustomerEntity
-import br.com.sos.osmobile.data.model.CpfCnpjPolicy
+import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
-fun CustomerScreen(viewModel: CustomerViewModel) {
+fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val form = viewModel.formState
 
@@ -40,16 +41,14 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            CustomerForm(
+            ServiceProductForm(
                 form = form,
-                cpfCnpjPolicy = uiState.cpfCnpjPolicy,
+                onCodeChanged = viewModel::onCodeChanged,
                 onNameChanged = viewModel::onNameChanged,
-                onPhoneChanged = viewModel::onPhoneChanged,
-                onCpfCnpjChanged = viewModel::onCpfCnpjChanged,
-                onEmailChanged = viewModel::onEmailChanged,
-                onAddressChanged = viewModel::onAddressChanged,
-                onNotesChanged = viewModel::onNotesChanged,
-                onSubmit = viewModel::saveCustomer,
+                onCategoryChanged = viewModel::onCategoryChanged,
+                onDescriptionChanged = viewModel::onDescriptionChanged,
+                onUnitPriceChanged = viewModel::onUnitPriceChanged,
+                onSubmit = viewModel::save,
                 onCancel = viewModel::cancelEditing,
             )
         }
@@ -58,7 +57,7 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
             OutlinedTextField(
                 value = viewModel.query,
                 onValueChange = viewModel::onQueryChanged,
-                label = { Text("Buscar por nome, telefone, CPF/CNPJ, email ou endereco") },
+                label = { Text("Buscar por codigo, nome, categoria ou descricao") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -66,26 +65,25 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
 
         item {
             Text(
-                text = "Clientes ativos",
+                text = "Servicos e produtos ativos",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
         }
 
-        if (uiState.customers.isEmpty()) {
+        if (uiState.items.isEmpty()) {
             item {
                 Text(
-                    text = "Nenhum cliente encontrado.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Nenhum servico/produto encontrado.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
-            items(uiState.customers, key = { it.id }) { customer ->
-                CustomerRow(
-                    customer = customer,
-                    onEdit = { viewModel.startEditing(customer) },
-                    onArchive = { viewModel.archiveCustomer(customer.id) },
+            items(uiState.items, key = { it.id }) { item ->
+                ServiceProductRow(
+                    item = item,
+                    onEdit = { viewModel.startEditing(item) },
+                    onArchive = { viewModel.archive(item.id) },
                 )
             }
         }
@@ -93,23 +91,28 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
 }
 
 @Composable
-private fun CustomerForm(
-    form: CustomerFormState,
-    cpfCnpjPolicy: CpfCnpjPolicy,
+private fun ServiceProductForm(
+    form: ServiceProductFormState,
+    onCodeChanged: (String) -> Unit,
     onNameChanged: (String) -> Unit,
-    onPhoneChanged: (String) -> Unit,
-    onCpfCnpjChanged: (String) -> Unit,
-    onEmailChanged: (String) -> Unit,
-    onAddressChanged: (String) -> Unit,
-    onNotesChanged: (String) -> Unit,
+    onCategoryChanged: (String) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onUnitPriceChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onCancel: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = if (form.editingId == null) "Novo cliente" else "Editar cliente",
+            text = if (form.editingId == null) "Novo servico/produto" else "Editar servico/produto",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedTextField(
+            value = form.code,
+            onValueChange = onCodeChanged,
+            label = { Text("Codigo") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = form.name,
@@ -119,38 +122,23 @@ private fun CustomerForm(
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = form.phone,
-            onValueChange = onPhoneChanged,
-            label = { Text("Telefone") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (cpfCnpjPolicy != CpfCnpjPolicy.NotUsed) {
-            OutlinedTextField(
-                value = form.cpfCnpj,
-                onValueChange = onCpfCnpjChanged,
-                label = { Text(if (cpfCnpjPolicy == CpfCnpjPolicy.Required) "CPF/CNPJ obrigatorio" else "CPF/CNPJ") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        OutlinedTextField(
-            value = form.email,
-            onValueChange = onEmailChanged,
-            label = { Text("Email") },
+            value = form.category,
+            onValueChange = onCategoryChanged,
+            label = { Text("Categoria") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = form.address,
-            onValueChange = onAddressChanged,
-            label = { Text("Endereco") },
+            value = form.unitPrice,
+            onValueChange = onUnitPriceChanged,
+            label = { Text("Valor padrao") },
+            singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = form.notes,
-            onValueChange = onNotesChanged,
-            label = { Text("Observacoes") },
+            value = form.description,
+            onValueChange = onDescriptionChanged,
+            label = { Text("Descricao") },
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -178,8 +166,8 @@ private fun CustomerForm(
 }
 
 @Composable
-private fun CustomerRow(
-    customer: CustomerEntity,
+private fun ServiceProductRow(
+    item: ServiceProductEntity,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
 ) {
@@ -192,16 +180,13 @@ private fun CustomerRow(
                 .fillMaxWidth()
                 .padding(12.dp),
         ) {
-            Text(customer.nome, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(item.nome, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
-            Text(customer.telefone, style = MaterialTheme.typography.bodyMedium)
-            customer.email?.let {
+            Text("${item.codigo} - ${formatCurrency(item.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
+            item.categoria?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            customer.cpfCnpj?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            customer.endereco?.let {
+            item.descricao?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -215,3 +200,6 @@ private fun CustomerRow(
         }
     }
 }
+
+private fun formatCurrency(value: Double): String =
+    NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)

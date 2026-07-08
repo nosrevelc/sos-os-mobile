@@ -17,11 +17,19 @@ interface ServiceProductDao {
         """
         SELECT * FROM servicos_produtos
         WHERE ativo = 1
-          AND (nome LIKE '%' || :query || '%' OR descricao LIKE '%' || :query || '%' OR codigo LIKE '%' || :query || '%')
+          AND (
+            nome LIKE '%' || :query || '%'
+            OR descricao LIKE '%' || :query || '%'
+            OR codigo LIKE '%' || :query || '%'
+            OR categoria LIKE '%' || :query || '%'
+          )
         ORDER BY nome
         """,
     )
     fun search(query: String): Flow<List<ServiceProductEntity>>
+
+    @Query("SELECT * FROM servicos_produtos WHERE id_servico_produto = :id")
+    suspend fun findById(id: Long): ServiceProductEntity?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(item: ServiceProductEntity): Long

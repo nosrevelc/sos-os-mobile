@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import br.com.sos.osmobile.data.model.CpfCnpjPolicy
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
@@ -34,6 +36,22 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingSwitch("Checklist", checked = settings.checklist, onCheckedChange = { viewModel.setModule("modulo_checklist", it) })
         SettingSwitch("Garantia", checked = settings.garantia, onCheckedChange = { viewModel.setModule("modulo_garantia", it) })
         SettingSwitch("Financeiro", checked = settings.financeiro, onCheckedChange = { viewModel.setModule("modulo_financeiro", it) })
+
+        Text("CPF/CNPJ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PolicyButton("Nao usar", settings.cpfCnpjPolicy == CpfCnpjPolicy.NotUsed) {
+                viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.NotUsed)
+            }
+            PolicyButton("Opcional", settings.cpfCnpjPolicy == CpfCnpjPolicy.Optional) {
+                viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Optional)
+            }
+            PolicyButton("Obrigatorio", settings.cpfCnpjPolicy == CpfCnpjPolicy.Required) {
+                viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Required)
+            }
+        }
     }
 }
 
@@ -50,5 +68,16 @@ private fun SettingSwitch(
     ) {
         Text(label)
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun PolicyButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(onClick = onClick) {
+        Text(if (selected) "$label *" else label)
     }
 }

@@ -21,6 +21,8 @@ interface CustomerDao {
             nome LIKE '%' || :query || '%'
             OR telefone LIKE '%' || :query || '%'
             OR cpf_cnpj LIKE '%' || :query || '%'
+            OR email LIKE '%' || :query || '%'
+            OR endereco LIKE '%' || :query || '%'
           )
         ORDER BY nome
         """,
