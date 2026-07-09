@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.QuoteSummary
+import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.model.QuoteStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionRepository
@@ -66,6 +67,12 @@ class QuoteViewModel(
         private set
 
     var listMessage by mutableStateOf<String?>(null)
+        private set
+
+    var documentText by mutableStateOf<String?>(null)
+        private set
+
+    var messageText by mutableStateOf<String?>(null)
         private set
 
     fun selectCustomer(id: Long) {
@@ -170,6 +177,24 @@ class QuoteViewModel(
             quoteRepository.updateStatus(quoteId, status)
             listMessage = "Status do orcamento alterado para ${status.label}."
         }
+    }
+
+    fun showDocument(quoteId: Long) {
+        viewModelScope.launch {
+            documentText = quoteRepository.generateDocumentText(quoteId) ?: "Documento nao encontrado."
+        }
+    }
+
+    fun showMessage(quote: QuoteSummary) {
+        messageText = MessageTemplateRenderer.render(
+            template = MessageTemplateRenderer.quoteDefaultTemplate,
+            tokens = mapOf(
+                "nome" to quote.customerName,
+                "orcamento" to quote.number,
+                "status" to quote.status,
+                "valor" to quote.totalValue.toString(),
+            ),
+        )
     }
 
     companion object {

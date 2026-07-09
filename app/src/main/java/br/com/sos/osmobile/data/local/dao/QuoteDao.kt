@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
+import br.com.sos.osmobile.data.local.model.DocumentItem
 import br.com.sos.osmobile.data.local.model.QuoteSummary
 import kotlinx.coroutines.flow.Flow
 
@@ -24,6 +25,21 @@ interface QuoteDao {
 
     @Query("SELECT * FROM itens_orcamento WHERE id_orcamento = :quoteId")
     suspend fun findItemsByQuoteId(quoteId: Long): List<QuoteItemEntity>
+
+    @Query(
+        """
+        SELECT
+            sp.nome AS name,
+            i.quantidade AS quantity,
+            i.preco_unitario_praticado AS unitPrice,
+            i.subtotal AS subtotal
+        FROM itens_orcamento i
+        INNER JOIN servicos_produtos sp ON sp.id_servico_produto = i.id_servico_produto
+        WHERE i.id_orcamento = :quoteId
+        ORDER BY i.id_item_orcamento
+        """,
+    )
+    suspend fun findDocumentItems(quoteId: Long): List<DocumentItem>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(quote: QuoteEntity): Long
@@ -52,6 +68,25 @@ interface QuoteDao {
         """,
     )
     fun observeSummaries(): Flow<List<QuoteSummary>>
+
+    @Query(
+        """
+        SELECT
+            o.id_orcamento AS id,
+            o.numero AS number,
+            c.nome AS customerName,
+            o.status AS status,
+            o.valor_total AS totalValue,
+            COUNT(i.id_item_orcamento) AS itemCount,
+            o.data_criacao AS createdAt
+        FROM orcamentos o
+        INNER JOIN clientes c ON c.id_cliente = o.id_cliente
+        LEFT JOIN itens_orcamento i ON i.id_orcamento = o.id_orcamento
+        WHERE o.id_orcamento = :id
+        GROUP BY o.id_orcamento
+        """,
+    )
+    suspend fun findSummaryById(id: Long): QuoteSummary?
 
     @Query("SELECT COUNT(*) FROM orcamentos WHERE data_criacao BETWEEN :startMillis AND :endMillis")
     suspend fun countCreatedBetween(startMillis: Long, endMillis: Long): Int

@@ -1,6 +1,7 @@
 package br.com.sos.osmobile.data.repository
 
 import br.com.sos.osmobile.core.time.Clock
+import br.com.sos.osmobile.data.document.ServiceDocumentGenerator
 import br.com.sos.osmobile.data.local.dao.QuoteDao
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
@@ -62,6 +63,21 @@ class QuoteRepository(
         val current = quoteDao.findById(id) ?: return
         quoteDao.update(current.copy(status = status.label, updatedAt = Clock.nowMillis()))
         auditRepository.record("Orcamentos", "Status do orcamento alterado", "orcamentos", id, details = status.label)
+    }
+
+    suspend fun generateDocumentText(id: Long): String? {
+        val quote = quoteDao.findById(id) ?: return null
+        val summary = quoteDao.findSummaryById(id) ?: return null
+        val items = quoteDao.findDocumentItems(id)
+        return ServiceDocumentGenerator.generate(
+            title = "ORCAMENTO",
+            number = quote.numero,
+            customerName = summary.customerName,
+            status = quote.status,
+            totalValue = quote.totalValue,
+            notes = quote.observacoes,
+            items = items,
+        )
     }
 
     private suspend fun generateQuoteNumber(nowMillis: Long): String {

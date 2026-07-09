@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
+import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.model.WorkOrderStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
@@ -63,6 +64,12 @@ class WorkOrderViewModel(
         private set
 
     var listMessage by mutableStateOf<String?>(null)
+        private set
+
+    var documentText by mutableStateOf<String?>(null)
+        private set
+
+    var messageText by mutableStateOf<String?>(null)
         private set
 
     fun selectCustomer(id: Long) {
@@ -156,6 +163,24 @@ class WorkOrderViewModel(
             workOrderRepository.updateStatus(workOrderId, status)
             listMessage = "Status da OS alterado para ${status.label}."
         }
+    }
+
+    fun showDocument(workOrderId: Long) {
+        viewModelScope.launch {
+            documentText = workOrderRepository.generateDocumentText(workOrderId) ?: "Documento nao encontrado."
+        }
+    }
+
+    fun showMessage(workOrder: WorkOrderSummary) {
+        messageText = MessageTemplateRenderer.render(
+            template = MessageTemplateRenderer.workOrderDefaultTemplate,
+            tokens = mapOf(
+                "nome" to workOrder.customerName,
+                "os" to workOrder.number,
+                "status" to workOrder.status,
+                "valor" to workOrder.totalValue.toString(),
+            ),
+        )
     }
 
     companion object {

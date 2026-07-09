@@ -1,6 +1,7 @@
 package br.com.sos.osmobile.data.repository
 
 import br.com.sos.osmobile.core.time.Clock
+import br.com.sos.osmobile.data.document.ServiceDocumentGenerator
 import br.com.sos.osmobile.data.local.dao.WorkOrderDao
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
@@ -70,6 +71,20 @@ class WorkOrderRepository(
             ),
         )
         auditRepository.record("Ordens de Servico", "Status da OS alterado", "ordens_servico", id, details = status.label)
+    }
+
+    suspend fun generateDocumentText(id: Long): String? {
+        val workOrder = workOrderDao.findById(id) ?: return null
+        val summary = workOrderDao.findSummaryById(id) ?: return null
+        return ServiceDocumentGenerator.generate(
+            title = "ORDEM DE SERVICO",
+            number = workOrder.numero,
+            customerName = summary.customerName,
+            status = workOrder.status,
+            totalValue = workOrder.totalValue,
+            notes = workOrder.observacoes,
+            items = workOrderDao.findDocumentItems(id),
+        )
     }
 
     private suspend fun generateWorkOrderNumber(nowMillis: Long): String {

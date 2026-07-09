@@ -73,6 +73,19 @@ fun WorkOrderScreen(viewModel: WorkOrderViewModel) {
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
+            viewModel.documentText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            viewModel.messageText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
 
         if (uiState.workOrders.isEmpty()) {
@@ -87,6 +100,8 @@ fun WorkOrderScreen(viewModel: WorkOrderViewModel) {
                 WorkOrderRow(
                     workOrder = workOrder,
                     onStatusSelected = { viewModel.updateWorkOrderStatus(workOrder.id, it) },
+                    onShowDocument = { viewModel.showDocument(workOrder.id) },
+                    onShowMessage = { viewModel.showMessage(workOrder) },
                 )
             }
         }
@@ -254,6 +269,8 @@ private fun DraftItemRow(
 private fun WorkOrderRow(
     workOrder: WorkOrderSummary,
     onStatusSelected: (WorkOrderStatus) -> Unit,
+    onShowDocument: () -> Unit,
+    onShowMessage: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -278,6 +295,12 @@ private fun WorkOrderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onShowDocument) {
+                    Text("Documento")
+                }
+                TextButton(onClick = onShowMessage) {
+                    Text("Mensagem")
+                }
                 WorkOrderStatus.entries.forEach { status ->
                     TextButton(onClick = { onStatusSelected(status) }) {
                         Text(status.label)

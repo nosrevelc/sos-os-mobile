@@ -73,6 +73,19 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                     color = MaterialTheme.colorScheme.secondary,
                 )
             }
+            viewModel.documentText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            viewModel.messageText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
 
         if (uiState.quotes.isEmpty()) {
@@ -88,6 +101,8 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                     quote = quote,
                     onConvert = { viewModel.convertToWorkOrder(quote.id) },
                     onStatusSelected = { viewModel.updateQuoteStatus(quote.id, it) },
+                    onShowDocument = { viewModel.showDocument(quote.id) },
+                    onShowMessage = { viewModel.showMessage(quote) },
                 )
             }
         }
@@ -256,6 +271,8 @@ private fun QuoteRow(
     quote: QuoteSummary,
     onConvert: () -> Unit,
     onStatusSelected: (QuoteStatus) -> Unit,
+    onShowDocument: () -> Unit,
+    onShowMessage: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -280,6 +297,12 @@ private fun QuoteRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onShowDocument) {
+                    Text("Documento")
+                }
+                TextButton(onClick = onShowMessage) {
+                    Text("Mensagem")
+                }
                 QuoteStatus.entries
                     .filter { it != QuoteStatus.Converted }
                     .forEach { status ->
