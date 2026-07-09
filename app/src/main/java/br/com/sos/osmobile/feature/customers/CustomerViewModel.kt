@@ -3,6 +3,7 @@ package br.com.sos.osmobile.feature.customers
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.database.sqlite.SQLiteConstraintException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -120,28 +121,32 @@ class CustomerViewModel(
         }
 
         viewModelScope.launch {
-            val editingId = formState.editingId
-            if (editingId == null) {
-                customerRepository.create(
-                    name = formState.name,
-                    phone = formState.phone,
-                    cpfCnpj = formState.cpfCnpj,
-                    email = formState.email,
-                    address = formState.address,
-                    notes = formState.notes,
-                )
-                formState = CustomerFormState(message = "Cliente cadastrado.")
-            } else {
-                customerRepository.update(
-                    id = editingId,
-                    name = formState.name,
-                    phone = formState.phone,
-                    cpfCnpj = formState.cpfCnpj,
-                    email = formState.email,
-                    address = formState.address,
-                    notes = formState.notes,
-                )
-                formState = CustomerFormState(message = "Cliente atualizado.")
+            try {
+                val editingId = formState.editingId
+                if (editingId == null) {
+                    customerRepository.create(
+                        name = formState.name,
+                        phone = formState.phone,
+                        cpfCnpj = formState.cpfCnpj,
+                        email = formState.email,
+                        address = formState.address,
+                        notes = formState.notes,
+                    )
+                    formState = CustomerFormState(message = "Cliente cadastrado.")
+                } else {
+                    customerRepository.update(
+                        id = editingId,
+                        name = formState.name,
+                        phone = formState.phone,
+                        cpfCnpj = formState.cpfCnpj,
+                        email = formState.email,
+                        address = formState.address,
+                        notes = formState.notes,
+                    )
+                    formState = CustomerFormState(message = "Cliente atualizado.")
+                }
+            } catch (_: SQLiteConstraintException) {
+                formState = formState.copy(message = "CPF/CNPJ ja cadastrado.")
             }
         }
     }

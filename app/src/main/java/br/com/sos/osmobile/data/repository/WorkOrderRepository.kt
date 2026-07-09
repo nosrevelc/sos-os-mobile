@@ -5,6 +5,7 @@ import br.com.sos.osmobile.data.document.ServiceDocumentGenerator
 import br.com.sos.osmobile.data.local.dao.WorkOrderDao
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
+import br.com.sos.osmobile.data.local.model.DocumentItem
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.model.WorkOrderStatus
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,17 @@ class WorkOrderRepository(
     fun observeAll(): Flow<List<WorkOrderEntity>> = workOrderDao.observeAll()
 
     fun observeSummaries(): Flow<List<WorkOrderSummary>> = workOrderDao.observeSummaries()
+
+    suspend fun findSummaryById(id: Long): WorkOrderSummary? = workOrderDao.findSummaryById(id)
+
+    suspend fun findById(id: Long): WorkOrderEntity? = workOrderDao.findById(id)
+
+    suspend fun listSummariesByCustomer(customerId: Long): List<WorkOrderSummary> =
+        workOrderDao.listSummariesByCustomer(customerId)
+
+    suspend fun listDocumentItems(id: Long): List<DocumentItem> = workOrderDao.findDocumentItems(id)
+
+    suspend fun listItems(id: Long): List<WorkOrderItemEntity> = workOrderDao.findItemsByWorkOrder(id)
 
     suspend fun create(
         customerId: Long,
@@ -71,6 +83,42 @@ class WorkOrderRepository(
             ),
         )
         auditRepository.record("Ordens de Servico", "Status da OS alterado", "ordens_servico", id, details = status.label)
+    }
+
+    suspend fun updateContent(
+        id: Long,
+        customerId: Long,
+        status: WorkOrderStatus,
+        notes: String?,
+        items: List<WorkOrderItemInput>,
+    ): Boolean {
+        val current = workOrderDao.findById(id) ?: return false
+        if (current.status == WorkOrderStatus.Completed.label || current.status == WorkOrderStatus.Canceled.label) {
+            return false
+        }
+        val now = Clock.nowMillis()
+        val workOrderItems = items.map {
+            WorkOrderItemEntity(
+                workOrderId = id,
+                serviceProductId = it.serviceProductId,
+                quantidade = it.quantity,
+                practicedUnitPrice = it.practicedUnitPrice,
+                subtotal = it.quantity * it.practicedUnitPrice,
+            )
+        }
+        workOrderDao.updateWithItems(
+            workOrder = current.copy(
+                customerId = customerId,
+                status = status.label,
+                observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
+                totalValue = workOrderItems.sumOf { it.subtotal },
+                concludedAt = if (status == WorkOrderStatus.Completed) now else current.concludedAt,
+                updatedAt = now,
+            ),
+            items = workOrderItems,
+        )
+        auditRepository.record("Ordens de Servico", "OS editada", "ordens_servico", id, details = current.numero)
+        return true
     }
 
     suspend fun generateDocumentText(id: Long): String? {

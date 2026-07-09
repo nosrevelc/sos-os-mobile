@@ -12,6 +12,7 @@ import br.com.sos.osmobile.data.local.model.QuoteSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.model.QuoteStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
+import br.com.sos.osmobile.data.repository.AuditRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionResult
 import br.com.sos.osmobile.data.repository.QuoteItemInput
@@ -33,6 +34,7 @@ data class QuoteDraftItem(
 }
 
 data class QuoteFormState(
+    val editingId: Long? = null,
     val selectedCustomerId: Long? = null,
     val selectedServiceProductId: Long? = null,
     val status: QuoteStatus = QuoteStatus.Pending,
@@ -52,6 +54,7 @@ data class QuoteUiState(
 class QuoteViewModel(
     private val quoteRepository: QuoteRepository,
     private val quoteConversionRepository: QuoteConversionRepository,
+    private val auditRepository: AuditRepository,
     private val customerRepository: CustomerRepository,
     private val serviceProductRepository: ServiceProductRepository,
 ) : ViewModel() {
@@ -73,6 +76,12 @@ class QuoteViewModel(
         private set
 
     var messageText by mutableStateOf<String?>(null)
+        private set
+
+    var messagePhone by mutableStateOf("")
+        private set
+
+    var historyText by mutableStateOf<String?>(null)
         private set
 
     fun selectCustomer(id: Long) {
@@ -145,20 +154,67 @@ class QuoteViewModel(
         }
 
         viewModelScope.launch {
-            quoteRepository.create(
-                customerId = formState.selectedCustomerId ?: return@launch,
-                status = formState.status.label,
-                notes = formState.notes,
-                items = formState.items.map {
-                    QuoteItemInput(
-                        serviceProductId = it.serviceProductId,
-                        quantity = it.quantity,
-                        practicedUnitPrice = it.unitPrice,
+            val items = formState.items.map {
+                QuoteItemInput(
+                    serviceProductId = it.serviceProductId,
+                    quantity = it.quantity,
+                    practicedUnitPrice = it.unitPrice,
+                )
+            }
+            val editingId = formState.editingId
+            if (editingId == null) {
+                quoteRepository.create(
+                    customerId = formState.selectedCustomerId ?: return@launch,
+                    status = formState.status.label,
+                    notes = formState.notes,
+                    items = items,
+                )
+                formState = QuoteFormState(message = "Orcamento criado.")
+            } else {
+                val updated = quoteRepository.updateContent(
+                    id = editingId,
+                    customerId = formState.selectedCustomerId ?: return@launch,
+                    status = formState.status,
+                    notes = formState.notes,
+                    items = items,
+                )
+                formState = QuoteFormState(
+                    message = if (updated) "Orcamento atualizado." else "Orcamento convertido nao pode ser editado.",
+                )
+            }
+        }
+    }
+
+    fun editQuote(quoteId: Long) {
+        viewModelScope.launch {
+            val quote = quoteRepository.findById(quoteId) ?: return@launch
+            if (quote.status == QuoteStatus.Converted.label) {
+                listMessage = "Orcamento convertido nao pode ser editado."
+                return@launch
+            }
+            val items = quoteRepository.listItems(quoteId)
+            val services = uiState.value.services
+            formState = QuoteFormState(
+                editingId = quote.id,
+                selectedCustomerId = quote.customerId,
+                status = statusFromLabel(quote.status),
+                notes = quote.observacoes.orEmpty(),
+                items = items.map { item ->
+                    val service = services.firstOrNull { it.id == item.serviceProductId }
+                    QuoteDraftItem(
+                        serviceProductId = item.serviceProductId,
+                        name = service?.nome ?: "Servico/produto ${item.serviceProductId}",
+                        quantity = item.quantidade,
+                        unitPrice = item.practicedUnitPrice,
                     )
                 },
+                message = "Editando orcamento ${quote.numero}.",
             )
-            formState = QuoteFormState(message = "Orcamento criado.")
         }
+    }
+
+    fun cancelEdit() {
+        formState = QuoteFormState(message = "Edicao cancelada.")
     }
 
     fun convertToWorkOrder(quoteId: Long) {
@@ -186,6 +242,7 @@ class QuoteViewModel(
     }
 
     fun showMessage(quote: QuoteSummary) {
+        messagePhone = quote.customerPhone
         messageText = MessageTemplateRenderer.render(
             template = MessageTemplateRenderer.quoteDefaultTemplate,
             tokens = mapOf(
@@ -197,10 +254,25 @@ class QuoteViewModel(
         )
     }
 
+    fun showHistory(quoteId: Long) {
+        viewModelScope.launch {
+            val logs = auditRepository.listForRecord("orcamentos", quoteId)
+            historyText = if (logs.isEmpty()) {
+                "Sem historico para este orcamento."
+            } else {
+                logs.joinToString("\n") { "${it.acao}: ${it.detalhes.orEmpty()}" }
+            }
+        }
+    }
+
     companion object {
+        private fun statusFromLabel(label: String): QuoteStatus =
+            QuoteStatus.entries.firstOrNull { it.label == label } ?: QuoteStatus.Pending
+
         fun factory(
             quoteRepository: QuoteRepository,
             quoteConversionRepository: QuoteConversionRepository,
+            auditRepository: AuditRepository,
             customerRepository: CustomerRepository,
             serviceProductRepository: ServiceProductRepository,
         ): ViewModelProvider.Factory =
@@ -210,6 +282,7 @@ class QuoteViewModel(
                     return QuoteViewModel(
                         quoteRepository = quoteRepository,
                         quoteConversionRepository = quoteConversionRepository,
+                        auditRepository = auditRepository,
                         customerRepository = customerRepository,
                         serviceProductRepository = serviceProductRepository,
                     ) as T

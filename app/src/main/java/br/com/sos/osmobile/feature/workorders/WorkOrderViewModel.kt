@@ -12,6 +12,7 @@ import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.model.WorkOrderStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
+import br.com.sos.osmobile.data.repository.AuditRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.WorkOrderItemInput
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
@@ -31,6 +32,7 @@ data class WorkOrderDraftItem(
 }
 
 data class WorkOrderFormState(
+    val editingId: Long? = null,
     val selectedCustomerId: Long? = null,
     val selectedServiceProductId: Long? = null,
     val status: WorkOrderStatus = WorkOrderStatus.Open,
@@ -49,6 +51,7 @@ data class WorkOrderUiState(
 
 class WorkOrderViewModel(
     private val workOrderRepository: WorkOrderRepository,
+    private val auditRepository: AuditRepository,
     private val customerRepository: CustomerRepository,
     private val serviceProductRepository: ServiceProductRepository,
 ) : ViewModel() {
@@ -70,6 +73,12 @@ class WorkOrderViewModel(
         private set
 
     var messageText by mutableStateOf<String?>(null)
+        private set
+
+    var messagePhone by mutableStateOf("")
+        private set
+
+    var historyText by mutableStateOf<String?>(null)
         private set
 
     fun selectCustomer(id: Long) {
@@ -142,20 +151,67 @@ class WorkOrderViewModel(
         }
 
         viewModelScope.launch {
-            workOrderRepository.create(
-                customerId = formState.selectedCustomerId ?: return@launch,
-                status = formState.status.label,
-                notes = formState.notes,
-                items = formState.items.map {
-                    WorkOrderItemInput(
-                        serviceProductId = it.serviceProductId,
-                        quantity = it.quantity,
-                        practicedUnitPrice = it.unitPrice,
+            val items = formState.items.map {
+                WorkOrderItemInput(
+                    serviceProductId = it.serviceProductId,
+                    quantity = it.quantity,
+                    practicedUnitPrice = it.unitPrice,
+                )
+            }
+            val editingId = formState.editingId
+            if (editingId == null) {
+                workOrderRepository.create(
+                    customerId = formState.selectedCustomerId ?: return@launch,
+                    status = formState.status.label,
+                    notes = formState.notes,
+                    items = items,
+                )
+                formState = WorkOrderFormState(message = "OS criada.")
+            } else {
+                val updated = workOrderRepository.updateContent(
+                    id = editingId,
+                    customerId = formState.selectedCustomerId ?: return@launch,
+                    status = formState.status,
+                    notes = formState.notes,
+                    items = items,
+                )
+                formState = WorkOrderFormState(
+                    message = if (updated) "OS atualizada." else "OS concluida ou cancelada nao pode ser editada.",
+                )
+            }
+        }
+    }
+
+    fun editWorkOrder(workOrderId: Long) {
+        viewModelScope.launch {
+            val workOrder = workOrderRepository.findById(workOrderId) ?: return@launch
+            if (workOrder.status == WorkOrderStatus.Completed.label || workOrder.status == WorkOrderStatus.Canceled.label) {
+                listMessage = "OS concluida ou cancelada nao pode ser editada."
+                return@launch
+            }
+            val items = workOrderRepository.listItems(workOrderId)
+            val services = uiState.value.services
+            formState = WorkOrderFormState(
+                editingId = workOrder.id,
+                selectedCustomerId = workOrder.customerId,
+                status = statusFromLabel(workOrder.status),
+                notes = workOrder.observacoes.orEmpty(),
+                items = items.map { item ->
+                    val service = services.firstOrNull { it.id == item.serviceProductId }
+                    WorkOrderDraftItem(
+                        serviceProductId = item.serviceProductId,
+                        name = service?.nome ?: "Servico/produto ${item.serviceProductId}",
+                        quantity = item.quantidade,
+                        unitPrice = item.practicedUnitPrice,
                     )
                 },
+                message = "Editando OS ${workOrder.numero}.",
             )
-            formState = WorkOrderFormState(message = "OS criada.")
         }
+    }
+
+    fun cancelEdit() {
+        formState = WorkOrderFormState(message = "Edicao cancelada.")
     }
 
     fun updateWorkOrderStatus(workOrderId: Long, status: WorkOrderStatus) {
@@ -172,6 +228,7 @@ class WorkOrderViewModel(
     }
 
     fun showMessage(workOrder: WorkOrderSummary) {
+        messagePhone = workOrder.customerPhone
         messageText = MessageTemplateRenderer.render(
             template = MessageTemplateRenderer.workOrderDefaultTemplate,
             tokens = mapOf(
@@ -183,9 +240,24 @@ class WorkOrderViewModel(
         )
     }
 
+    fun showHistory(workOrderId: Long) {
+        viewModelScope.launch {
+            val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
+            historyText = if (logs.isEmpty()) {
+                "Sem historico para esta OS."
+            } else {
+                logs.joinToString("\n") { "${it.acao}: ${it.detalhes.orEmpty()}" }
+            }
+        }
+    }
+
     companion object {
+        private fun statusFromLabel(label: String): WorkOrderStatus =
+            WorkOrderStatus.entries.firstOrNull { it.label == label } ?: WorkOrderStatus.Open
+
         fun factory(
             workOrderRepository: WorkOrderRepository,
+            auditRepository: AuditRepository,
             customerRepository: CustomerRepository,
             serviceProductRepository: ServiceProductRepository,
         ): ViewModelProvider.Factory =
@@ -194,6 +266,7 @@ class WorkOrderViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return WorkOrderViewModel(
                         workOrderRepository = workOrderRepository,
+                        auditRepository = auditRepository,
                         customerRepository = customerRepository,
                         serviceProductRepository = serviceProductRepository,
                     ) as T

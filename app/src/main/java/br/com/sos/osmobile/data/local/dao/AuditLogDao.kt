@@ -21,6 +21,15 @@ interface AuditLogDao {
     )
     fun observeForRecord(tableName: String, recordId: Long): Flow<List<AuditLogEntity>>
 
+    @Query(
+        """
+        SELECT * FROM historico_sistema
+        WHERE tabela_afetada = :tableName AND id_registro_afetado = :recordId
+        ORDER BY data_hora DESC
+        """,
+    )
+    suspend fun listForRecord(tableName: String, recordId: Long): List<AuditLogEntity>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(log: AuditLogEntity): Long
 }

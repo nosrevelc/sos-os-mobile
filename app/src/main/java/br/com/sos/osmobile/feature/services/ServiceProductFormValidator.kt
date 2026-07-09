@@ -2,9 +2,6 @@ package br.com.sos.osmobile.feature.services
 
 object ServiceProductFormValidator {
     fun validate(form: ServiceProductFormState): String? {
-        if (form.code.isBlank()) {
-            return "Codigo e obrigatorio."
-        }
         if (form.name.isBlank()) {
             return "Nome e obrigatorio."
         }

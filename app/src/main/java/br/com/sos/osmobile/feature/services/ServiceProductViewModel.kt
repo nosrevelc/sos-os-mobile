@@ -3,6 +3,7 @@ package br.com.sos.osmobile.feature.services
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.database.sqlite.SQLiteConstraintException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -103,26 +104,29 @@ class ServiceProductViewModel(
 
         val price = ServiceProductFormValidator.parsePrice(formState.unitPrice) ?: return
         viewModelScope.launch {
-            val editingId = formState.editingId
-            if (editingId == null) {
-                serviceProductRepository.create(
-                    code = formState.code,
-                    name = formState.name,
-                    category = formState.category,
-                    description = formState.description,
-                    unitPrice = price,
-                )
-                formState = ServiceProductFormState(message = "Servico/produto cadastrado.")
-            } else {
-                serviceProductRepository.update(
-                    id = editingId,
-                    code = formState.code,
-                    name = formState.name,
-                    category = formState.category,
-                    description = formState.description,
-                    unitPrice = price,
-                )
-                formState = ServiceProductFormState(message = "Servico/produto atualizado.")
+            try {
+                val editingId = formState.editingId
+                if (editingId == null) {
+                    serviceProductRepository.create(
+                        name = formState.name,
+                        category = formState.category,
+                        description = formState.description,
+                        unitPrice = price,
+                    )
+                    formState = ServiceProductFormState(message = "Servico/produto cadastrado.")
+                } else {
+                    serviceProductRepository.update(
+                        id = editingId,
+                        code = formState.code,
+                        name = formState.name,
+                        category = formState.category,
+                        description = formState.description,
+                        unitPrice = price,
+                    )
+                    formState = ServiceProductFormState(message = "Servico/produto atualizado.")
+                }
+            } catch (_: SQLiteConstraintException) {
+                formState = formState.copy(message = "Codigo ja cadastrado.")
             }
         }
     }

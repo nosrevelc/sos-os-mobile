@@ -19,16 +19,16 @@ class ServiceProductFormValidatorTest {
     }
 
     @Test
-    fun blankCodeReturnsMessage() {
+    fun blankNameReturnsMessage() {
         val form = ServiceProductFormState(
             code = "",
-            name = "Troca de tela",
+            name = "",
             unitPrice = "150",
         )
 
         val result = ServiceProductFormValidator.validate(form)
 
-        assertEquals("Codigo e obrigatorio.", result)
+        assertEquals("Nome e obrigatorio.", result)
     }
 
     @Test

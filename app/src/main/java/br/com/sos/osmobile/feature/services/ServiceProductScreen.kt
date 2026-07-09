@@ -109,9 +109,10 @@ private fun ServiceProductForm(
         )
         OutlinedTextField(
             value = form.code,
-            onValueChange = onCodeChanged,
-            label = { Text("Codigo") },
+            onValueChange = {},
+            label = { Text("Codigo automatico") },
             singleLine = true,
+            enabled = form.editingId != null,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(

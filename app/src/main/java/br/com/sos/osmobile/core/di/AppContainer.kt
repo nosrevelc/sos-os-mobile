@@ -3,6 +3,7 @@ package br.com.sos.osmobile.core.di
 import android.content.Context
 import androidx.room.Room
 import br.com.sos.osmobile.core.database.AppDatabase
+import br.com.sos.osmobile.data.backup.BackupRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionRepository
@@ -25,4 +26,5 @@ class AppContainer(context: Context) {
     val quoteRepository = QuoteRepository(database.quoteDao(), auditRepository)
     val quoteConversionRepository = QuoteConversionRepository(database, auditRepository)
     val settingsRepository = SettingsRepository(database.settingsDao(), auditRepository)
+    val backupRepository = BackupRepository(database)
 }

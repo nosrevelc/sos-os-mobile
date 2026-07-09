@@ -10,6 +10,9 @@ class AuditRepository(
 ) {
     fun observeRecent(): Flow<List<AuditLogEntity>> = auditLogDao.observeRecent()
 
+    suspend fun listForRecord(table: String, recordId: Long): List<AuditLogEntity> =
+        auditLogDao.listForRecord(table, recordId)
+
     suspend fun record(
         module: String,
         action: String,

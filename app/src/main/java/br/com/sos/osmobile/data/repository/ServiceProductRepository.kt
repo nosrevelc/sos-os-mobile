@@ -14,7 +14,6 @@ class ServiceProductRepository(
     fun search(query: String): Flow<List<ServiceProductEntity>> = serviceProductDao.search(query)
 
     suspend fun create(
-        code: String,
         name: String,
         category: String?,
         description: String?,
@@ -23,7 +22,7 @@ class ServiceProductRepository(
         val now = Clock.nowMillis()
         val id = serviceProductDao.insert(
             ServiceProductEntity(
-                codigo = code.trim(),
+                codigo = nextCode(),
                 nome = name.trim(),
                 categoria = category?.trim()?.takeIf { it.isNotBlank() },
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
@@ -35,6 +34,9 @@ class ServiceProductRepository(
         auditRepository.record("Servicos", "Servico/produto criado", "servicos_produtos", id)
         return id
     }
+
+    private suspend fun nextCode(): String =
+        "SP-${(serviceProductDao.countAll() + 1).toString().padStart(4, '0')}"
 
     suspend fun update(
         id: Long,

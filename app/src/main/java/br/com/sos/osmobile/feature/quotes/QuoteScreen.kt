@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -19,6 +21,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +32,10 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.QuoteSummary
 import br.com.sos.osmobile.data.model.QuoteStatus
+import br.com.sos.osmobile.ui.components.ShareFileButton
+import br.com.sos.osmobile.ui.components.SharePdfButton
+import br.com.sos.osmobile.ui.components.ShareTextButton
+import br.com.sos.osmobile.ui.components.WhatsAppTextButton
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
@@ -57,6 +66,7 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                 onAddItem = viewModel::addSelectedItem,
                 onRemoveItem = viewModel::removeItem,
                 onSave = viewModel::saveQuote,
+                onCancelEdit = viewModel::cancelEdit,
             )
         }
 
@@ -78,6 +88,9 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                ShareTextButton(label = "Compartilhar documento", text = it)
+                ShareFileButton(label = "Compartilhar arquivo", fileName = "orcamento.txt", text = it)
+                SharePdfButton(label = "Compartilhar PDF", fileName = "orcamento.pdf", text = it)
             }
             viewModel.messageText?.let {
                 Text(
@@ -85,6 +98,11 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
+                ShareTextButton(label = "Compartilhar mensagem", text = it)
+                WhatsAppTextButton(phone = viewModel.messagePhone, text = it)
+            }
+            viewModel.historyText?.let {
+                Text(text = it, style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -103,6 +121,8 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                     onStatusSelected = { viewModel.updateQuoteStatus(quote.id, it) },
                     onShowDocument = { viewModel.showDocument(quote.id) },
                     onShowMessage = { viewModel.showMessage(quote) },
+                    onShowHistory = { viewModel.showHistory(quote.id) },
+                    onEdit = { viewModel.editQuote(quote.id) },
                 )
             }
         }
@@ -123,20 +143,34 @@ private fun QuoteForm(
     onAddItem: () -> Unit,
     onRemoveItem: (Int) -> Unit,
     onSave: () -> Unit,
+    onCancelEdit: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Novo orcamento", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = if (form.editingId == null) "Novo orcamento" else "Editar orcamento",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
 
         Text("Cliente", style = MaterialTheme.typography.titleSmall)
         if (customers.isEmpty()) {
             Text("Cadastre um cliente antes de criar orcamentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            customers.forEach { customer ->
-                SelectionButton(
-                    label = customer.nome,
-                    selected = form.selectedCustomerId == customer.id,
-                    onClick = { onCustomerSelected(customer.id) },
-                )
+            var customerExpanded by remember { mutableStateOf(false) }
+            val selectedCustomer = customers.firstOrNull { it.id == form.selectedCustomerId }
+            OutlinedButton(onClick = { customerExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(selectedCustomer?.let { "${it.nome} - ${it.telefone}" } ?: "Selecionar cliente")
+            }
+            DropdownMenu(expanded = customerExpanded, onDismissRequest = { customerExpanded = false }) {
+                customers.forEach { customer ->
+                    DropdownMenuItem(
+                        text = { Text("${customer.nome} - ${customer.telefone}") },
+                        onClick = {
+                            onCustomerSelected(customer.id)
+                            customerExpanded = false
+                        },
+                    )
+                }
             }
         }
 
@@ -156,12 +190,21 @@ private fun QuoteForm(
         if (services.isEmpty()) {
             Text("Cadastre servicos/produtos antes de adicionar itens.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            services.forEach { service ->
-                SelectionButton(
-                    label = "${service.codigo} - ${service.nome}",
-                    selected = form.selectedServiceProductId == service.id,
-                    onClick = { onServiceSelected(service) },
-                )
+            var expanded by remember { mutableStateOf(false) }
+            val selected = services.firstOrNull { it.id == form.selectedServiceProductId }
+            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(selected?.let { "${it.codigo} - ${it.nome}" } ?: "Selecionar servico/produto")
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                services.forEach { service ->
+                    DropdownMenuItem(
+                        text = { Text("${service.codigo} - ${service.nome}") },
+                        onClick = {
+                            onServiceSelected(service)
+                            expanded = false
+                        },
+                    )
+                }
             }
         }
 
@@ -215,8 +258,13 @@ private fun QuoteForm(
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.weight(1f),
             )
+            if (form.editingId != null) {
+                OutlinedButton(onClick = onCancelEdit) {
+                    Text("Cancelar")
+                }
+            }
             Button(onClick = onSave) {
-                Text("Salvar orcamento")
+                Text(if (form.editingId == null) "Salvar orcamento" else "Atualizar orcamento")
             }
         }
     }
@@ -273,6 +321,8 @@ private fun QuoteRow(
     onStatusSelected: (QuoteStatus) -> Unit,
     onShowDocument: () -> Unit,
     onShowMessage: () -> Unit,
+    onShowHistory: () -> Unit,
+    onEdit: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -297,11 +347,19 @@ private fun QuoteRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                if (quote.status != QuoteStatus.Converted.label) {
+                    TextButton(onClick = onEdit) {
+                        Text("Editar")
+                    }
+                }
                 TextButton(onClick = onShowDocument) {
                     Text("Documento")
                 }
                 TextButton(onClick = onShowMessage) {
                     Text("Mensagem")
+                }
+                TextButton(onClick = onShowHistory) {
+                    Text("Historico")
                 }
                 QuoteStatus.entries
                     .filter { it != QuoteStatus.Converted }

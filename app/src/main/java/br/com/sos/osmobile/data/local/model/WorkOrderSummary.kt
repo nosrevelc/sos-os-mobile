@@ -4,6 +4,7 @@ data class WorkOrderSummary(
     val id: Long,
     val number: String,
     val customerName: String,
+    val customerPhone: String,
     val status: String,
     val totalValue: Double,
     val itemCount: Int,

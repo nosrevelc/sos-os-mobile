@@ -13,6 +13,9 @@ interface CustomerDao {
     @Query("SELECT * FROM clientes WHERE ativo = 1 ORDER BY nome")
     fun observeActive(): Flow<List<CustomerEntity>>
 
+    @Query("SELECT * FROM clientes ORDER BY nome")
+    suspend fun listAll(): List<CustomerEntity>
+
     @Query(
         """
         SELECT * FROM clientes
@@ -35,9 +38,15 @@ interface CustomerDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(customer: CustomerEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertBackup(customers: List<CustomerEntity>)
+
     @Update
     suspend fun update(customer: CustomerEntity)
 
     @Query("UPDATE clientes SET ativo = 0, data_atualizacao = :updatedAt WHERE id_cliente = :id")
     suspend fun archive(id: Long, updatedAt: Long)
+
+    @Query("DELETE FROM clientes")
+    suspend fun deleteAll()
 }
