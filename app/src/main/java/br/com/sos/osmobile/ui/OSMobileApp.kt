@@ -19,11 +19,14 @@ import br.com.sos.osmobile.core.di.AppContainer
 import br.com.sos.osmobile.feature.audit.AuditScreen
 import br.com.sos.osmobile.feature.customers.CustomerScreen
 import br.com.sos.osmobile.feature.customers.CustomerViewModel
-import br.com.sos.osmobile.feature.placeholder.ModulePlaceholderScreen
+import br.com.sos.osmobile.feature.quotes.QuoteScreen
+import br.com.sos.osmobile.feature.quotes.QuoteViewModel
 import br.com.sos.osmobile.feature.services.ServiceProductScreen
 import br.com.sos.osmobile.feature.services.ServiceProductViewModel
 import br.com.sos.osmobile.feature.settings.SettingsScreen
 import br.com.sos.osmobile.feature.settings.SettingsViewModel
+import br.com.sos.osmobile.feature.workorders.WorkOrderScreen
+import br.com.sos.osmobile.feature.workorders.WorkOrderViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,14 +79,25 @@ fun OSMobileApp(appContainer: AppContainer) {
                 ServiceProductScreen(viewModel = serviceProductViewModel)
             }
             composable(AppRoute.Quotes.route) {
-                ModulePlaceholderScreen(
-                    title = "Orcamentos",
+                val quoteViewModel: QuoteViewModel = viewModel(
+                    factory = QuoteViewModel.factory(
+                        quoteRepository = appContainer.quoteRepository,
+                        quoteConversionRepository = appContainer.quoteConversionRepository,
+                        customerRepository = appContainer.customerRepository,
+                        serviceProductRepository = appContainer.serviceProductRepository,
+                    ),
                 )
+                QuoteScreen(viewModel = quoteViewModel)
             }
             composable(AppRoute.WorkOrders.route) {
-                ModulePlaceholderScreen(
-                    title = "Ordens de servico",
+                val workOrderViewModel: WorkOrderViewModel = viewModel(
+                    factory = WorkOrderViewModel.factory(
+                        workOrderRepository = appContainer.workOrderRepository,
+                        customerRepository = appContainer.customerRepository,
+                        serviceProductRepository = appContainer.serviceProductRepository,
+                    ),
                 )
+                WorkOrderScreen(viewModel = workOrderViewModel)
             }
             composable(AppRoute.Settings.route) {
                 val settingsViewModel: SettingsViewModel = viewModel(

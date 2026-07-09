@@ -1,8 +1,21 @@
 package br.com.sos.osmobile.data.repository
 
+import br.com.sos.osmobile.core.time.Clock
 import br.com.sos.osmobile.data.local.dao.WorkOrderDao
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
+import br.com.sos.osmobile.data.local.model.WorkOrderSummary
+import br.com.sos.osmobile.data.model.WorkOrderStatus
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+data class WorkOrderItemInput(
+    val serviceProductId: Long,
+    val quantity: Double,
+    val practicedUnitPrice: Double,
+)
 
 class WorkOrderRepository(
     private val workOrderDao: WorkOrderDao,
@@ -10,9 +23,67 @@ class WorkOrderRepository(
 ) {
     fun observeAll(): Flow<List<WorkOrderEntity>> = workOrderDao.observeAll()
 
-    suspend fun create(workOrder: WorkOrderEntity): Long {
-        val id = workOrderDao.insert(workOrder)
-        auditRepository.record("Ordens de Servico", "OS criada", "ordens_servico", id)
+    fun observeSummaries(): Flow<List<WorkOrderSummary>> = workOrderDao.observeSummaries()
+
+    suspend fun create(
+        customerId: Long,
+        status: String,
+        notes: String?,
+        items: List<WorkOrderItemInput>,
+    ): Long {
+        val now = Clock.nowMillis()
+        val number = generateWorkOrderNumber(now)
+        val workOrderItems = items.map {
+            WorkOrderItemEntity(
+                workOrderId = 0,
+                serviceProductId = it.serviceProductId,
+                quantidade = it.quantity,
+                practicedUnitPrice = it.practicedUnitPrice,
+                subtotal = it.quantity * it.practicedUnitPrice,
+            )
+        }
+        val id = workOrderDao.insertWithItems(
+            workOrder = WorkOrderEntity(
+                numero = number,
+                customerId = customerId,
+                openedAt = now,
+                status = status,
+                observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
+                totalValue = workOrderItems.sumOf { it.subtotal },
+                concludedAt = if (status == "Concluida") now else null,
+                updatedAt = now,
+            ),
+            items = workOrderItems,
+        )
+        auditRepository.record("Ordens de Servico", "OS criada", "ordens_servico", id, details = number)
         return id
+    }
+
+    suspend fun updateStatus(id: Long, status: WorkOrderStatus) {
+        val current = workOrderDao.findById(id) ?: return
+        val now = Clock.nowMillis()
+        workOrderDao.update(
+            current.copy(
+                status = status.label,
+                concludedAt = if (status == WorkOrderStatus.Completed) now else current.concludedAt,
+                updatedAt = now,
+            ),
+        )
+        auditRepository.record("Ordens de Servico", "Status da OS alterado", "ordens_servico", id, details = status.label)
+    }
+
+    private suspend fun generateWorkOrderNumber(nowMillis: Long): String {
+        val zone = ZoneId.systemDefault()
+        val date = Instant.ofEpochMilli(nowMillis).atZone(zone)
+        val yearStart = date.withDayOfYear(1).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+        val yearEnd = date.withDayOfYear(date.toLocalDate().lengthOfYear())
+            .toLocalDate()
+            .plusDays(1)
+            .atStartOfDay(zone)
+            .toInstant()
+            .toEpochMilli() - 1
+        val sequence = workOrderDao.countOpenedBetween(yearStart, yearEnd) + 1
+        val datePart = date.format(DateTimeFormatter.ofPattern("yyMMdd"))
+        return "$datePart${sequence.toString().padStart(4, '0')}"
     }
 }
