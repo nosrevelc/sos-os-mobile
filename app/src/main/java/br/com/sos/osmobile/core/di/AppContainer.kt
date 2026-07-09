@@ -5,6 +5,7 @@ import androidx.room.Room
 import br.com.sos.osmobile.core.database.AppDatabase
 import br.com.sos.osmobile.data.backup.BackupRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
+import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionRepository
 import br.com.sos.osmobile.data.repository.QuoteRepository
@@ -20,6 +21,7 @@ class AppContainer(context: Context) {
     ).build()
 
     val auditRepository = AuditRepository(database.auditLogDao())
+    val contactsRepository = ContactsRepository(context.applicationContext)
     val customerRepository = CustomerRepository(database.customerDao(), auditRepository)
     val serviceProductRepository = ServiceProductRepository(database.serviceProductDao(), auditRepository)
     val workOrderRepository = WorkOrderRepository(database.workOrderDao(), auditRepository)

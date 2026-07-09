@@ -82,7 +82,13 @@ class WorkOrderRepository(
                 updatedAt = now,
             ),
         )
-        auditRepository.record("Ordens de Servico", "Status da OS alterado", "ordens_servico", id, details = status.label)
+        auditRepository.record(
+            "Ordens de Servico",
+            "Status da OS alterado",
+            "ordens_servico",
+            id,
+            details = "${current.status} -> ${status.label}",
+        )
     }
 
     suspend fun updateContent(
@@ -93,9 +99,6 @@ class WorkOrderRepository(
         items: List<WorkOrderItemInput>,
     ): Boolean {
         val current = workOrderDao.findById(id) ?: return false
-        if (current.status == WorkOrderStatus.Completed.label || current.status == WorkOrderStatus.Canceled.label) {
-            return false
-        }
         val now = Clock.nowMillis()
         val workOrderItems = items.map {
             WorkOrderItemEntity(
@@ -117,7 +120,12 @@ class WorkOrderRepository(
             ),
             items = workOrderItems,
         )
-        auditRepository.record("Ordens de Servico", "OS editada", "ordens_servico", id, details = current.numero)
+        val details = if (current.status != status.label) {
+            "${current.numero}; status ${current.status} -> ${status.label}"
+        } else {
+            current.numero
+        }
+        auditRepository.record("Ordens de Servico", "OS editada", "ordens_servico", id, details = details)
         return true
     }
 

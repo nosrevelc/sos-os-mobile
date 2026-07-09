@@ -175,20 +175,18 @@ class WorkOrderViewModel(
                     notes = formState.notes,
                     items = items,
                 )
-                formState = WorkOrderFormState(
-                    message = if (updated) "OS atualizada." else "OS concluida ou cancelada nao pode ser editada.",
-                )
+                if (updated) {
+                    editWorkOrder(editingId, "OS atualizada.")
+                } else {
+                    formState = formState.copy(message = "Nao foi possivel atualizar a OS.")
+                }
             }
         }
     }
 
-    fun editWorkOrder(workOrderId: Long) {
+    fun editWorkOrder(workOrderId: Long, message: String? = null) {
         viewModelScope.launch {
             val workOrder = workOrderRepository.findById(workOrderId) ?: return@launch
-            if (workOrder.status == WorkOrderStatus.Completed.label || workOrder.status == WorkOrderStatus.Canceled.label) {
-                listMessage = "OS concluida ou cancelada nao pode ser editada."
-                return@launch
-            }
             val items = workOrderRepository.listItems(workOrderId)
             val services = uiState.value.services
             formState = WorkOrderFormState(
@@ -205,8 +203,9 @@ class WorkOrderViewModel(
                         unitPrice = item.practicedUnitPrice,
                     )
                 },
-                message = "Editando OS ${workOrder.numero}.",
+                message = message ?: "Editando OS ${workOrder.numero}.",
             )
+            loadHistory(workOrderId)
         }
     }
 
@@ -242,12 +241,16 @@ class WorkOrderViewModel(
 
     fun showHistory(workOrderId: Long) {
         viewModelScope.launch {
-            val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
-            historyText = if (logs.isEmpty()) {
-                "Sem historico para esta OS."
-            } else {
-                logs.joinToString("\n") { "${it.acao}: ${it.detalhes.orEmpty()}" }
-            }
+            loadHistory(workOrderId)
+        }
+    }
+
+    private suspend fun loadHistory(workOrderId: Long) {
+        val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
+        historyText = if (logs.isEmpty()) {
+            "Sem historico para esta OS."
+        } else {
+            logs.joinToString("\n") { "${it.acao}: ${it.detalhes.orEmpty()}" }
         }
     }
 

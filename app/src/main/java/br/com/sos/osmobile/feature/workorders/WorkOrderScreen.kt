@@ -1,7 +1,10 @@
 package br.com.sos.osmobile.feature.workorders
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -19,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,9 +37,12 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.model.WorkOrderStatus
+import br.com.sos.osmobile.ui.components.CustomerSearchSelector
+import br.com.sos.osmobile.ui.components.PrintDocumentButton
 import br.com.sos.osmobile.ui.components.ShareFileButton
 import br.com.sos.osmobile.ui.components.SharePdfButton
 import br.com.sos.osmobile.ui.components.ShareTextButton
+import br.com.sos.osmobile.ui.components.ServiceProductSearchSelector
 import br.com.sos.osmobile.ui.components.WhatsAppTextButton
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -42,9 +50,16 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun WorkOrderScreen(viewModel: WorkOrderViewModel) {
+fun WorkOrderScreen(
+    viewModel: WorkOrderViewModel,
+    initialEditId: Long? = null,
+) {
     val uiState by viewModel.uiState.collectAsState()
     val form = viewModel.formState
+
+    LaunchedEffect(initialEditId) {
+        initialEditId?.let { viewModel.editWorkOrder(it) }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -72,7 +87,7 @@ fun WorkOrderScreen(viewModel: WorkOrderViewModel) {
 
         item {
             Text(
-                text = "Ordens de servico",
+                text = "Documento e mensagens",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -91,6 +106,7 @@ fun WorkOrderScreen(viewModel: WorkOrderViewModel) {
                 ShareTextButton(label = "Compartilhar documento", text = it)
                 ShareFileButton(label = "Compartilhar arquivo", fileName = "ordem_servico.txt", text = it)
                 SharePdfButton(label = "Compartilhar PDF", fileName = "ordem_servico.pdf", text = it)
+                PrintDocumentButton(label = "Imprimir", jobName = "Ordem de Servico", text = it)
             }
             viewModel.messageText?.let {
                 Text(
@@ -102,32 +118,96 @@ fun WorkOrderScreen(viewModel: WorkOrderViewModel) {
                 WhatsAppTextButton(phone = viewModel.messagePhone, text = it)
             }
             viewModel.historyText?.let {
+                Text("Historico", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(text = it, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-
-        if (uiState.workOrders.isEmpty()) {
-            item {
-                Text(
-                    text = "Nenhuma OS cadastrada.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            items(uiState.workOrders, key = { it.id }) { workOrder ->
-                WorkOrderRow(
-                    workOrder = workOrder,
-                    onStatusSelected = { viewModel.updateWorkOrderStatus(workOrder.id, it) },
-                    onShowDocument = { viewModel.showDocument(workOrder.id) },
-                    onShowMessage = { viewModel.showMessage(workOrder) },
-                    onShowHistory = { viewModel.showHistory(workOrder.id) },
-                    onEdit = { viewModel.editWorkOrder(workOrder.id) },
-                )
             }
         }
     }
 }
 
+@Composable
+fun WorkOrderListScreen(
+    viewModel: WorkOrderViewModel,
+    onEdit: (Long) -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    var visibleCount by remember { mutableStateOf(20) }
+    val visibleItems = uiState.workOrders.take(visibleCount)
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                text = "Lista de OS",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Mais recentes primeiro.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (uiState.workOrders.isEmpty()) {
+            item {
+                Text("Nenhuma OS cadastrada.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            items(visibleItems, key = { it.id }) { workOrder ->
+                WorkOrderListRow(workOrder = workOrder, onClick = { onEdit(workOrder.id) })
+            }
+            if (visibleCount < uiState.workOrders.size) {
+                item {
+                    OutlinedButton(
+                        onClick = { visibleCount += 20 },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Ver mais")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkOrderListRow(
+    workOrder: WorkOrderSummary,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(workOrder.customerName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = "${workOrder.number} - ${workOrder.status}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = "${formatCurrency(workOrder.totalValue)} - ${formatDate(workOrder.openedAt)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WorkOrderForm(
     form: WorkOrderFormState,
@@ -152,60 +232,23 @@ private fun WorkOrderForm(
         )
 
         Text("Cliente", style = MaterialTheme.typography.titleSmall)
-        if (customers.isEmpty()) {
-            Text("Cadastre um cliente antes de criar OS.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            var customerExpanded by remember { mutableStateOf(false) }
-            val selectedCustomer = customers.firstOrNull { it.id == form.selectedCustomerId }
-            OutlinedButton(onClick = { customerExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(selectedCustomer?.let { "${it.nome} - ${it.telefone}" } ?: "Selecionar cliente")
-            }
-            DropdownMenu(expanded = customerExpanded, onDismissRequest = { customerExpanded = false }) {
-                customers.forEach { customer ->
-                    DropdownMenuItem(
-                        text = { Text("${customer.nome} - ${customer.telefone}") },
-                        onClick = {
-                            onCustomerSelected(customer.id)
-                            customerExpanded = false
-                        },
-                    )
-                }
-            }
-        }
+        CustomerSearchSelector(
+            customers = customers,
+            selectedCustomerId = form.selectedCustomerId,
+            onCustomerSelected = onCustomerSelected,
+            emptyText = "Cadastre um cliente antes de criar OS.",
+        )
 
         Text("Status", style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            WorkOrderStatus.entries.forEach { status ->
-                SelectionButton(
-                    label = status.label,
-                    selected = form.status == status,
-                    onClick = { onStatusSelected(status) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
+        WorkOrderStatusSelector(status = form.status, onStatusSelected = onStatusSelected)
 
         Text("Itens", style = MaterialTheme.typography.titleSmall)
-        if (services.isEmpty()) {
-            Text("Cadastre servicos/produtos antes de adicionar itens.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            var expanded by remember { mutableStateOf(false) }
-            val selected = services.firstOrNull { it.id == form.selectedServiceProductId }
-            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(selected?.let { "${it.codigo} - ${it.nome}" } ?: "Selecionar servico/produto")
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                services.forEach { service ->
-                    DropdownMenuItem(
-                        text = { Text("${service.codigo} - ${service.nome}") },
-                        onClick = {
-                            onServiceSelected(service)
-                            expanded = false
-                        },
-                    )
-                }
-            }
-        }
+        ServiceProductSearchSelector(
+            services = services,
+            selectedServiceProductId = form.selectedServiceProductId,
+            onServiceSelected = onServiceSelected,
+            emptyText = "Cadastre servicos/produtos antes de adicionar itens.",
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
@@ -269,6 +312,31 @@ private fun WorkOrderForm(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WorkOrderStatusSelector(
+    status: WorkOrderStatus,
+    onStatusSelected: (WorkOrderStatus) -> Unit,
+) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        WorkOrderStatus.entries.forEach { option ->
+            val selected = option == status
+            Button(
+                onClick = {
+                    onStatusSelected(option)
+                },
+                colors = if (selected) {
+                    ButtonDefaults.buttonColors()
+                } else {
+                    ButtonDefaults.outlinedButtonColors()
+                },
+            ) {
+                Text(option.label)
+            }
+        }
+    }
+}
+
 @Composable
 private fun SelectionButton(
     label: String,
@@ -313,6 +381,7 @@ private fun DraftItemRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WorkOrderRow(
     workOrder: WorkOrderSummary,
@@ -344,7 +413,7 @@ private fun WorkOrderRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 if (workOrder.status != WorkOrderStatus.Completed.label && workOrder.status != WorkOrderStatus.Canceled.label) {
                     TextButton(onClick = onEdit) {
                         Text("Editar")

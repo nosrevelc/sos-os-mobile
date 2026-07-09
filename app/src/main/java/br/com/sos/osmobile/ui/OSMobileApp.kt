@@ -1,14 +1,17 @@
 package br.com.sos.osmobile.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -41,6 +44,7 @@ import br.com.sos.osmobile.feature.services.ServiceProductScreen
 import br.com.sos.osmobile.feature.services.ServiceProductViewModel
 import br.com.sos.osmobile.feature.settings.SettingsScreen
 import br.com.sos.osmobile.feature.settings.SettingsViewModel
+import br.com.sos.osmobile.feature.workorders.WorkOrderListScreen
 import br.com.sos.osmobile.feature.workorders.WorkOrderScreen
 import br.com.sos.osmobile.feature.workorders.WorkOrderViewModel
 import kotlinx.coroutines.launch
@@ -59,7 +63,7 @@ fun OSMobileApp(appContainer: AppContainer) {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text("OS Mobile", modifier = Modifier.padding(16.dp))
+                Text("OS Mobile", modifier = Modifier.padding(24.dp, 20.dp, 16.dp, 12.dp))
                 AppRoute.entries.forEach { route ->
                     NavigationDrawerItem(
                         label = { Text(route.label) },
@@ -81,8 +85,8 @@ fun OSMobileApp(appContainer: AppContainer) {
                 TopAppBar(
                     title = { Text(currentLabel) },
                     navigationIcon = {
-                        TextButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Text("Menu")
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(imageVector = Icons.Filled.Menu, contentDescription = "Abrir menu")
                         }
                     },
                 )
@@ -105,7 +109,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                         viewModel = dashboardViewModel,
                         onCustomerClick = { navController.navigate("customer/$it") },
                         onQuoteClick = { navController.navigate("quote/$it") },
-                        onWorkOrderClick = { navController.navigate("work_order/$it") },
+                        onWorkOrderClick = { navController.navigate("work_orders/edit/$it") },
                     )
                 }
                 composable("customer/{id}") { backStack ->
@@ -121,7 +125,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                     CustomerDetailScreen(
                         viewModel = vm,
                         onQuoteClick = { navController.navigate("quote/$it") },
-                        onWorkOrderClick = { navController.navigate("work_order/$it") },
+                        onWorkOrderClick = { navController.navigate("work_orders/edit/$it") },
                     )
                 }
                 composable("quote/{id}") { backStack ->
@@ -143,6 +147,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                         factory = CustomerViewModel.factory(
                             customerRepository = appContainer.customerRepository,
                             settingsRepository = appContainer.settingsRepository,
+                            contactsRepository = appContainer.contactsRepository,
                         ),
                     )
                     CustomerScreen(viewModel = customerViewModel)
@@ -176,6 +181,32 @@ fun OSMobileApp(appContainer: AppContainer) {
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel)
                 }
+                composable(AppRoute.WorkOrderList.route) {
+                    val workOrderViewModel: WorkOrderViewModel = viewModel(
+                        factory = WorkOrderViewModel.factory(
+                            workOrderRepository = appContainer.workOrderRepository,
+                            auditRepository = appContainer.auditRepository,
+                            customerRepository = appContainer.customerRepository,
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                        ),
+                    )
+                    WorkOrderListScreen(
+                        viewModel = workOrderViewModel,
+                        onEdit = { navController.navigate("work_orders/edit/$it") },
+                    )
+                }
+                composable("work_orders/edit/{id}") { backStack ->
+                    val id = backStack.arguments?.getString("id")?.toLongOrNull()
+                    val workOrderViewModel: WorkOrderViewModel = viewModel(
+                        factory = WorkOrderViewModel.factory(
+                            workOrderRepository = appContainer.workOrderRepository,
+                            auditRepository = appContainer.auditRepository,
+                            customerRepository = appContainer.customerRepository,
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                        ),
+                    )
+                    WorkOrderScreen(viewModel = workOrderViewModel, initialEditId = id)
+                }
                 composable(AppRoute.Backup.route) {
                     val backupViewModel: BackupViewModel = viewModel(
                         factory = BackupViewModel.factory(appContainer.backupRepository),
@@ -184,7 +215,10 @@ fun OSMobileApp(appContainer: AppContainer) {
                 }
                 composable(AppRoute.Settings.route) {
                     val settingsViewModel: SettingsViewModel = viewModel(
-                        factory = SettingsViewModel.factory(appContainer.settingsRepository),
+                        factory = SettingsViewModel.factory(
+                            repository = appContainer.settingsRepository,
+                            contactsRepository = appContainer.contactsRepository,
+                        ),
                     )
                     SettingsScreen(viewModel = settingsViewModel)
                 }

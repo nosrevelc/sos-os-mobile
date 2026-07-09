@@ -2,6 +2,8 @@ package br.com.sos.osmobile.feature.quotes
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,9 +34,12 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.QuoteSummary
 import br.com.sos.osmobile.data.model.QuoteStatus
+import br.com.sos.osmobile.ui.components.CustomerSearchSelector
+import br.com.sos.osmobile.ui.components.PrintDocumentButton
 import br.com.sos.osmobile.ui.components.ShareFileButton
 import br.com.sos.osmobile.ui.components.SharePdfButton
 import br.com.sos.osmobile.ui.components.ShareTextButton
+import br.com.sos.osmobile.ui.components.ServiceProductSearchSelector
 import br.com.sos.osmobile.ui.components.WhatsAppTextButton
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -91,6 +96,7 @@ fun QuoteScreen(viewModel: QuoteViewModel) {
                 ShareTextButton(label = "Compartilhar documento", text = it)
                 ShareFileButton(label = "Compartilhar arquivo", fileName = "orcamento.txt", text = it)
                 SharePdfButton(label = "Compartilhar PDF", fileName = "orcamento.pdf", text = it)
+                PrintDocumentButton(label = "Imprimir", jobName = "Orcamento", text = it)
             }
             viewModel.messageText?.let {
                 Text(
@@ -153,26 +159,12 @@ private fun QuoteForm(
         )
 
         Text("Cliente", style = MaterialTheme.typography.titleSmall)
-        if (customers.isEmpty()) {
-            Text("Cadastre um cliente antes de criar orcamentos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            var customerExpanded by remember { mutableStateOf(false) }
-            val selectedCustomer = customers.firstOrNull { it.id == form.selectedCustomerId }
-            OutlinedButton(onClick = { customerExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(selectedCustomer?.let { "${it.nome} - ${it.telefone}" } ?: "Selecionar cliente")
-            }
-            DropdownMenu(expanded = customerExpanded, onDismissRequest = { customerExpanded = false }) {
-                customers.forEach { customer ->
-                    DropdownMenuItem(
-                        text = { Text("${customer.nome} - ${customer.telefone}") },
-                        onClick = {
-                            onCustomerSelected(customer.id)
-                            customerExpanded = false
-                        },
-                    )
-                }
-            }
-        }
+        CustomerSearchSelector(
+            customers = customers,
+            selectedCustomerId = form.selectedCustomerId,
+            onCustomerSelected = onCustomerSelected,
+            emptyText = "Cadastre um cliente antes de criar orcamentos.",
+        )
 
         Text("Status", style = MaterialTheme.typography.titleSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -187,26 +179,12 @@ private fun QuoteForm(
         }
 
         Text("Itens", style = MaterialTheme.typography.titleSmall)
-        if (services.isEmpty()) {
-            Text("Cadastre servicos/produtos antes de adicionar itens.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            var expanded by remember { mutableStateOf(false) }
-            val selected = services.firstOrNull { it.id == form.selectedServiceProductId }
-            OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(selected?.let { "${it.codigo} - ${it.nome}" } ?: "Selecionar servico/produto")
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                services.forEach { service ->
-                    DropdownMenuItem(
-                        text = { Text("${service.codigo} - ${service.nome}") },
-                        onClick = {
-                            onServiceSelected(service)
-                            expanded = false
-                        },
-                    )
-                }
-            }
-        }
+        ServiceProductSearchSelector(
+            services = services,
+            selectedServiceProductId = form.selectedServiceProductId,
+            onServiceSelected = onServiceSelected,
+            emptyText = "Cadastre servicos/produtos antes de adicionar itens.",
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
@@ -314,6 +292,7 @@ private fun DraftItemRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuoteRow(
     quote: QuoteSummary,
@@ -346,7 +325,7 @@ private fun QuoteRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 if (quote.status != QuoteStatus.Converted.label) {
                     TextButton(onClick = onEdit) {
                         Text("Editar")

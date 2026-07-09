@@ -1,5 +1,9 @@
 package br.com.sos.osmobile.feature.customers
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,10 +25,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
 
@@ -32,6 +41,16 @@ import br.com.sos.osmobile.data.model.CpfCnpjPolicy
 fun CustomerScreen(viewModel: CustomerViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val form = viewModel.formState
+    val context = LocalContext.current
+    var pendingContact by remember { mutableStateOf<CustomerEntity?>(null) }
+    val contactPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            pendingContact?.let(viewModel::syncContact)
+        }
+        pendingContact = null
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -55,6 +74,13 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
         }
 
         item {
+            viewModel.listMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             OutlinedTextField(
                 value = viewModel.query,
                 onValueChange = viewModel::onQueryChanged,
@@ -86,6 +112,14 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
                     customer = customer,
                     onEdit = { viewModel.startEditing(customer) },
                     onArchive = { viewModel.archiveCustomer(customer.id) },
+                    onSyncContact = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                            viewModel.syncContact(customer)
+                        } else {
+                            pendingContact = customer
+                            contactPermissionLauncher.launch(Manifest.permission.WRITE_CONTACTS)
+                        }
+                    },
                 )
             }
         }
@@ -182,6 +216,7 @@ private fun CustomerRow(
     customer: CustomerEntity,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
+    onSyncContact: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -205,6 +240,9 @@ private fun CustomerRow(
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onSyncContact) {
+                    Text("Agenda")
+                }
                 TextButton(onClick = onEdit) {
                     Text("Editar")
                 }

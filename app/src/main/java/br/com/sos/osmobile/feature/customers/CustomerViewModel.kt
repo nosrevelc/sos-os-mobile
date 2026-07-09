@@ -9,8 +9,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
+import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CONTACTS_GOOGLE_ACCOUNT_KEY
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +42,7 @@ data class CustomerUiState(
 class CustomerViewModel(
     private val customerRepository: CustomerRepository,
     private val settingsRepository: SettingsRepository,
+    private val contactsRepository: ContactsRepository,
 ) : ViewModel() {
     private val searchQuery = MutableStateFlow("")
 
@@ -63,6 +66,9 @@ class CustomerViewModel(
         private set
 
     var query by mutableStateOf("")
+        private set
+
+    var listMessage by mutableStateOf<String?>(null)
         private set
 
     fun onQueryChanged(value: String) {
@@ -160,15 +166,36 @@ class CustomerViewModel(
         }
     }
 
+    fun syncContact(customer: CustomerEntity) {
+        viewModelScope.launch {
+            listMessage = runCatching {
+                val account = settingsRepository.getString(CONTACTS_GOOGLE_ACCOUNT_KEY)
+                val currentRawContactId = settingsRepository.getContactRawId(customer.id)
+                val rawContactId = contactsRepository.syncCustomer(
+                    customer = customer,
+                    googleAccount = account,
+                    existingRawContactId = currentRawContactId,
+                )
+                settingsRepository.setContactRawId(customer.id, rawContactId)
+                account?.takeIf { it.isNotBlank() }
+                    ?.let { "Contato salvo na agenda Google configurada." }
+                    ?: "Contato salvo na agenda local do aparelho."
+            }.getOrElse {
+                "Nao foi possivel salvar na agenda: ${it.message ?: "verifique a permissao de contatos"}"
+            }
+        }
+    }
+
     companion object {
         fun factory(
             customerRepository: CustomerRepository,
             settingsRepository: SettingsRepository,
+            contactsRepository: ContactsRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return CustomerViewModel(customerRepository, settingsRepository) as T
+                    return CustomerViewModel(customerRepository, settingsRepository, contactsRepository) as T
                 }
             }
     }

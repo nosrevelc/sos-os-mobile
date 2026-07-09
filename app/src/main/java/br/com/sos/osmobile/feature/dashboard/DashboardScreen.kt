@@ -1,13 +1,14 @@
 package br.com.sos.osmobile.feature.dashboard
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -47,14 +48,22 @@ fun DashboardScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         if (viewModel.query.isNotBlank()) {
+            Text(
+                text = "Resultados",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
             search.customers.forEach {
-                ResultButton("Cliente", "${it.nome} - ${it.telefone}") { onCustomerClick(it.id) }
+                ResultCard("Cliente", it.nome, it.telefone) { onCustomerClick(it.id) }
             }
             search.workOrders.forEach {
-                ResultButton("OS ${it.number}", "${it.customerName} - ${it.status}") { onWorkOrderClick(it.id) }
+                ResultCard("OS ${it.number}", it.customerName, it.status) { onWorkOrderClick(it.id) }
             }
             search.quotes.forEach {
-                ResultButton("Orcamento ${it.number}", "${it.customerName} - ${it.status}") { onQuoteClick(it.id) }
+                ResultCard("Orcamento ${it.number}", it.customerName, it.status) { onQuoteClick(it.id) }
+            }
+            if (search.customers.isEmpty() && search.workOrders.isEmpty() && search.quotes.isEmpty()) {
+                Text("Nenhum resultado encontrado.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         MetricCard("OS cadastradas", metrics.workOrderCount.toString())
@@ -67,9 +76,27 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun ResultButton(label: String, value: String, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text("$label: $value")
+private fun ResultCard(label: String, title: String, detail: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("Abrir", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 

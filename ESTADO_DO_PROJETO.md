@@ -4,18 +4,26 @@
 
 Projeto Android nativo em Kotlin/Jetpack Compose, offline-first, usando Room/SQLite.
 
-Build validado:
+Builds validados:
 
 ```powershell
 .\gradlew.bat test assembleDebug
+.\gradlew.bat test assembleRelease
+.\gradlew.bat bundleRelease
 ```
 
 Resultado atual esperado: `BUILD SUCCESSFUL`.
 
-APK para teste:
+APK preferencial para teste no celular:
 
 ```text
-C:\SOS\app\build\outputs\apk\debug\app-debug.apk
+C:\SOS\app\build\outputs\apk\release\app-release.apk
+```
+
+AAB para Play Console/Teste interno:
+
+```text
+C:\SOS\app\build\outputs\bundle\release\app-release.aab
 ```
 
 ## Stack
@@ -49,6 +57,9 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
 - Tratamento de CPF/CNPJ duplicado.
 - Detalhe do cliente com OS e orcamentos vinculados.
 - Vínculos clicaveis para detalhe de OS/orcamento.
+- Sincronizacao manual de cliente para agenda Android/Google.
+- Permissao de contatos solicitada somente ao usar a acao de agenda.
+- Configuracoes buscam as agendas Google disponiveis no aparelho.
 
 ### Servicos/Produtos
 
@@ -65,8 +76,8 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
 - Edicao de cliente, itens, status e observacoes.
 - Remocao de itens durante criacao/edicao.
 - Orcamento convertido fica bloqueado para edicao.
-- Cliente em dropdown.
-- Servico/produto em dropdown.
+- Cliente em seletor pesquisavel.
+- Servico/produto em seletor pesquisavel com resultados abaixo da busca.
 - Status: Pendente, Aprovado, Rejeitado, Convertido.
 - Alteracao de status.
 - Conversao de orcamento aprovado em OS.
@@ -83,10 +94,12 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
 - Criacao com cliente, itens, status, observacoes e total.
 - Edicao de cliente, itens, status e observacoes.
 - Remocao de itens durante criacao/edicao.
-- OS concluida ou cancelada fica bloqueada para edicao.
-- Cliente em dropdown.
-- Servico/produto em dropdown.
+- OS abre em tela de edicao propria ao clicar em uma lista ou resultado de busca.
+- OS concluida/cancelada tambem pode ser reaberta/editada se o usuario alterar o status.
+- Cliente em seletor pesquisavel.
+- Servico/produto em seletor pesquisavel com resultados abaixo da busca.
 - Status: Aberta, Em andamento, Concluida, Cancelada.
+- Status no formulario em botoes compactos, com o selecionado destacado.
 - Alteracao de status.
 - Data de conclusao quando status vira Concluida.
 - Documento em texto.
@@ -96,6 +109,8 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
 - WhatsApp direto usando telefone do cliente.
 - Historico por registro.
 - Detalhe da OS com itens e historico.
+- Historico aparece abaixo do formulario ao editar uma OS.
+- Alteracao de status registra origem e destino, exemplo: `Aberta -> Concluida`.
 
 ### Auditoria
 
@@ -116,12 +131,24 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
 
 - Ativar/desativar modulos.
 - CPF/CNPJ: nao usar, opcional ou obrigatorio.
+- Conta Google para salvar contatos sincronizados.
+- Lista de agendas Google disponiveis no aparelho para selecao.
 
 ### Navegacao/UI
 
 - Menu lateral via drawer.
+- Menu possui `Nova OS` e `Lista de OS` separados.
+- `Nova OS` nao lista mais todas as OS no rodape.
+- `Lista de OS` mostra OS em ordem decrescente com opcao `Ver mais`.
 - Icone proprio simples.
 - Barra inferior removida.
+
+### Release
+
+- APK release assinado localmente.
+- AAB release assinado localmente.
+- Assinatura configurada por `keystore.properties`.
+- Keystore local em `keystore/osmobile-release.jks`.
 
 ## Pontos pendentes principais
 
@@ -133,8 +160,8 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
    - possivel uso de icones.
 
 2. Release:
-   - gerar APK/AAB assinado;
-   - configurar versionamento;
+   - subir AAB no Play Console em Teste interno;
+   - configurar versionamento para proximas versoes;
    - testar instalacao limpa em aparelho real.
 
 3. Testes:
@@ -145,6 +172,10 @@ C:\SOS\app\build\outputs\apk\debug\app-debug.apk
 4. PDF:
    - melhorar layout visual do PDF;
    - avaliar impressao direta/Bluetooth.
+
+5. Agenda/Contatos:
+   - validar em aparelho real com conta Google configurada;
+   - melhorar mensagens de erro quando a conta nao aceitar insercao.
 
 ## Arquivos-chave
 
@@ -179,11 +210,15 @@ Fluxo minimo:
 5. Buscar cliente no Painel.
 6. Abrir detalhe do cliente.
 7. Abrir OS vinculada.
-8. Gerar documento.
-9. Gerar mensagem.
-10. Abrir WhatsApp.
-11. Gerar backup JSON.
+8. Confirmar que a OS abre em tela de edicao.
+9. Alterar status e salvar.
+10. Confirmar historico abaixo do formulario.
+11. Gerar documento.
+12. Gerar mensagem.
+13. Abrir WhatsApp.
+14. Gerar backup JSON.
+15. Em Clientes, tocar em Agenda e validar contato criado no app Contatos.
 
 ## Proximo passo recomendado
 
-Fazer polimento final de UI/UX e teste em aparelho real com o APK debug.
+Testar em aparelho real com o APK release assinado e, em seguida, subir o AAB no Play Console em Teste interno.

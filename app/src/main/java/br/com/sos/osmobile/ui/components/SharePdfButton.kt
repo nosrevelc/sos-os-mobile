@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.OutputStream
 
 @Composable
 fun SharePdfButton(
@@ -21,7 +22,7 @@ fun SharePdfButton(
         onClick = {
             val dir = File(context.cacheDir, "exports").apply { mkdirs() }
             val file = File(dir, fileName)
-            writePdf(file, text)
+            file.outputStream().use { writePdf(it, text) }
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/pdf"
@@ -35,7 +36,7 @@ fun SharePdfButton(
     }
 }
 
-private fun writePdf(file: File, text: String) {
+internal fun writePdf(outputStream: OutputStream, text: String) {
     val document = PdfDocument()
     val paint = Paint().apply {
         textSize = 12f
@@ -59,6 +60,6 @@ private fun writePdf(file: File, text: String) {
     }
 
     document.finishPage(page)
-    file.outputStream().use { document.writeTo(it) }
+    document.writeTo(outputStream)
     document.close()
 }
