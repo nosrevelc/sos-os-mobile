@@ -45,6 +45,20 @@ class ServiceProductFormValidatorTest {
     }
 
     @Test
+    fun invalidTypeReturnsMessage() {
+        val form = ServiceProductFormState(
+            code = "SRV-001",
+            name = "Troca de tela",
+            type = "Outro",
+            unitPrice = "150",
+        )
+
+        val result = ServiceProductFormValidator.validate(form)
+
+        assertEquals("Tipo invalido.", result)
+    }
+
+    @Test
     fun negativePriceReturnsMessage() {
         val form = ServiceProductFormState(
             code = "SRV-001",

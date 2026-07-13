@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.data.local.entity.ServiceProductType
 import br.com.sos.osmobile.ui.input.InputMasks
 import java.text.NumberFormat
 import java.util.Locale
@@ -54,6 +57,7 @@ fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
                 form = form,
                 onCodeChanged = viewModel::onCodeChanged,
                 onNameChanged = viewModel::onNameChanged,
+                onTypeChanged = viewModel::onTypeChanged,
                 onCategoryChanged = viewModel::onCategoryChanged,
                 onDescriptionChanged = viewModel::onDescriptionChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
@@ -104,6 +108,7 @@ private fun ServiceProductForm(
     form: ServiceProductFormState,
     onCodeChanged: (String) -> Unit,
     onNameChanged: (String) -> Unit,
+    onTypeChanged: (String) -> Unit,
     onCategoryChanged: (String) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
@@ -138,6 +143,10 @@ private fun ServiceProductForm(
             label = { Text("Nome") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
+        )
+        ServiceProductTypeSelector(
+            selected = form.type,
+            onSelected = onTypeChanged,
         )
         OutlinedTextField(
             value = form.category,
@@ -207,7 +216,7 @@ private fun ServiceProductRow(
         ) {
             Text(item.nome, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
-            Text("${item.codigo} - ${formatCurrency(item.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
+            Text("${item.codigo} - ${item.tipo} - ${formatCurrency(item.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
             item.categoria?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -221,6 +230,34 @@ private fun ServiceProductRow(
                 TextButton(onClick = onArchive) {
                     Text("Arquivar")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ServiceProductTypeSelector(
+    selected: String,
+    onSelected: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Tipo: $selected")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ServiceProductType.all.forEach { type ->
+                DropdownMenuItem(
+                    text = { Text(if (type == selected) "$type *" else type) },
+                    onClick = {
+                        onSelected(type)
+                        expanded = false
+                    },
+                )
             }
         }
     }

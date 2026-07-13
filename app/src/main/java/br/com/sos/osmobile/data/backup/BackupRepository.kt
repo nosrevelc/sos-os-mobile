@@ -62,7 +62,7 @@ class BackupRepository(
         return buildString {
             appendLine("{")
             appendLine("\"clientes\":${customers.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"nome":${str(it.nome)},"cpfCnpj":${str(it.cpfCnpj)},"telefone":${str(it.telefone)},"email":${str(it.email)},"endereco":${str(it.endereco)},"observacoes":${str(it.observacoes)},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
-            appendLine("\"servicos_produtos\":${services.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"codigo":${str(it.codigo)},"nome":${str(it.nome)},"categoria":${str(it.categoria)},"descricao":${str(it.descricao)},"unitPrice":${it.unitPrice},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"servicos_produtos\":${services.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"codigo":${str(it.codigo)},"nome":${str(it.nome)},"tipo":${str(it.tipo)},"categoria":${str(it.categoria)},"descricao":${str(it.descricao)},"unitPrice":${it.unitPrice},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"orcamentos\":${quotes.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"createdAt":${it.createdAt},"validUntil":${it.validUntil ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"itens_orcamento\":${quoteItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"quoteId":${it.quoteId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }},")
             appendLine("\"ordens_servico\":${workOrders.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"openedAt":${it.openedAt},"expectedConclusionAt":${it.expectedConclusionAt ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"concludedAt":${it.concludedAt ?: "null"},"updatedAt":${it.updatedAt}}""" }},")
@@ -98,6 +98,7 @@ class BackupRepository(
                 id = item.requiredId(),
                 codigo = item.getString("codigo"),
                 nome = item.getString("nome"),
+                tipo = item.optString("tipo", "Servico"),
                 categoria = item.nullableString("categoria"),
                 descricao = item.nullableString("descricao"),
                 unitPrice = item.optDouble("unitPrice", item.optDouble("valor", 0.0)),

@@ -1,9 +1,14 @@
 package br.com.sos.osmobile.feature.services
 
+import br.com.sos.osmobile.data.local.entity.ServiceProductType
+
 object ServiceProductFormValidator {
     fun validate(form: ServiceProductFormState): String? {
         if (form.name.isBlank()) {
             return "Nome e obrigatorio."
+        }
+        if (form.type !in ServiceProductType.all) {
+            return "Tipo invalido."
         }
         val price = parsePrice(form.unitPrice)
         if (price == null) {

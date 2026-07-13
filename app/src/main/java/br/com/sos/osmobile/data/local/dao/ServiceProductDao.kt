@@ -25,6 +25,7 @@ interface ServiceProductDao {
             OR descricao LIKE '%' || :query || '%'
             OR codigo LIKE '%' || :query || '%'
             OR categoria LIKE '%' || :query || '%'
+            OR tipo LIKE '%' || :query || '%'
           )
         ORDER BY nome
         """,

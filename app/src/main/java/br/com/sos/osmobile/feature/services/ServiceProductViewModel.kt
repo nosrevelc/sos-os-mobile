@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.data.local.entity.ServiceProductType
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +24,7 @@ data class ServiceProductFormState(
     val editingId: Long? = null,
     val code: String = "",
     val name: String = "",
+    val type: String = ServiceProductType.SERVICE,
     val category: String = "",
     val description: String = "",
     val unitPrice: String = "",
@@ -69,6 +71,10 @@ class ServiceProductViewModel(
         formState = formState.copy(name = value, message = null)
     }
 
+    fun onTypeChanged(value: String) {
+        formState = formState.copy(type = value, message = null)
+    }
+
     fun onCategoryChanged(value: String) {
         formState = formState.copy(category = value, message = null)
     }
@@ -86,6 +92,7 @@ class ServiceProductViewModel(
             editingId = item.id,
             code = item.codigo,
             name = item.nome,
+            type = item.tipo,
             category = item.categoria.orEmpty(),
             description = item.descricao.orEmpty(),
             unitPrice = InputMasks.currencyFromDouble(item.unitPrice),
@@ -110,6 +117,7 @@ class ServiceProductViewModel(
                 if (editingId == null) {
                     serviceProductRepository.create(
                         name = formState.name,
+                        type = formState.type,
                         category = formState.category,
                         description = formState.description,
                         unitPrice = price,
@@ -120,6 +128,7 @@ class ServiceProductViewModel(
                         id = editingId,
                         code = formState.code,
                         name = formState.name,
+                        type = formState.type,
                         category = formState.category,
                         description = formState.description,
                         unitPrice = price,

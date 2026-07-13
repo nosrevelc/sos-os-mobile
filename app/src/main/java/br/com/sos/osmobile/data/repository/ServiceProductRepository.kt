@@ -15,6 +15,7 @@ class ServiceProductRepository(
 
     suspend fun create(
         name: String,
+        type: String,
         category: String?,
         description: String?,
         unitPrice: Double,
@@ -24,6 +25,7 @@ class ServiceProductRepository(
             ServiceProductEntity(
                 codigo = nextCode(),
                 nome = name.trim(),
+                tipo = type,
                 categoria = category?.trim()?.takeIf { it.isNotBlank() },
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
                 unitPrice = unitPrice,
@@ -42,6 +44,7 @@ class ServiceProductRepository(
         id: Long,
         code: String,
         name: String,
+        type: String,
         category: String?,
         description: String?,
         unitPrice: Double,
@@ -51,6 +54,7 @@ class ServiceProductRepository(
             current.copy(
                 codigo = code.trim(),
                 nome = name.trim(),
+                tipo = type,
                 categoria = category?.trim()?.takeIf { it.isNotBlank() },
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
                 unitPrice = unitPrice,

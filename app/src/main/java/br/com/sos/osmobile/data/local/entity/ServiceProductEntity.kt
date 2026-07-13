@@ -19,6 +19,7 @@ data class ServiceProductEntity(
     val id: Long = 0,
     val codigo: String,
     val nome: String,
+    val tipo: String = ServiceProductType.SERVICE,
     val categoria: String? = null,
     val descricao: String? = null,
     @ColumnInfo(name = "preco_unitario")
@@ -29,3 +30,11 @@ data class ServiceProductEntity(
     @ColumnInfo(name = "data_atualizacao")
     val updatedAt: Long,
 )
+
+object ServiceProductType {
+    const val SERVICE = "Servico"
+    const val PRODUCT = "Produto"
+    const val SUPPLY = "Insumo"
+
+    val all = listOf(SERVICE, PRODUCT, SUPPLY)
+}
