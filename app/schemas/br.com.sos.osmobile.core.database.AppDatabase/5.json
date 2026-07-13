@@ -1,0 +1,1029 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 5,
+    "identityHash": "924d84d40eb47c8b7ebca75d98d161d9",
+    "entities": [
+      {
+        "tableName": "clientes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_cliente` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nome` TEXT NOT NULL, `cpf_cnpj` TEXT, `telefone` TEXT NOT NULL, `email` TEXT, `endereco` TEXT, `observacoes` TEXT, `ativo` INTEGER NOT NULL, `data_cadastro` INTEGER NOT NULL, `data_atualizacao` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_cliente",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cpfCnpj",
+            "columnName": "cpf_cnpj",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "telefone",
+            "columnName": "telefone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "endereco",
+            "columnName": "endereco",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "observacoes",
+            "columnName": "observacoes",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "ativo",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_cadastro",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_cliente"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_clientes_nome",
+            "unique": false,
+            "columnNames": [
+              "nome"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_clientes_nome` ON `${TABLE_NAME}` (`nome`)"
+          },
+          {
+            "name": "index_clientes_telefone",
+            "unique": false,
+            "columnNames": [
+              "telefone"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_clientes_telefone` ON `${TABLE_NAME}` (`telefone`)"
+          },
+          {
+            "name": "index_clientes_cpf_cnpj",
+            "unique": true,
+            "columnNames": [
+              "cpf_cnpj"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_clientes_cpf_cnpj` ON `${TABLE_NAME}` (`cpf_cnpj`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "servicos_produtos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_servico_produto` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `codigo` TEXT NOT NULL, `nome` TEXT NOT NULL, `categoria` TEXT, `descricao` TEXT, `preco_unitario` REAL NOT NULL, `ativo` INTEGER NOT NULL, `data_cadastro` INTEGER NOT NULL, `data_atualizacao` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_servico_produto",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codigo",
+            "columnName": "codigo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nome",
+            "columnName": "nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoria",
+            "columnName": "categoria",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "unitPrice",
+            "columnName": "preco_unitario",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ativo",
+            "columnName": "ativo",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_cadastro",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_servico_produto"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_servicos_produtos_codigo",
+            "unique": true,
+            "columnNames": [
+              "codigo"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_servicos_produtos_codigo` ON `${TABLE_NAME}` (`codigo`)"
+          },
+          {
+            "name": "index_servicos_produtos_nome",
+            "unique": false,
+            "columnNames": [
+              "nome"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_servicos_produtos_nome` ON `${TABLE_NAME}` (`nome`)"
+          },
+          {
+            "name": "index_servicos_produtos_categoria",
+            "unique": false,
+            "columnNames": [
+              "categoria"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_servicos_produtos_categoria` ON `${TABLE_NAME}` (`categoria`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "ordens_servico",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_os` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `numero` TEXT NOT NULL, `id_cliente` INTEGER NOT NULL, `data_abertura` INTEGER NOT NULL, `data_previsao_conclusao` INTEGER, `status` TEXT NOT NULL, `observacoes` TEXT, `valor_total` REAL NOT NULL, `data_conclusao` INTEGER, `data_atualizacao` INTEGER NOT NULL, FOREIGN KEY(`id_cliente`) REFERENCES `clientes`(`id_cliente`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numero",
+            "columnName": "numero",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerId",
+            "columnName": "id_cliente",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "openedAt",
+            "columnName": "data_abertura",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expectedConclusionAt",
+            "columnName": "data_previsao_conclusao",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observacoes",
+            "columnName": "observacoes",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalValue",
+            "columnName": "valor_total",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concludedAt",
+            "columnName": "data_conclusao",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_os"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_ordens_servico_numero",
+            "unique": true,
+            "columnNames": [
+              "numero"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_ordens_servico_numero` ON `${TABLE_NAME}` (`numero`)"
+          },
+          {
+            "name": "index_ordens_servico_id_cliente",
+            "unique": false,
+            "columnNames": [
+              "id_cliente"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ordens_servico_id_cliente` ON `${TABLE_NAME}` (`id_cliente`)"
+          },
+          {
+            "name": "index_ordens_servico_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_ordens_servico_status` ON `${TABLE_NAME}` (`status`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "clientes",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_cliente"
+            ],
+            "referencedColumns": [
+              "id_cliente"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "itens_os",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_item_os` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_os` INTEGER NOT NULL, `id_servico_produto` INTEGER NOT NULL, `quantidade` REAL NOT NULL, `preco_unitario_praticado` REAL NOT NULL, `subtotal` REAL NOT NULL, FOREIGN KEY(`id_os`) REFERENCES `ordens_servico`(`id_os`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`id_servico_produto`) REFERENCES `servicos_produtos`(`id_servico_produto`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_item_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOrderId",
+            "columnName": "id_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serviceProductId",
+            "columnName": "id_servico_produto",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantidade",
+            "columnName": "quantidade",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "practicedUnitPrice",
+            "columnName": "preco_unitario_praticado",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subtotal",
+            "columnName": "subtotal",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_item_os"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_itens_os_id_os",
+            "unique": false,
+            "columnNames": [
+              "id_os"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_itens_os_id_os` ON `${TABLE_NAME}` (`id_os`)"
+          },
+          {
+            "name": "index_itens_os_id_servico_produto",
+            "unique": false,
+            "columnNames": [
+              "id_servico_produto"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_itens_os_id_servico_produto` ON `${TABLE_NAME}` (`id_servico_produto`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ordens_servico",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_os"
+            ],
+            "referencedColumns": [
+              "id_os"
+            ]
+          },
+          {
+            "table": "servicos_produtos",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_servico_produto"
+            ],
+            "referencedColumns": [
+              "id_servico_produto"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "orcamentos",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_orcamento` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `numero` TEXT NOT NULL, `id_cliente` INTEGER NOT NULL, `data_criacao` INTEGER NOT NULL, `data_validade` INTEGER, `status` TEXT NOT NULL, `observacoes` TEXT, `valor_total` REAL NOT NULL, `data_atualizacao` INTEGER NOT NULL, FOREIGN KEY(`id_cliente`) REFERENCES `clientes`(`id_cliente`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_orcamento",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numero",
+            "columnName": "numero",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "customerId",
+            "columnName": "id_cliente",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "validUntil",
+            "columnName": "data_validade",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observacoes",
+            "columnName": "observacoes",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalValue",
+            "columnName": "valor_total",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_orcamento"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_orcamentos_numero",
+            "unique": true,
+            "columnNames": [
+              "numero"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_orcamentos_numero` ON `${TABLE_NAME}` (`numero`)"
+          },
+          {
+            "name": "index_orcamentos_id_cliente",
+            "unique": false,
+            "columnNames": [
+              "id_cliente"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_orcamentos_id_cliente` ON `${TABLE_NAME}` (`id_cliente`)"
+          },
+          {
+            "name": "index_orcamentos_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_orcamentos_status` ON `${TABLE_NAME}` (`status`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "clientes",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_cliente"
+            ],
+            "referencedColumns": [
+              "id_cliente"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "itens_orcamento",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_item_orcamento` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_orcamento` INTEGER NOT NULL, `id_servico_produto` INTEGER NOT NULL, `quantidade` REAL NOT NULL, `preco_unitario_praticado` REAL NOT NULL, `subtotal` REAL NOT NULL, FOREIGN KEY(`id_orcamento`) REFERENCES `orcamentos`(`id_orcamento`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`id_servico_produto`) REFERENCES `servicos_produtos`(`id_servico_produto`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_item_orcamento",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quoteId",
+            "columnName": "id_orcamento",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "serviceProductId",
+            "columnName": "id_servico_produto",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantidade",
+            "columnName": "quantidade",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "practicedUnitPrice",
+            "columnName": "preco_unitario_praticado",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subtotal",
+            "columnName": "subtotal",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_item_orcamento"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_itens_orcamento_id_orcamento",
+            "unique": false,
+            "columnNames": [
+              "id_orcamento"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_itens_orcamento_id_orcamento` ON `${TABLE_NAME}` (`id_orcamento`)"
+          },
+          {
+            "name": "index_itens_orcamento_id_servico_produto",
+            "unique": false,
+            "columnNames": [
+              "id_servico_produto"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_itens_orcamento_id_servico_produto` ON `${TABLE_NAME}` (`id_servico_produto`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "orcamentos",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_orcamento"
+            ],
+            "referencedColumns": [
+              "id_orcamento"
+            ]
+          },
+          {
+            "table": "servicos_produtos",
+            "onDelete": "RESTRICT",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_servico_produto"
+            ],
+            "referencedColumns": [
+              "id_servico_produto"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "historico_sistema",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_historico` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `data_hora` INTEGER NOT NULL, `usuario` TEXT, `modulo` TEXT NOT NULL, `acao` TEXT NOT NULL, `id_registro_afetado` INTEGER, `tabela_afetada` TEXT, `detalhes` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_historico",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "data_hora",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuario",
+            "columnName": "usuario",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "modulo",
+            "columnName": "modulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acao",
+            "columnName": "acao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "affectedRecordId",
+            "columnName": "id_registro_afetado",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "affectedTable",
+            "columnName": "tabela_afetada",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "detalhes",
+            "columnName": "detalhes",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_historico"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_historico_sistema_modulo",
+            "unique": false,
+            "columnNames": [
+              "modulo"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_historico_sistema_modulo` ON `${TABLE_NAME}` (`modulo`)"
+          },
+          {
+            "name": "index_historico_sistema_tabela_afetada_id_registro_afetado",
+            "unique": false,
+            "columnNames": [
+              "tabela_afetada",
+              "id_registro_afetado"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_historico_sistema_tabela_afetada_id_registro_afetado` ON `${TABLE_NAME}` (`tabela_afetada`, `id_registro_afetado`)"
+          },
+          {
+            "name": "index_historico_sistema_data_hora",
+            "unique": false,
+            "columnNames": [
+              "data_hora"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_historico_sistema_data_hora` ON `${TABLE_NAME}` (`data_hora`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "configuracoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chave` TEXT NOT NULL, `valor` TEXT NOT NULL, `data_atualizacao` INTEGER NOT NULL, PRIMARY KEY(`chave`))",
+        "fields": [
+          {
+            "fieldPath": "chave",
+            "columnName": "chave",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "valor",
+            "columnName": "valor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "chave"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "fotos_os",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_foto_os` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_os` INTEGER NOT NULL, `nome_arquivo` TEXT NOT NULL, `caminho_relativo` TEXT NOT NULL, `mime_type` TEXT NOT NULL, `data_criacao` INTEGER NOT NULL, FOREIGN KEY(`id_os`) REFERENCES `ordens_servico`(`id_os`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_foto_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOrderId",
+            "columnName": "id_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileName",
+            "columnName": "nome_arquivo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "caminho_relativo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mimeType",
+            "columnName": "mime_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_foto_os"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_fotos_os_id_os",
+            "unique": false,
+            "columnNames": [
+              "id_os"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_fotos_os_id_os` ON `${TABLE_NAME}` (`id_os`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ordens_servico",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_os"
+            ],
+            "referencedColumns": [
+              "id_os"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "assinaturas_os",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_assinatura_os` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_os` INTEGER NOT NULL, `nome_arquivo` TEXT NOT NULL, `caminho_relativo` TEXT NOT NULL, `nome_assinante` TEXT NOT NULL, `data_criacao` INTEGER NOT NULL, FOREIGN KEY(`id_os`) REFERENCES `ordens_servico`(`id_os`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_assinatura_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOrderId",
+            "columnName": "id_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileName",
+            "columnName": "nome_arquivo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relativePath",
+            "columnName": "caminho_relativo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "signerName",
+            "columnName": "nome_assinante",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_assinatura_os"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_assinaturas_os_id_os",
+            "unique": true,
+            "columnNames": [
+              "id_os"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_assinaturas_os_id_os` ON `${TABLE_NAME}` (`id_os`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ordens_servico",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_os"
+            ],
+            "referencedColumns": [
+              "id_os"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "checklist_os",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_checklist_os` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_os` INTEGER NOT NULL, `descricao` TEXT NOT NULL, `concluido` INTEGER NOT NULL, `data_criacao` INTEGER NOT NULL, `data_atualizacao` INTEGER NOT NULL, FOREIGN KEY(`id_os`) REFERENCES `ordens_servico`(`id_os`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_checklist_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOrderId",
+            "columnName": "id_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concluido",
+            "columnName": "concluido",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_checklist_os"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_checklist_os_id_os",
+            "unique": false,
+            "columnNames": [
+              "id_os"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_checklist_os_id_os` ON `${TABLE_NAME}` (`id_os`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ordens_servico",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_os"
+            ],
+            "referencedColumns": [
+              "id_os"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "garantias_os",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id_garantia_os` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `id_os` INTEGER NOT NULL, `prazo_dias` INTEGER NOT NULL, `termos` TEXT NOT NULL, `data_criacao` INTEGER NOT NULL, `data_atualizacao` INTEGER NOT NULL, FOREIGN KEY(`id_os`) REFERENCES `ordens_servico`(`id_os`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id_garantia_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workOrderId",
+            "columnName": "id_os",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "warrantyDays",
+            "columnName": "prazo_dias",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "termos",
+            "columnName": "termos",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "data_criacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "data_atualizacao",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id_garantia_os"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_garantias_os_id_os",
+            "unique": true,
+            "columnNames": [
+              "id_os"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_garantias_os_id_os` ON `${TABLE_NAME}` (`id_os`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ordens_servico",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "id_os"
+            ],
+            "referencedColumns": [
+              "id_os"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '924d84d40eb47c8b7ebca75d98d161d9')"
+    ]
+  }
+}

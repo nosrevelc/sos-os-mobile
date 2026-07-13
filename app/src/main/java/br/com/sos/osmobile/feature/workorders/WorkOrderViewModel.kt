@@ -12,6 +12,7 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
@@ -45,6 +46,7 @@ import br.com.sos.osmobile.data.repository.WorkOrderChecklistRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
+import br.com.sos.osmobile.data.repository.WorkOrderWarrantyRepository
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalPrintStyle
 import br.com.sos.osmobile.data.print.ThermalTextBlock
@@ -91,6 +93,7 @@ data class WorkOrderUiState(
     val photosEnabled: Boolean = false,
     val signatureEnabled: Boolean = false,
     val checklistEnabled: Boolean = false,
+    val warrantyEnabled: Boolean = false,
     val printBluetoothAddress: String = "",
     val printWorkOrderAuto: Boolean = false,
     val printWorkOrderCopies: Int = 0,
@@ -108,6 +111,7 @@ class WorkOrderViewModel(
     private val photoRepository: WorkOrderPhotoRepository,
     private val signatureRepository: WorkOrderSignatureRepository,
     private val checklistRepository: WorkOrderChecklistRepository,
+    private val warrantyRepository: WorkOrderWarrantyRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
@@ -135,6 +139,7 @@ class WorkOrderViewModel(
             photosEnabled = values["modulo_fotos"]?.toBooleanStrictOrNull() ?: false,
             signatureEnabled = values["modulo_assinatura"]?.toBooleanStrictOrNull() ?: false,
             checklistEnabled = values["modulo_checklist"]?.toBooleanStrictOrNull() ?: false,
+            warrantyEnabled = values["modulo_garantia"]?.toBooleanStrictOrNull() ?: false,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY]?.toBooleanStrictOrNull() ?: false,
             printWorkOrderCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -174,6 +179,9 @@ class WorkOrderViewModel(
         private set
 
     var checklist by mutableStateOf<List<WorkOrderChecklistItemEntity>>(emptyList())
+        private set
+
+    var warranty by mutableStateOf<WorkOrderWarrantyEntity?>(null)
         private set
 
     fun selectCustomer(id: Long) {
@@ -319,6 +327,7 @@ class WorkOrderViewModel(
             loadPhotos(workOrderId)
             loadSignature(workOrderId)
             loadChecklist(workOrderId)
+            loadWarranty(workOrderId)
         }
     }
 
@@ -390,6 +399,8 @@ class WorkOrderViewModel(
                 headerTemplate = settings.printWorkOrderHeader,
                 footerTemplate = settings.printWorkOrderFooter,
                 companyName = settings.companyName,
+                warrantyDays = warranty?.warrantyDays,
+                warrantyTerms = warranty?.termos,
             ) ?: ThermalPrintContent(body = "Garantia nao encontrada.")
             documentText = content.asText()
             onLoaded(content)
@@ -505,6 +516,27 @@ class WorkOrderViewModel(
         }
     }
 
+    fun saveWarranty(days: String, terms: String) {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de criar garantia.")
+            return
+        }
+        viewModelScope.launch {
+            warrantyRepository.save(workOrderId, days.toIntOrNull() ?: 0, terms)
+            loadWarranty(workOrderId)
+            formState = formState.copy(message = "Garantia salva.")
+        }
+    }
+
+    fun deleteWarranty() {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            warrantyRepository.delete(workOrderId)
+            loadWarranty(workOrderId)
+            formState = formState.copy(message = "Garantia removida.")
+        }
+    }
+
     private suspend fun loadHistory(workOrderId: Long) {
         val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
         historyText = if (logs.isEmpty()) {
@@ -526,6 +558,10 @@ class WorkOrderViewModel(
         checklist = checklistRepository.listByWorkOrder(workOrderId)
     }
 
+    private suspend fun loadWarranty(workOrderId: Long) {
+        warranty = warrantyRepository.findByWorkOrder(workOrderId)
+    }
+
     companion object {
         private fun statusFromLabel(label: String): WorkOrderStatus =
             WorkOrderStatus.entries.firstOrNull { it.label == label } ?: WorkOrderStatus.Open
@@ -539,6 +575,7 @@ class WorkOrderViewModel(
             photoRepository: WorkOrderPhotoRepository,
             signatureRepository: WorkOrderSignatureRepository,
             checklistRepository: WorkOrderChecklistRepository,
+            warrantyRepository: WorkOrderWarrantyRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -552,6 +589,7 @@ class WorkOrderViewModel(
                         photoRepository = photoRepository,
                         signatureRepository = signatureRepository,
                         checklistRepository = checklistRepository,
+                        warrantyRepository = warrantyRepository,
                     ) as T
                 }
             }

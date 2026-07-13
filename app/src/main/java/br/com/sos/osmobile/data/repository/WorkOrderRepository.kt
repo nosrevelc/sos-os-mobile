@@ -262,6 +262,8 @@ class WorkOrderRepository(
         headerTemplate: String,
         footerTemplate: String,
         companyName: String,
+        warrantyDays: Int?,
+        warrantyTerms: String?,
     ): ThermalPrintContent? {
         val workOrder = workOrderDao.findById(id) ?: return null
         val summary = workOrderDao.findSummaryById(id) ?: return null
@@ -274,11 +276,11 @@ class WorkOrderRepository(
                 appendLine("Cliente: ${summary.customerName}")
                 appendLine("Telefone: ${summary.customerPhone}")
                 appendLine("Data: ${formatDate(Clock.nowMillis())}")
+                warrantyDays?.takeIf { it > 0 }?.let {
+                    appendLine("Prazo: $it dias")
+                }
                 appendLine()
-                appendLine("Garantia vinculada aos")
-                appendLine("servicos descritos nesta OS.")
-                appendLine("Apresente este comprovante")
-                appendLine("para atendimento.")
+                appendLine(warrantyTerms?.takeIf { it.isNotBlank() } ?: "Garantia vinculada aos servicos descritos nesta OS.")
                 appendLine()
                 appendLine("Valor: ${money(workOrder.totalValue)}")
             },

@@ -110,6 +110,8 @@ fun WorkOrderScreen(
     val selectedCustomer = uiState.customers.firstOrNull { it.id == form.selectedCustomerId }
     var signatureName by remember(selectedCustomer?.nome) { mutableStateOf(selectedCustomer?.nome.orEmpty()) }
     var checklistDescription by remember { mutableStateOf("") }
+    var warrantyDays by remember { mutableStateOf("90") }
+    var warrantyTerms by remember { mutableStateOf("Garantia conforme politica da empresa. Apresente este comprovante para atendimento.") }
     val totalValue = form.items.sumOf { item -> item.subtotal }
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     val currentMessage = selectedCustomer?.let {
@@ -129,6 +131,12 @@ fun WorkOrderScreen(
 
     LaunchedEffect(initialEditId) {
         initialEditId?.let { viewModel.editWorkOrder(it) }
+    }
+    LaunchedEffect(viewModel.warranty) {
+        viewModel.warranty?.let {
+            warrantyDays = it.warrantyDays.toString()
+            warrantyTerms = it.termos
+        }
     }
 
     fun printThermalContent(content: ThermalPrintContent) {
@@ -444,6 +452,38 @@ fun WorkOrderScreen(
                                 Text("Remover")
                             }
                         }
+                    }
+                }
+            }
+            if (uiState.warrantyEnabled && form.editingId != null) {
+                Text("Garantia", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(
+                    value = warrantyDays,
+                    onValueChange = { warrantyDays = it.filter(Char::isDigit).take(4) },
+                    label = { Text("Prazo em dias") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = warrantyTerms,
+                    onValueChange = { warrantyTerms = it },
+                    label = { Text("Termos da garantia") },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { viewModel.saveWarranty(warrantyDays, warrantyTerms) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Salvar garantia")
+                    }
+                    OutlinedButton(
+                        onClick = viewModel::deleteWarranty,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Remover")
                     }
                 }
             }
