@@ -112,6 +112,9 @@ fun WorkOrderScreen(
     var checklistDescription by remember { mutableStateOf("") }
     var warrantyDays by remember { mutableStateOf("90") }
     var warrantyTerms by remember { mutableStateOf("Garantia conforme politica da empresa. Apresente este comprovante para atendimento.") }
+    var paymentValue by remember { mutableStateOf("") }
+    var paymentMethod by remember { mutableStateOf("PIX") }
+    var paymentNote by remember { mutableStateOf("") }
     val totalValue = form.items.sumOf { item -> item.subtotal }
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     val currentMessage = selectedCustomer?.let {
@@ -484,6 +487,68 @@ fun WorkOrderScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         Text("Remover")
+                    }
+                }
+            }
+            if (uiState.financeEnabled && form.editingId != null) {
+                Text("Financeiro", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                val paidTotal = viewModel.payments.sumOf { it.valor }
+                val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
+                Text(
+                    "Total: ${formatCurrency(totalValue)} | Pago: ${formatCurrency(paidTotal)} | Saldo: ${formatCurrency(balance)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = paymentValue,
+                        onValueChange = { paymentValue = InputMasks.currency(it) },
+                        label = { Text("Valor pago") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
+                        value = paymentMethod,
+                        onValueChange = { paymentMethod = it },
+                        label = { Text("Forma") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                OutlinedTextField(
+                    value = paymentNote,
+                    onValueChange = { paymentNote = it },
+                    label = { Text("Observacao do pagamento") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = {
+                        viewModel.addPayment(paymentValue, paymentMethod, paymentNote)
+                        paymentValue = ""
+                        paymentNote = ""
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Registrar pagamento")
+                }
+                viewModel.payments.forEach { payment ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("${formatCurrency(payment.valor)} - ${payment.forma}", fontWeight = FontWeight.SemiBold)
+                            Text(formatDate(payment.paidAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            payment.observacao?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                        TextButton(onClick = { viewModel.deletePayment(payment.id) }) {
+                            Text("Remover")
+                        }
                     }
                 }
             }

@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderPaymentEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
@@ -43,6 +44,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_OPEN_KEY
 import br.com.sos.osmobile.data.repository.WorkOrderItemInput
 import br.com.sos.osmobile.data.repository.WorkOrderChecklistRepository
+import br.com.sos.osmobile.data.repository.WorkOrderPaymentRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
@@ -94,6 +96,7 @@ data class WorkOrderUiState(
     val signatureEnabled: Boolean = false,
     val checklistEnabled: Boolean = false,
     val warrantyEnabled: Boolean = false,
+    val financeEnabled: Boolean = false,
     val printBluetoothAddress: String = "",
     val printWorkOrderAuto: Boolean = false,
     val printWorkOrderCopies: Int = 0,
@@ -112,6 +115,7 @@ class WorkOrderViewModel(
     private val signatureRepository: WorkOrderSignatureRepository,
     private val checklistRepository: WorkOrderChecklistRepository,
     private val warrantyRepository: WorkOrderWarrantyRepository,
+    private val paymentRepository: WorkOrderPaymentRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
@@ -140,6 +144,7 @@ class WorkOrderViewModel(
             signatureEnabled = values["modulo_assinatura"]?.toBooleanStrictOrNull() ?: false,
             checklistEnabled = values["modulo_checklist"]?.toBooleanStrictOrNull() ?: false,
             warrantyEnabled = values["modulo_garantia"]?.toBooleanStrictOrNull() ?: false,
+            financeEnabled = values["modulo_financeiro"]?.toBooleanStrictOrNull() ?: false,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY]?.toBooleanStrictOrNull() ?: false,
             printWorkOrderCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -182,6 +187,9 @@ class WorkOrderViewModel(
         private set
 
     var warranty by mutableStateOf<WorkOrderWarrantyEntity?>(null)
+        private set
+
+    var payments by mutableStateOf<List<WorkOrderPaymentEntity>>(emptyList())
         private set
 
     fun selectCustomer(id: Long) {
@@ -328,6 +336,7 @@ class WorkOrderViewModel(
             loadSignature(workOrderId)
             loadChecklist(workOrderId)
             loadWarranty(workOrderId)
+            loadPayments(workOrderId)
         }
     }
 
@@ -537,6 +546,31 @@ class WorkOrderViewModel(
         }
     }
 
+    fun addPayment(value: String, method: String, note: String) {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de registrar pagamento.")
+            return
+        }
+        val parsedValue = WorkOrderFormValidator.parseDecimal(value)
+        if (parsedValue == null || parsedValue <= 0.0) {
+            formState = formState.copy(message = "Informe um valor de pagamento valido.")
+            return
+        }
+        viewModelScope.launch {
+            paymentRepository.addPayment(workOrderId, parsedValue, method, note)
+            loadPayments(workOrderId)
+            formState = formState.copy(message = "Pagamento registrado.")
+        }
+    }
+
+    fun deletePayment(paymentId: Long) {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            paymentRepository.deletePayment(paymentId)
+            loadPayments(workOrderId)
+        }
+    }
+
     private suspend fun loadHistory(workOrderId: Long) {
         val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
         historyText = if (logs.isEmpty()) {
@@ -562,6 +596,10 @@ class WorkOrderViewModel(
         warranty = warrantyRepository.findByWorkOrder(workOrderId)
     }
 
+    private suspend fun loadPayments(workOrderId: Long) {
+        payments = paymentRepository.listByWorkOrder(workOrderId)
+    }
+
     companion object {
         private fun statusFromLabel(label: String): WorkOrderStatus =
             WorkOrderStatus.entries.firstOrNull { it.label == label } ?: WorkOrderStatus.Open
@@ -576,6 +614,7 @@ class WorkOrderViewModel(
             signatureRepository: WorkOrderSignatureRepository,
             checklistRepository: WorkOrderChecklistRepository,
             warrantyRepository: WorkOrderWarrantyRepository,
+            paymentRepository: WorkOrderPaymentRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -590,6 +629,7 @@ class WorkOrderViewModel(
                         signatureRepository = signatureRepository,
                         checklistRepository = checklistRepository,
                         warrantyRepository = warrantyRepository,
+                        paymentRepository = paymentRepository,
                     ) as T
                 }
             }

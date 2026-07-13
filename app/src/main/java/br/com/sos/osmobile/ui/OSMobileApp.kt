@@ -225,6 +225,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             signatureRepository = appContainer.workOrderSignatureRepository,
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
+                            paymentRepository = appContainer.workOrderPaymentRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel)
@@ -241,6 +242,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             signatureRepository = appContainer.workOrderSignatureRepository,
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
+                            paymentRepository = appContainer.workOrderPaymentRepository,
                         ),
                     )
                     WorkOrderListScreen(
@@ -260,6 +262,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             signatureRepository = appContainer.workOrderSignatureRepository,
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
+                            paymentRepository = appContainer.workOrderPaymentRepository,
                         ),
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
@@ -277,6 +280,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             signatureRepository = appContainer.workOrderSignatureRepository,
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
+                            paymentRepository = appContainer.workOrderPaymentRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel, initialEditId = id)

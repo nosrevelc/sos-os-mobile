@@ -14,6 +14,7 @@ import br.com.sos.osmobile.data.repository.QuoteRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
 import br.com.sos.osmobile.data.repository.WorkOrderChecklistRepository
+import br.com.sos.osmobile.data.repository.WorkOrderPaymentRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
@@ -96,12 +97,31 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration5To6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS pagamentos_os (
+                    id_pagamento_os INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    id_os INTEGER NOT NULL,
+                    valor REAL NOT NULL,
+                    forma TEXT NOT NULL,
+                    observacao TEXT,
+                    data_pagamento INTEGER NOT NULL,
+                    FOREIGN KEY(id_os) REFERENCES ordens_servico(id_os) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_pagamentos_os_id_os ON pagamentos_os(id_os)")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
         "os_mobile.db",
     )
-        .addMigrations(migration1To2, migration2To3, migration3To4, migration4To5)
+        .addMigrations(migration1To2, migration2To3, migration3To4, migration4To5, migration5To6)
         .build()
 
     val auditRepository = AuditRepository(database.auditLogDao())
@@ -128,6 +148,10 @@ class AppContainer(context: Context) {
     )
     val workOrderWarrantyRepository = WorkOrderWarrantyRepository(
         database.workOrderWarrantyDao(),
+        auditRepository,
+    )
+    val workOrderPaymentRepository = WorkOrderPaymentRepository(
+        database.workOrderPaymentDao(),
         auditRepository,
     )
     val backupRepository = BackupRepository(database)
