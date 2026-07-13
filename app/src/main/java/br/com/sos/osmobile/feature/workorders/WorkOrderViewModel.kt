@@ -1,6 +1,7 @@
 package br.com.sos.osmobile.feature.workorders
 
 import android.net.Uri
+import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
@@ -40,6 +42,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE
 import br.com.sos.osmobile.data.repository.WorkOrderItemInput
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
+import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalPrintStyle
 import br.com.sos.osmobile.data.print.ThermalTextBlock
@@ -84,6 +87,7 @@ data class WorkOrderUiState(
     val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
     val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
     val photosEnabled: Boolean = false,
+    val signatureEnabled: Boolean = false,
     val printBluetoothAddress: String = "",
     val printWorkOrderAuto: Boolean = false,
     val printWorkOrderCopies: Int = 0,
@@ -99,6 +103,7 @@ class WorkOrderViewModel(
     private val serviceProductRepository: ServiceProductRepository,
     private val settingsRepository: SettingsRepository,
     private val photoRepository: WorkOrderPhotoRepository,
+    private val signatureRepository: WorkOrderSignatureRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
@@ -124,6 +129,7 @@ class WorkOrderViewModel(
             reviewRequestTemplate = values[TEMPLATE_REVIEW_REQUEST_KEY] ?: MessageTemplateRenderer.reviewRequestTemplate,
             pickupReminderTemplate = values[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
             photosEnabled = values["modulo_fotos"]?.toBooleanStrictOrNull() ?: false,
+            signatureEnabled = values["modulo_assinatura"]?.toBooleanStrictOrNull() ?: false,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY]?.toBooleanStrictOrNull() ?: false,
             printWorkOrderCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -157,6 +163,9 @@ class WorkOrderViewModel(
         private set
 
     var photos by mutableStateOf<List<WorkOrderPhotoEntity>>(emptyList())
+        private set
+
+    var signature by mutableStateOf<WorkOrderSignatureEntity?>(null)
         private set
 
     fun selectCustomer(id: Long) {
@@ -300,6 +309,7 @@ class WorkOrderViewModel(
             )
             loadHistory(workOrderId)
             loadPhotos(workOrderId)
+            loadSignature(workOrderId)
         }
     }
 
@@ -431,6 +441,29 @@ class WorkOrderViewModel(
 
     fun photoUri(photo: WorkOrderPhotoEntity): Uri = photoRepository.uriFor(photo)
 
+    fun saveSignature(signerName: String, bitmap: Bitmap) {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de assinar.")
+            return
+        }
+        viewModelScope.launch {
+            signatureRepository.saveSignature(workOrderId, signerName, bitmap)
+            loadSignature(workOrderId)
+            formState = formState.copy(message = "Assinatura salva.")
+        }
+    }
+
+    fun deleteSignature() {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            signatureRepository.deleteSignature(workOrderId)
+            loadSignature(workOrderId)
+            formState = formState.copy(message = "Assinatura removida.")
+        }
+    }
+
+    fun signatureUri(signature: WorkOrderSignatureEntity): Uri = signatureRepository.uriFor(signature)
+
     private suspend fun loadHistory(workOrderId: Long) {
         val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
         historyText = if (logs.isEmpty()) {
@@ -444,6 +477,10 @@ class WorkOrderViewModel(
         photos = photoRepository.listByWorkOrder(workOrderId)
     }
 
+    private suspend fun loadSignature(workOrderId: Long) {
+        signature = signatureRepository.findByWorkOrder(workOrderId)
+    }
+
     companion object {
         private fun statusFromLabel(label: String): WorkOrderStatus =
             WorkOrderStatus.entries.firstOrNull { it.label == label } ?: WorkOrderStatus.Open
@@ -455,6 +492,7 @@ class WorkOrderViewModel(
             serviceProductRepository: ServiceProductRepository,
             settingsRepository: SettingsRepository,
             photoRepository: WorkOrderPhotoRepository,
+            signatureRepository: WorkOrderSignatureRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -466,6 +504,7 @@ class WorkOrderViewModel(
                         serviceProductRepository = serviceProductRepository,
                         settingsRepository = settingsRepository,
                         photoRepository = photoRepository,
+                        signatureRepository = signatureRepository,
                     ) as T
                 }
             }

@@ -2,8 +2,14 @@ package br.com.sos.osmobile.feature.workorders
 
 import android.Manifest
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas as AndroidCanvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,8 +19,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -32,17 +40,25 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.text.KeyboardOptions
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
@@ -91,6 +107,7 @@ fun WorkOrderScreen(
     var pendingPrintWorkOrderId by remember { mutableStateOf<Long?>(null) }
     var thermalPrintMessage by remember { mutableStateOf<String?>(null) }
     val selectedCustomer = uiState.customers.firstOrNull { it.id == form.selectedCustomerId }
+    var signatureName by remember(selectedCustomer?.nome) { mutableStateOf(selectedCustomer?.nome.orEmpty()) }
     val totalValue = form.items.sumOf { item -> item.subtotal }
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     val currentMessage = selectedCustomer?.let {
@@ -355,6 +372,38 @@ fun WorkOrderScreen(
                         }
                     }
                 }
+            }
+            if (uiState.signatureEnabled && form.editingId != null) {
+                Text("Assinatura", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                viewModel.signature?.let { signature ->
+                    Text("Assinado por: ${signature.signerName}", style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW)
+                                            .setDataAndType(viewModel.signatureUri(signature), "image/png")
+                                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                                    )
+                                }.onFailure {
+                                    thermalPrintMessage = "Nao foi possivel abrir a assinatura."
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Abrir assinatura")
+                        }
+                        OutlinedButton(onClick = viewModel::deleteSignature, modifier = Modifier.weight(1f)) {
+                            Text("Remover")
+                        }
+                    }
+                }
+                SignatureCapture(
+                    signerName = signatureName,
+                    onSignerNameChanged = { signatureName = it },
+                    onSave = { name, bitmap -> viewModel.saveSignature(name, bitmap) },
+                )
             }
             viewModel.messageText?.let {
                 Text(
@@ -1002,6 +1051,97 @@ private fun formatCurrency(value: Double): String =
 
 private fun formatDate(timestamp: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))
+
+@Composable
+private fun SignatureCapture(
+    signerName: String,
+    onSignerNameChanged: (String) -> Unit,
+    onSave: (String, Bitmap) -> Unit,
+) {
+    val strokes = remember { mutableStateListOf<List<Offset>>() }
+    var currentStroke by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    var padSize by remember { mutableStateOf(IntSize.Zero) }
+
+    OutlinedTextField(
+        value = signerName,
+        onValueChange = onSignerNameChanged,
+        label = { Text("Nome do assinante") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .background(Color.White)
+            .onSizeChanged { padSize = it }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { currentStroke = listOf(it) },
+                    onDrag = { change, _ -> currentStroke = currentStroke + change.position },
+                    onDragEnd = {
+                        if (currentStroke.size > 1) strokes += currentStroke
+                        currentStroke = emptyList()
+                    },
+                    onDragCancel = { currentStroke = emptyList() },
+                )
+            },
+    ) {
+        (strokes + listOf(currentStroke)).forEach { stroke ->
+            stroke.zipWithNext().forEach { (start, end) ->
+                drawLine(
+                    color = Color.Black,
+                    start = start,
+                    end = end,
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round,
+                )
+            }
+        }
+        drawRect(color = Color.LightGray, style = Stroke(width = 1f))
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = {
+                strokes.clear()
+                currentStroke = emptyList()
+            },
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Limpar")
+        }
+        Button(
+            onClick = {
+                val allStrokes = strokes.toList() + listOf(currentStroke).filter { it.size > 1 }
+                if (padSize.width > 0 && padSize.height > 0 && allStrokes.isNotEmpty()) {
+                    onSave(signerName, createSignatureBitmap(allStrokes, padSize.width, padSize.height))
+                }
+            },
+            modifier = Modifier.weight(1f),
+            enabled = strokes.isNotEmpty() || currentStroke.isNotEmpty(),
+        ) {
+            Text("Salvar assinatura")
+        }
+    }
+}
+
+private fun createSignatureBitmap(strokes: List<List<Offset>>, width: Int, height: Int): Bitmap {
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = AndroidCanvas(bitmap)
+    canvas.drawColor(AndroidColor.WHITE)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.BLACK
+        strokeWidth = 4f
+        strokeCap = Paint.Cap.ROUND
+        style = Paint.Style.STROKE
+    }
+    strokes.forEach { stroke ->
+        stroke.zipWithNext().forEach { (start, end) ->
+            canvas.drawLine(start.x, start.y, end.x, end.y, paint)
+        }
+    }
+    return bitmap
+}
 
 private data class ClientMessage(
     val phone: String,

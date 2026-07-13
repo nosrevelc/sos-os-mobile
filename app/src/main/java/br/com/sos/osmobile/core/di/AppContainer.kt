@@ -15,6 +15,7 @@ import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
+import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
 
 class AppContainer(context: Context) {
     private val migration1To2 = object : Migration(1, 2) {
@@ -36,12 +37,31 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration2To3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS assinaturas_os (
+                    id_assinatura_os INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    id_os INTEGER NOT NULL,
+                    nome_arquivo TEXT NOT NULL,
+                    caminho_relativo TEXT NOT NULL,
+                    nome_assinante TEXT NOT NULL,
+                    data_criacao INTEGER NOT NULL,
+                    FOREIGN KEY(id_os) REFERENCES ordens_servico(id_os) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_assinaturas_os_id_os ON assinaturas_os(id_os)")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
         "os_mobile.db",
     )
-        .addMigrations(migration1To2)
+        .addMigrations(migration1To2, migration2To3)
         .build()
 
     val auditRepository = AuditRepository(database.auditLogDao())
@@ -55,6 +75,11 @@ class AppContainer(context: Context) {
     val workOrderPhotoRepository = WorkOrderPhotoRepository(
         context.applicationContext,
         database.workOrderPhotoDao(),
+        auditRepository,
+    )
+    val workOrderSignatureRepository = WorkOrderSignatureRepository(
+        context.applicationContext,
+        database.workOrderSignatureDao(),
         auditRepository,
     )
     val backupRepository = BackupRepository(database)
