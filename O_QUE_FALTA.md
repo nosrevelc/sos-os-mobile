@@ -195,10 +195,35 @@ Segundo os documentos de escopo, ficam para fases futuras:
 - Sincronizacao em nuvem avancada.
 - Multiplos usuarios e permissoes.
 - Modulo financeiro completo.
+- Modulo de estoque completo:
+  - cadastro de produtos/insumos;
+  - entrada, saida e ajuste de estoque;
+  - baixa por OS/venda;
+  - saldo atual, estoque minimo e historico de movimentacoes.
+- Modulo fiscal / nota eletronica:
+  - status fiscal na OS/venda;
+  - configuracao fiscal da empresa;
+  - ambiente de homologacao/producao;
+  - integracao via API fiscal externa;
+  - armazenamento de chave, protocolo, XML/PDF/DANFE e rejeicoes.
 - Relatorios gerenciais avancados.
 - Notificacoes e lembretes.
 - Integracao com pagamentos.
 - Campos e layouts personalizados avancados.
+
+## Diretriz para NF-e
+
+Nao integrar direto com SEFAZ no primeiro ciclo. A recomendacao e usar uma API fiscal especializada, como Focus NFe, TecnoSpeed, eNotas, PlugNotas ou Nuvem Fiscal.
+
+O app deve preparar os dados comerciais e fiscais, mas a transmissao da nota deve passar por um provedor fiscal. Isso reduz risco, manutencao e complexidade legal.
+
+Ordem recomendada:
+
+1. Concluir estoque local.
+2. Criar venda/OS com status fiscal.
+3. Criar configuracoes fiscais da empresa.
+4. Integrar primeiro em homologacao via API fiscal.
+5. Liberar producao somente depois de testes reais.
 
 ## Sobre CSS / Template Visual
 

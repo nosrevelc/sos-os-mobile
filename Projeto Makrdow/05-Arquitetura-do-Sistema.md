@@ -62,6 +62,38 @@ graph TD
 
 Se a sincronização estivesse ativa, o Repositório também poderia verificar a Fonte de Dados Remota e atualizar o banco de dados local, notificando o ViewModel sobre as mudanças.
 
-## 6. Considerações Finais
+## 6. Arquitetura Prevista para Estoque e Fiscal
+
+Para evoluir o OS Mobile para um ERP comercial com estoque e emissão de nota eletrônica, a arquitetura recomendada é manter o aplicativo como fonte operacional do negócio e usar uma API fiscal externa para comunicação com os órgãos fiscais.
+
+Fluxo recomendado:
+
+```mermaid
+graph TD
+    A[OS Mobile / ERP] --> B[Clientes]
+    A --> C[Estoque]
+    A --> D[Financeiro]
+    A --> E[Vendas e OS]
+    A --> F[Modulo Fiscal]
+    F --> G[API Fiscal Externa]
+    G --> H[SEFAZ / Prefeitura]
+```
+
+Diretriz técnica:
+
+*   O estoque deve ser local/offline-first, usando Room/SQLite como fonte oficial.
+*   A emissão fiscal não deve ser integrada diretamente com a SEFAZ no primeiro ciclo.
+*   O módulo fiscal deve usar API especializada, como Focus NFe, TecnoSpeed, eNotas, PlugNotas, Nuvem Fiscal ou equivalente.
+*   O sistema deve possuir ambiente de homologação e produção.
+*   O aplicativo deve salvar o status fiscal, chave de acesso, protocolo, XML/PDF/DANFE e mensagens de rejeição retornadas pela API.
+*   A comunicação fiscal exige internet; por isso, a OS/venda deve poder ficar pendente de emissão quando offline.
+
+Motivo da decisão:
+
+*   Reduz esforço de desenvolvimento e manutenção.
+*   Evita implementar regras fiscais específicas de cada estado diretamente no app Android.
+*   Facilita lidar com certificado digital, contingência, rejeições, cancelamento, inutilização e mudanças legais.
+
+## 7. Considerações Finais
 
 Esta arquitetura fornece uma base sólida para o desenvolvimento do OS Mobile, garantindo que os princípios fundamentais do projeto sejam atendidos. As próximas etapas incluirão o detalhamento do modelo de banco de dados e a especificação de cada módulo. Qualquer alteração ou adição a esta arquitetura deverá seguir o processo de gestão de mudanças do projeto.
