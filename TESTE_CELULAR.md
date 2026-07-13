@@ -1,5 +1,7 @@
 # Teste rapido no celular
 
+Atualizado em: 13/07/2026
+
 APK:
 
 ```text
@@ -30,6 +32,17 @@ Fluxo minimo:
 20. Criar/editar OS e orcamento e confirmar se a mensagem usa o template alterado.
 21. Ir em `Clientes`, tocar em `Agenda` e permitir acesso aos contatos.
 22. Abrir o app Contatos do Android e confirmar se o cliente foi criado.
+23. Em `Configuracoes`, ativar `Fotos`, `Assinatura`, `Checklist`, `Garantia` e `Financeiro`.
+24. Abrir uma OS salva e adicionar uma foto.
+25. Abrir a foto adicionada e depois remover a foto.
+26. Desenhar uma assinatura, salvar, abrir e remover.
+27. Adicionar itens no checklist, marcar/desmarcar e remover.
+28. Salvar uma garantia com prazo e termos.
+29. Imprimir OS, etiqueta, recibo e garantia se a impressora Bluetooth estiver configurada e vias > 0.
+30. Abrir um orcamento salvo e testar `Imprimir orcamento` se a impressora Bluetooth estiver configurada e vias > 0.
+31. Registrar pagamento em Financeiro, confirmar total pago/saldo e remover pagamento.
+32. Gerar backup completo e confirmar que fotos/assinaturas entram no JSON.
+33. Restaurar backup completo e conferir dados, fotos, assinatura, checklist, garantia e pagamentos.
 
 Pontos a observar:
 
@@ -47,3 +60,8 @@ Pontos a observar:
 - Se o botao `Agenda` cria ou atualiza o contato corretamente.
 - Se ao cadastrar cliente novo o app pergunta se deseja adicionar na agenda.
 - Se contato ja existente gera aviso e nao duplica.
+- Se os modulos ativados aparecem na tela de OS.
+- Se fotos e assinaturas continuam abrindo apos fechar e abrir o app.
+- Se o backup restaurado recupera arquivos de fotos e assinaturas.
+- Se as impressoes Bluetooth saem direto na impressora selecionada, sem tela de PDF.
+- Se o financeiro calcula pago e saldo corretamente.
