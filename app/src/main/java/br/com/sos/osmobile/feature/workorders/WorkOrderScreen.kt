@@ -342,7 +342,7 @@ fun WorkOrderScreen(
             thermalPrintMessage?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
-            if (uiState.photosEnabled && form.editingId != null) {
+            if (form.editingId != null) {
                 Text("Fotos da OS", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },
