@@ -8,7 +8,12 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,12 +71,15 @@ fun MessageActionButtons(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Button(onClick = { openWhatsApp(context, phone, text) }) {
+            Icon(Icons.Filled.Message, contentDescription = null)
             Text("WhatsApp")
         }
         OutlinedButton(onClick = { openSms(context, phone, text) }) {
+            Icon(Icons.Filled.Sms, contentDescription = null)
             Text("SMS")
         }
         OutlinedButton(onClick = { openEmail(context, email, subject, text) }) {
+            Icon(Icons.Filled.Email, contentDescription = null)
             Text("Email")
         }
     }

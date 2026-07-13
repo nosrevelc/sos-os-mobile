@@ -16,13 +16,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +44,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -51,6 +65,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -322,6 +337,7 @@ fun WorkOrderScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(Icons.Filled.Print, contentDescription = null)
                     Text("Imprimir OS")
                 }
                 OutlinedButton(
@@ -330,6 +346,7 @@ fun WorkOrderScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(Icons.Filled.Print, contentDescription = null)
                     Text("Imprimir etiqueta OS")
                 }
                 OutlinedButton(
@@ -338,6 +355,7 @@ fun WorkOrderScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(Icons.Filled.Print, contentDescription = null)
                     Text("Imprimir recibo")
                 }
                 OutlinedButton(
@@ -346,6 +364,7 @@ fun WorkOrderScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(Icons.Filled.Print, contentDescription = null)
                     Text("Imprimir garantia")
                 }
             }
@@ -358,6 +377,7 @@ fun WorkOrderScreen(
                     onClick = { photoLauncher.launch("image/*") },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    Icon(Icons.Filled.PhotoCamera, contentDescription = null)
                     Text("Adicionar foto")
                 }
                 if (viewModel.photos.isEmpty()) {
@@ -389,6 +409,7 @@ fun WorkOrderScreen(
                                     Text("Abrir")
                                 }
                                 TextButton(onClick = { viewModel.deletePhoto(photo.id) }) {
+                                    Icon(Icons.Filled.Delete, contentDescription = null)
                                     Text("Remover")
                                 }
                             }
@@ -444,6 +465,7 @@ fun WorkOrderScreen(
                             checklistDescription = ""
                         },
                     ) {
+                        Icon(Icons.Filled.Add, contentDescription = null)
                         Text("Adicionar")
                     }
                 }
@@ -462,6 +484,7 @@ fun WorkOrderScreen(
                             )
                             Text(item.descricao, modifier = Modifier.weight(1f))
                             TextButton(onClick = { viewModel.deleteChecklistItem(item.id) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = null)
                                 Text("Remover")
                             }
                         }
@@ -490,12 +513,14 @@ fun WorkOrderScreen(
                         onClick = { viewModel.saveWarranty(warrantyDays, warrantyTerms) },
                         modifier = Modifier.weight(1f),
                     ) {
+                        Icon(Icons.Filled.Save, contentDescription = null)
                         Text("Salvar garantia")
                     }
                     OutlinedButton(
                         onClick = viewModel::deleteWarranty,
                         modifier = Modifier.weight(1f),
                     ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null)
                         Text("Remover")
                     }
                 }
@@ -544,10 +569,11 @@ fun WorkOrderScreen(
                             paymentValue = ""
                             paymentNote = ""
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Registrar pagamento")
-                    }
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.Payment, contentDescription = null)
+                    Text("Registrar pagamento")
+                }
                 }
                 viewModel.payments.forEach { payment ->
                     Row(
@@ -563,6 +589,7 @@ fun WorkOrderScreen(
                             }
                         }
                         TextButton(onClick = { viewModel.deletePayment(payment.id) }) {
+                            Icon(Icons.Filled.Delete, contentDescription = null)
                             Text("Remover")
                         }
                     }
@@ -1038,6 +1065,7 @@ private fun WorkOrderForm(
         }
 
         OutlinedButton(onClick = onAddItem, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Filled.Add, contentDescription = null)
             Text("Adicionar item")
         }
 
@@ -1078,6 +1106,7 @@ private fun WorkOrderForm(
                 }
             }
             Button(onClick = onSave) {
+                Icon(Icons.Filled.Save, contentDescription = null)
                 Text(if (form.editingId == null) "Salvar OS" else "Atualizar OS")
             }
         }
@@ -1147,6 +1176,7 @@ private fun DraftItemRow(
                 )
             }
             TextButton(onClick = { onRemoveItem(index) }) {
+                Icon(Icons.Filled.Delete, contentDescription = null)
                 Text("Remover")
             }
         }
@@ -1225,12 +1255,15 @@ private fun PaymentMethodSelector(
     var expanded by remember { mutableStateOf(false) }
     val methods = listOf("PIX", "Dinheiro", "Debito", "Credito", "Transferencia", "Outro")
     OutlinedButton(onClick = { expanded = true }, modifier = modifier.fillMaxWidth()) {
+        Icon(paymentMethodIcon(selected), contentDescription = null)
+        Spacer(Modifier.width(6.dp))
         Text("Forma: $selected")
     }
     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
         methods.forEach { method ->
             DropdownMenuItem(
-                text = { Text(if (method == selected) "$method *" else method) },
+                leadingIcon = { Icon(paymentMethodIcon(method), contentDescription = null) },
+                text = { Text(if (method == selected) "${paymentMethodLabel(method)} *" else paymentMethodLabel(method)) },
                 onClick = {
                     onSelected(method)
                     expanded = false
@@ -1239,6 +1272,18 @@ private fun PaymentMethodSelector(
         }
     }
 }
+
+private fun paymentMethodLabel(method: String): String =
+    if (method == "PIX") "PIX" else method
+
+private fun paymentMethodIcon(method: String): ImageVector =
+    when (method) {
+        "PIX" -> Icons.Filled.Payment
+        "Dinheiro" -> Icons.Filled.AttachMoney
+        "Debito", "Credito" -> Icons.Filled.CreditCard
+        "Transferencia" -> Icons.Filled.AccountBalance
+        else -> Icons.Filled.MoreHoriz
+    }
 
 @Composable
 private fun SignatureCapture(

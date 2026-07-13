@@ -1,7 +1,10 @@
 package br.com.sos.osmobile.ui.components
 
 import android.content.Intent
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +32,7 @@ fun ShareFileButton(
             context.startActivity(Intent.createChooser(intent, label))
         },
     ) {
+        Icon(Icons.Filled.InsertDriveFile, contentDescription = null)
         Text(label)
     }
 }

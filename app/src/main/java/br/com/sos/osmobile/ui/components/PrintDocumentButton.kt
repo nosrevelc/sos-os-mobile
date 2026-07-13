@@ -8,7 +8,10 @@ import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
 import android.print.PrintDocumentInfo
 import android.print.PrintManager
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +37,7 @@ fun PrintDocumentButton(
             )
         },
     ) {
+        Icon(Icons.Filled.Print, contentDescription = null)
         Text(label)
     }
 }

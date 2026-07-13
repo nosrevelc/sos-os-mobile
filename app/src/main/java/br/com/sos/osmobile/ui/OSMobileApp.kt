@@ -3,7 +3,16 @@ package br.com.sos.osmobile.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -83,6 +93,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                 visibleRoutes.forEach { route ->
                     NavigationDrawerItem(
                         label = { Text(route.label) },
+                        icon = { Icon(imageVector = routeIcon(route), contentDescription = null) },
                         selected = currentRoute == route.route,
                         onClick = {
                             scope.launch { drawerState.close() }
@@ -322,3 +333,18 @@ fun OSMobileApp(appContainer: AppContainer) {
         }
     }
 }
+
+private fun routeIcon(route: AppRoute): ImageVector =
+    when (route) {
+        AppRoute.Dashboard -> Icons.Filled.Dashboard
+        AppRoute.Customers -> Icons.Filled.Person
+        AppRoute.Services -> Icons.Filled.Build
+        AppRoute.Quotes -> Icons.Filled.Description
+        AppRoute.QuoteList -> Icons.Filled.List
+        AppRoute.WorkOrders -> Icons.Filled.Assignment
+        AppRoute.WorkOrderList -> Icons.Filled.List
+        AppRoute.WorkOrderPickup -> Icons.Filled.Assignment
+        AppRoute.Backup -> Icons.Filled.Save
+        AppRoute.Settings -> Icons.Filled.Settings
+        AppRoute.Audit -> Icons.Filled.History
+    }
