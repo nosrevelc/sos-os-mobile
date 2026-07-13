@@ -28,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -108,6 +109,7 @@ fun WorkOrderScreen(
     var thermalPrintMessage by remember { mutableStateOf<String?>(null) }
     val selectedCustomer = uiState.customers.firstOrNull { it.id == form.selectedCustomerId }
     var signatureName by remember(selectedCustomer?.nome) { mutableStateOf(selectedCustomer?.nome.orEmpty()) }
+    var checklistDescription by remember { mutableStateOf("") }
     val totalValue = form.items.sumOf { item -> item.subtotal }
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     val currentMessage = selectedCustomer?.let {
@@ -404,6 +406,46 @@ fun WorkOrderScreen(
                     onSignerNameChanged = { signatureName = it },
                     onSave = { name, bitmap -> viewModel.saveSignature(name, bitmap) },
                 )
+            }
+            if (uiState.checklistEnabled && form.editingId != null) {
+                Text("Checklist", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = checklistDescription,
+                        onValueChange = { checklistDescription = it },
+                        label = { Text("Novo item") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Button(
+                        onClick = {
+                            viewModel.addChecklistItem(checklistDescription)
+                            checklistDescription = ""
+                        },
+                    ) {
+                        Text("Adicionar")
+                    }
+                }
+                if (viewModel.checklist.isEmpty()) {
+                    Text("Nenhum item no checklist.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    viewModel.checklist.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = item.concluido,
+                                onCheckedChange = { viewModel.setChecklistChecked(item.id, it) },
+                            )
+                            Text(item.descricao, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { viewModel.deleteChecklistItem(item.id) }) {
+                                Text("Remover")
+                            }
+                        }
+                    }
+                }
             }
             viewModel.messageText?.let {
                 Text(

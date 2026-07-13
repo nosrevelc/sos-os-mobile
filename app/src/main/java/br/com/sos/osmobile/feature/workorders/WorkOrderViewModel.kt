@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
@@ -40,6 +41,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_OPEN_KEY
 import br.com.sos.osmobile.data.repository.WorkOrderItemInput
+import br.com.sos.osmobile.data.repository.WorkOrderChecklistRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
@@ -88,6 +90,7 @@ data class WorkOrderUiState(
     val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
     val photosEnabled: Boolean = false,
     val signatureEnabled: Boolean = false,
+    val checklistEnabled: Boolean = false,
     val printBluetoothAddress: String = "",
     val printWorkOrderAuto: Boolean = false,
     val printWorkOrderCopies: Int = 0,
@@ -104,6 +107,7 @@ class WorkOrderViewModel(
     private val settingsRepository: SettingsRepository,
     private val photoRepository: WorkOrderPhotoRepository,
     private val signatureRepository: WorkOrderSignatureRepository,
+    private val checklistRepository: WorkOrderChecklistRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
@@ -130,6 +134,7 @@ class WorkOrderViewModel(
             pickupReminderTemplate = values[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
             photosEnabled = values["modulo_fotos"]?.toBooleanStrictOrNull() ?: false,
             signatureEnabled = values["modulo_assinatura"]?.toBooleanStrictOrNull() ?: false,
+            checklistEnabled = values["modulo_checklist"]?.toBooleanStrictOrNull() ?: false,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY]?.toBooleanStrictOrNull() ?: false,
             printWorkOrderCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -166,6 +171,9 @@ class WorkOrderViewModel(
         private set
 
     var signature by mutableStateOf<WorkOrderSignatureEntity?>(null)
+        private set
+
+    var checklist by mutableStateOf<List<WorkOrderChecklistItemEntity>>(emptyList())
         private set
 
     fun selectCustomer(id: Long) {
@@ -310,6 +318,7 @@ class WorkOrderViewModel(
             loadHistory(workOrderId)
             loadPhotos(workOrderId)
             loadSignature(workOrderId)
+            loadChecklist(workOrderId)
         }
     }
 
@@ -464,6 +473,38 @@ class WorkOrderViewModel(
 
     fun signatureUri(signature: WorkOrderSignatureEntity): Uri = signatureRepository.uriFor(signature)
 
+    fun addChecklistItem(description: String) {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de adicionar checklist.")
+            return
+        }
+        if (description.isBlank()) {
+            formState = formState.copy(message = "Informe o item do checklist.")
+            return
+        }
+        viewModelScope.launch {
+            checklistRepository.addItem(workOrderId, description)
+            loadChecklist(workOrderId)
+            formState = formState.copy(message = "Item adicionado ao checklist.")
+        }
+    }
+
+    fun setChecklistChecked(itemId: Long, checked: Boolean) {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            checklistRepository.setChecked(itemId, checked)
+            loadChecklist(workOrderId)
+        }
+    }
+
+    fun deleteChecklistItem(itemId: Long) {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            checklistRepository.deleteItem(itemId)
+            loadChecklist(workOrderId)
+        }
+    }
+
     private suspend fun loadHistory(workOrderId: Long) {
         val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
         historyText = if (logs.isEmpty()) {
@@ -481,6 +522,10 @@ class WorkOrderViewModel(
         signature = signatureRepository.findByWorkOrder(workOrderId)
     }
 
+    private suspend fun loadChecklist(workOrderId: Long) {
+        checklist = checklistRepository.listByWorkOrder(workOrderId)
+    }
+
     companion object {
         private fun statusFromLabel(label: String): WorkOrderStatus =
             WorkOrderStatus.entries.firstOrNull { it.label == label } ?: WorkOrderStatus.Open
@@ -493,6 +538,7 @@ class WorkOrderViewModel(
             settingsRepository: SettingsRepository,
             photoRepository: WorkOrderPhotoRepository,
             signatureRepository: WorkOrderSignatureRepository,
+            checklistRepository: WorkOrderChecklistRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -505,6 +551,7 @@ class WorkOrderViewModel(
                         settingsRepository = settingsRepository,
                         photoRepository = photoRepository,
                         signatureRepository = signatureRepository,
+                        checklistRepository = checklistRepository,
                     ) as T
                 }
             }

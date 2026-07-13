@@ -8,6 +8,7 @@ import br.com.sos.osmobile.data.local.dao.QuoteDao
 import br.com.sos.osmobile.data.local.dao.ServiceProductDao
 import br.com.sos.osmobile.data.local.dao.SettingsDao
 import br.com.sos.osmobile.data.local.dao.WorkOrderDao
+import br.com.sos.osmobile.data.local.dao.WorkOrderChecklistDao
 import br.com.sos.osmobile.data.local.dao.WorkOrderPhotoDao
 import br.com.sos.osmobile.data.local.dao.WorkOrderSignatureDao
 import br.com.sos.osmobile.data.local.entity.AppSettingEntity
@@ -16,6 +17,7 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
@@ -33,8 +35,9 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
         AppSettingEntity::class,
         WorkOrderPhotoEntity::class,
         WorkOrderSignatureEntity::class,
+        WorkOrderChecklistItemEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,4 +49,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun settingsDao(): SettingsDao
     abstract fun workOrderPhotoDao(): WorkOrderPhotoDao
     abstract fun workOrderSignatureDao(): WorkOrderSignatureDao
+    abstract fun workOrderChecklistDao(): WorkOrderChecklistDao
 }

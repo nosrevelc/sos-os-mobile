@@ -13,6 +13,7 @@ import br.com.sos.osmobile.data.repository.QuoteConversionRepository
 import br.com.sos.osmobile.data.repository.QuoteRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.WorkOrderChecklistRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderSignatureRepository
@@ -56,12 +57,31 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration3To4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS checklist_os (
+                    id_checklist_os INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    id_os INTEGER NOT NULL,
+                    descricao TEXT NOT NULL,
+                    concluido INTEGER NOT NULL,
+                    data_criacao INTEGER NOT NULL,
+                    data_atualizacao INTEGER NOT NULL,
+                    FOREIGN KEY(id_os) REFERENCES ordens_servico(id_os) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_checklist_os_id_os ON checklist_os(id_os)")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
         "os_mobile.db",
     )
-        .addMigrations(migration1To2, migration2To3)
+        .addMigrations(migration1To2, migration2To3, migration3To4)
         .build()
 
     val auditRepository = AuditRepository(database.auditLogDao())
@@ -80,6 +100,10 @@ class AppContainer(context: Context) {
     val workOrderSignatureRepository = WorkOrderSignatureRepository(
         context.applicationContext,
         database.workOrderSignatureDao(),
+        auditRepository,
+    )
+    val workOrderChecklistRepository = WorkOrderChecklistRepository(
+        database.workOrderChecklistDao(),
         auditRepository,
     )
     val backupRepository = BackupRepository(database)
