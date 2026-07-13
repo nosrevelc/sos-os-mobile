@@ -154,5 +154,5 @@ class AppContainer(context: Context) {
         database.workOrderPaymentDao(),
         auditRepository,
     )
-    val backupRepository = BackupRepository(database)
+    val backupRepository = BackupRepository(database, context.applicationContext)
 }

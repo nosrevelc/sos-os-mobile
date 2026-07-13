@@ -1,5 +1,7 @@
 package br.com.sos.osmobile.data.backup
 
+import android.content.Context
+import android.util.Base64
 import br.com.sos.osmobile.core.database.AppDatabase
 import br.com.sos.osmobile.core.time.Clock
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
@@ -7,9 +9,15 @@ import br.com.sos.osmobile.data.local.entity.AppSettingEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderPaymentEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
 import androidx.room.withTransaction
+import java.io.File
 import org.json.JSONObject
 
 data class BackupImportResult(
@@ -25,6 +33,7 @@ data class SettingsBackupImportResult(
 
 class BackupRepository(
     private val database: AppDatabase,
+    private val context: Context,
 ) {
     suspend fun exportSettingsJson(): String {
         val settings = database.settingsDao().listAll()
@@ -44,6 +53,11 @@ class BackupRepository(
         val quoteItems = database.quoteDao().listAllItems()
         val workOrders = database.workOrderDao().listAll()
         val workOrderItems = database.workOrderDao().listAllItems()
+        val photos = database.workOrderPhotoDao().listAll()
+        val signatures = database.workOrderSignatureDao().listAll()
+        val checklist = database.workOrderChecklistDao().listAll()
+        val warranties = database.workOrderWarrantyDao().listAll()
+        val payments = database.workOrderPaymentDao().listAll()
 
         return buildString {
             appendLine("{")
@@ -52,7 +66,12 @@ class BackupRepository(
             appendLine("\"orcamentos\":${quotes.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"createdAt":${it.createdAt},"validUntil":${it.validUntil ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"itens_orcamento\":${quoteItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"quoteId":${it.quoteId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }},")
             appendLine("\"ordens_servico\":${workOrders.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"openedAt":${it.openedAt},"expectedConclusionAt":${it.expectedConclusionAt ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"concludedAt":${it.concludedAt ?: "null"},"updatedAt":${it.updatedAt}}""" }},")
-            appendLine("\"itens_os\":${workOrderItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }}")
+            appendLine("\"itens_os\":${workOrderItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }},")
+            appendLine("\"fotos_os\":${photos.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"fileName":${str(it.fileName)},"relativePath":${str(it.relativePath)},"mimeType":${str(it.mimeType)},"createdAt":${it.createdAt},"conteudoBase64":${str(fileBase64(it.relativePath))}}""" }},")
+            appendLine("\"assinaturas_os\":${signatures.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"fileName":${str(it.fileName)},"relativePath":${str(it.relativePath)},"signerName":${str(it.signerName)},"createdAt":${it.createdAt},"conteudoBase64":${str(fileBase64(it.relativePath))}}""" }},")
+            appendLine("\"checklist_os\":${checklist.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"descricao":${str(it.descricao)},"concluido":${it.concluido},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"garantias_os\":${warranties.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"warrantyDays":${it.warrantyDays},"termos":${str(it.termos)},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"pagamentos_os\":${payments.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"valor":${it.valor},"forma":${str(it.forma)},"observacao":${str(it.observacao)},"paidAt":${it.paidAt}}""" }}")
             appendLine("}")
         }
     }
@@ -134,8 +153,63 @@ class BackupRepository(
                 subtotal = item.optDouble("subtotal", 0.0),
             )
         }
+        val photos = root.optionalArray("fotos_os").mapObjects { item ->
+            WorkOrderPhotoEntity(
+                id = item.optLong("id", 0),
+                workOrderId = item.optLong("workOrderId", item.optLong("os")),
+                fileName = item.getString("fileName"),
+                relativePath = item.getString("relativePath"),
+                mimeType = item.optString("mimeType", "image/jpeg"),
+                createdAt = item.optLong("createdAt", now),
+            )
+        }
+        val signatures = root.optionalArray("assinaturas_os").mapObjects { item ->
+            WorkOrderSignatureEntity(
+                id = item.optLong("id", 0),
+                workOrderId = item.optLong("workOrderId", item.optLong("os")),
+                fileName = item.getString("fileName"),
+                relativePath = item.getString("relativePath"),
+                signerName = item.optString("signerName", "Cliente"),
+                createdAt = item.optLong("createdAt", now),
+            )
+        }
+        val checklist = root.optionalArray("checklist_os").mapObjects { item ->
+            WorkOrderChecklistItemEntity(
+                id = item.optLong("id", 0),
+                workOrderId = item.optLong("workOrderId", item.optLong("os")),
+                descricao = item.getString("descricao"),
+                concluido = item.optBoolean("concluido", false),
+                createdAt = item.optLong("createdAt", now),
+                updatedAt = item.optLong("updatedAt", now),
+            )
+        }
+        val warranties = root.optionalArray("garantias_os").mapObjects { item ->
+            WorkOrderWarrantyEntity(
+                id = item.optLong("id", 0),
+                workOrderId = item.optLong("workOrderId", item.optLong("os")),
+                warrantyDays = item.optInt("warrantyDays", item.optInt("prazoDias", 0)),
+                termos = item.optString("termos", "Garantia conforme politica da empresa."),
+                createdAt = item.optLong("createdAt", now),
+                updatedAt = item.optLong("updatedAt", now),
+            )
+        }
+        val payments = root.optionalArray("pagamentos_os").mapObjects { item ->
+            WorkOrderPaymentEntity(
+                id = item.optLong("id", 0),
+                workOrderId = item.optLong("workOrderId", item.optLong("os")),
+                valor = item.optDouble("valor", 0.0),
+                forma = item.optString("forma", "Nao informado"),
+                observacao = item.nullableString("observacao"),
+                paidAt = item.optLong("paidAt", now),
+            )
+        }
 
         database.withTransaction {
+            database.workOrderPhotoDao().deleteAll()
+            database.workOrderSignatureDao().deleteAll()
+            database.workOrderChecklistDao().deleteAll()
+            database.workOrderWarrantyDao().deleteAll()
+            database.workOrderPaymentDao().deleteAll()
             database.quoteDao().deleteAllItems()
             database.workOrderDao().deleteAllItems()
             database.quoteDao().deleteAll()
@@ -148,6 +222,19 @@ class BackupRepository(
             database.workOrderDao().upsertBackup(workOrders)
             database.quoteDao().upsertBackupItems(quoteItems)
             database.workOrderDao().upsertBackupItems(workOrderItems)
+            database.workOrderPhotoDao().upsertBackup(photos)
+            database.workOrderSignatureDao().upsertBackup(signatures)
+            database.workOrderChecklistDao().upsertBackup(checklist)
+            database.workOrderWarrantyDao().upsertBackup(warranties)
+            database.workOrderPaymentDao().upsertBackup(payments)
+        }
+        deleteFilesDir("work_order_photos")
+        deleteFilesDir("work_order_signatures")
+        root.optionalArray("fotos_os").forEachObject { item ->
+            writeBase64File(item.getString("relativePath"), item.nullableString("conteudoBase64"))
+        }
+        root.optionalArray("assinaturas_os").forEachObject { item ->
+            writeBase64File(item.getString("relativePath"), item.nullableString("conteudoBase64"))
         }
 
         return BackupImportResult(
@@ -182,6 +269,8 @@ class BackupRepository(
 
     private fun JSONObject.array(name: String) = optJSONArray(name) ?: error("Backup sem a lista $name.")
 
+    private fun JSONObject.optionalArray(name: String) = optJSONArray(name) ?: org.json.JSONArray()
+
     private fun JSONObject.requiredId(): Long =
         optLong("id", 0).takeIf { it > 0 } ?: error("Backup possui registro sem id valido.")
 
@@ -193,4 +282,25 @@ class BackupRepository(
 
     private inline fun <T> org.json.JSONArray.mapObjects(transform: (JSONObject) -> T): List<T> =
         List(length()) { index -> transform(getJSONObject(index)) }
+
+    private inline fun org.json.JSONArray.forEachObject(action: (JSONObject) -> Unit) {
+        repeat(length()) { index -> action(getJSONObject(index)) }
+    }
+
+    private fun fileBase64(relativePath: String): String? {
+        val file = File(context.filesDir, relativePath)
+        if (!file.exists()) return null
+        return Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+    }
+
+    private fun writeBase64File(relativePath: String, base64: String?) {
+        if (base64.isNullOrBlank()) return
+        val file = File(context.filesDir, relativePath)
+        file.parentFile?.mkdirs()
+        file.writeBytes(Base64.decode(base64, Base64.DEFAULT))
+    }
+
+    private fun deleteFilesDir(relativePath: String) {
+        File(context.filesDir, relativePath).deleteRecursively()
+    }
 }
