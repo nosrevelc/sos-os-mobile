@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Print
@@ -59,6 +61,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -1294,6 +1298,7 @@ private fun SignatureCapture(
     val strokes = remember { mutableStateListOf<List<Offset>>() }
     var currentStroke by remember { mutableStateOf<List<Offset>>(emptyList()) }
     var padSize by remember { mutableStateOf(IntSize.Zero) }
+    var expanded by remember { mutableStateOf(false) }
 
     OutlinedTextField(
         value = signerName,
@@ -1302,21 +1307,149 @@ private fun SignatureCapture(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    Canvas(
+    SignaturePad(
+        strokes = strokes,
+        currentStroke = currentStroke,
+        onCurrentStrokeChanged = { currentStroke = it },
+        onStrokeFinished = { strokes += it },
+        onSizeChanged = { padSize = it },
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(180.dp),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = {
+                strokes.clear()
+                currentStroke = emptyList()
+            },
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Limpar")
+        }
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(Icons.Filled.OpenInFull, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text("Tela cheia")
+        }
+        Button(
+            onClick = {
+                val allStrokes = strokes.toList() + listOf(currentStroke).filter { it.size > 1 }
+                if (padSize.width > 0 && padSize.height > 0 && allStrokes.isNotEmpty()) {
+                    onSave(signerName, createSignatureBitmap(allStrokes, padSize.width, padSize.height))
+                }
+            },
+            modifier = Modifier.weight(1f),
+            enabled = strokes.isNotEmpty() || currentStroke.isNotEmpty(),
+        ) {
+            Text("Salvar assinatura")
+        }
+    }
+
+    if (expanded) {
+        Dialog(
+            onDismissRequest = { expanded = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.98f)
+                    .fillMaxHeight(0.92f),
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                ) {
+                    Text("Assinatura", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(
+                        value = signerName,
+                        onValueChange = onSignerNameChanged,
+                        label = { Text("Nome do assinante") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SignaturePad(
+                        strokes = strokes,
+                        currentStroke = currentStroke,
+                        onCurrentStrokeChanged = { currentStroke = it },
+                        onStrokeFinished = { strokes += it },
+                        onSizeChanged = { padSize = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = {
+                                strokes.clear()
+                                currentStroke = emptyList()
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Limpar")
+                        }
+                        OutlinedButton(onClick = { expanded = false }, modifier = Modifier.weight(1f)) {
+                            Text("Fechar")
+                        }
+                        Button(
+                            onClick = {
+                                val allStrokes = strokes.toList() + listOf(currentStroke).filter { it.size > 1 }
+                                if (padSize.width > 0 && padSize.height > 0 && allStrokes.isNotEmpty()) {
+                                    onSave(signerName, createSignatureBitmap(allStrokes, padSize.width, padSize.height))
+                                    expanded = false
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = strokes.isNotEmpty() || currentStroke.isNotEmpty(),
+                        ) {
+                            Text("Salvar")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignaturePad(
+    strokes: List<List<Offset>>,
+    currentStroke: List<Offset>,
+    onCurrentStrokeChanged: (List<Offset>) -> Unit,
+    onStrokeFinished: (List<Offset>) -> Unit,
+    onSizeChanged: (IntSize) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(
+        modifier = modifier
             .background(Color.White)
-            .onSizeChanged { padSize = it }
+            .onSizeChanged(onSizeChanged)
             .pointerInput(Unit) {
+                val inProgressStroke = mutableListOf<Offset>()
                 detectDragGestures(
-                    onDragStart = { currentStroke = listOf(it) },
-                    onDrag = { change, _ -> currentStroke = currentStroke + change.position },
-                    onDragEnd = {
-                        if (currentStroke.size > 1) strokes += currentStroke
-                        currentStroke = emptyList()
+                    onDragStart = {
+                        inProgressStroke.clear()
+                        inProgressStroke += it
+                        onCurrentStrokeChanged(inProgressStroke.toList())
                     },
-                    onDragCancel = { currentStroke = emptyList() },
+                    onDrag = { change, _ ->
+                        inProgressStroke += change.position
+                        onCurrentStrokeChanged(inProgressStroke.toList())
+                    },
+                    onDragEnd = {
+                        if (inProgressStroke.size > 1) onStrokeFinished(inProgressStroke.toList())
+                        inProgressStroke.clear()
+                        onCurrentStrokeChanged(emptyList())
+                    },
+                    onDragCancel = {
+                        inProgressStroke.clear()
+                        onCurrentStrokeChanged(emptyList())
+                    },
                 )
             },
     ) {
@@ -1332,29 +1465,6 @@ private fun SignatureCapture(
             }
         }
         drawRect(color = Color.LightGray, style = Stroke(width = 1f))
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        OutlinedButton(
-            onClick = {
-                strokes.clear()
-                currentStroke = emptyList()
-            },
-            modifier = Modifier.weight(1f),
-        ) {
-            Text("Limpar")
-        }
-        Button(
-            onClick = {
-                val allStrokes = strokes.toList() + listOf(currentStroke).filter { it.size > 1 }
-                if (padSize.width > 0 && padSize.height > 0 && allStrokes.isNotEmpty()) {
-                    onSave(signerName, createSignatureBitmap(allStrokes, padSize.width, padSize.height))
-                }
-            },
-            modifier = Modifier.weight(1f),
-            enabled = strokes.isNotEmpty() || currentStroke.isNotEmpty(),
-        ) {
-            Text("Salvar assinatura")
-        }
     }
 }
 
