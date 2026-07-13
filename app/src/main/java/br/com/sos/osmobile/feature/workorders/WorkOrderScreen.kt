@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -47,6 +48,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -1307,16 +1309,26 @@ private fun SignatureCapture(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    SignaturePad(
-        strokes = strokes,
-        currentStroke = currentStroke,
-        onCurrentStrokeChanged = { currentStroke = it },
-        onStrokeFinished = { strokes += it },
-        onSizeChanged = { padSize = it },
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp),
-    )
+    ) {
+        SignaturePad(
+            strokes = strokes,
+            currentStroke = currentStroke,
+            onCurrentStrokeChanged = { currentStroke = it },
+            onStrokeFinished = { strokes += it },
+            onSizeChanged = { padSize = it },
+            modifier = Modifier.fillMaxSize(),
+        )
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Icon(Icons.Filled.OpenInFull, contentDescription = "Expandir assinatura")
+        }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         OutlinedButton(
             onClick = {
@@ -1326,14 +1338,6 @@ private fun SignatureCapture(
             modifier = Modifier.weight(1f),
         ) {
             Text("Limpar")
-        }
-        OutlinedButton(
-            onClick = { expanded = true },
-            modifier = Modifier.weight(1f),
-        ) {
-            Icon(Icons.Filled.OpenInFull, contentDescription = null)
-            Spacer(Modifier.width(6.dp))
-            Text("Tela cheia")
         }
         Button(
             onClick = {
