@@ -262,16 +262,32 @@ class WorkOrderViewModel(
         saveWorkOrderInternal { onSaved() }
     }
 
-    fun saveWorkOrderThenWithId(onSaved: (Long) -> Unit) {
-        saveWorkOrderInternal(onSaved)
+    fun saveWorkOrderThenWithId(
+        initialPaymentValue: String = "",
+        initialPaymentMethod: String = "",
+        initialPaymentNote: String = "",
+        onSaved: (Long) -> Unit,
+    ) {
+        saveWorkOrderInternal(
+            initialPaymentValue = initialPaymentValue,
+            initialPaymentMethod = initialPaymentMethod,
+            initialPaymentNote = initialPaymentNote,
+            onSaved = onSaved,
+        )
     }
 
-    private fun saveWorkOrderInternal(onSaved: ((Long) -> Unit)? = null) {
+    private fun saveWorkOrderInternal(
+        initialPaymentValue: String = "",
+        initialPaymentMethod: String = "",
+        initialPaymentNote: String = "",
+        onSaved: ((Long) -> Unit)? = null,
+    ) {
         val validationMessage = WorkOrderFormValidator.validate(formState)
         if (validationMessage != null) {
             formState = formState.copy(message = validationMessage)
             return
         }
+        val initialPayment = WorkOrderFormValidator.parseDecimal(initialPaymentValue).takeIf { it != null && it > 0.0 }
 
         viewModelScope.launch {
             val items = formState.items.map {
@@ -289,6 +305,9 @@ class WorkOrderViewModel(
                     notes = formState.notes,
                     items = items,
                 )
+                if (initialPayment != null) {
+                    paymentRepository.addPayment(createdId, initialPayment, initialPaymentMethod, initialPaymentNote)
+                }
                 editWorkOrder(createdId, "OS criada com sucesso.")
                 onSaved?.invoke(createdId)
             } else {
@@ -417,23 +436,21 @@ class WorkOrderViewModel(
     }
 
     fun showMessage(workOrder: WorkOrderSummary) {
-        messagePhone = workOrder.customerPhone
-        messageText = MessageTemplateRenderer.render(
-            template = uiState.value.workOrderStatusTemplates[workOrder.status] ?: uiState.value.workOrderTemplate,
-            tokens = mapOf(
-                "nome" to workOrder.customerName,
-                "telefone" to workOrder.customerPhone,
-                "cpf" to "",
-                "os" to workOrder.number,
-                "orcamento" to "",
-                "status" to workOrder.status,
-                "valor" to workOrder.totalValue.toString(),
-                "empresa" to uiState.value.companyName,
-                "data" to "",
-                "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, workOrder.totalValue),
-                "PIX_QR" to "",
-            ),
-        )
+        viewModelScope.launch {
+            val paidTotal = paymentRepository.listByWorkOrder(workOrder.id).sumOf { it.valor }
+            messagePhone = workOrder.customerPhone
+            messageText = MessageTemplateRenderer.render(
+                template = uiState.value.workOrderStatusTemplates[workOrder.status] ?: uiState.value.workOrderTemplate,
+                tokens = workOrderMessageTokens(
+                    customerName = workOrder.customerName,
+                    customerPhone = workOrder.customerPhone,
+                    workOrderNumber = workOrder.number,
+                    status = workOrder.status,
+                    totalValue = workOrder.totalValue,
+                    paidTotal = paidTotal,
+                ),
+            )
+        }
     }
 
     fun showHistory(workOrderId: Long) {
@@ -598,6 +615,38 @@ class WorkOrderViewModel(
 
     private suspend fun loadPayments(workOrderId: Long) {
         payments = paymentRepository.listByWorkOrder(workOrderId)
+    }
+
+    private fun workOrderMessageTokens(
+        customerName: String,
+        customerPhone: String,
+        workOrderNumber: String,
+        status: String,
+        totalValue: Double,
+        paidTotal: Double,
+    ): Map<String, String> {
+        val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
+        val paymentStatus = when {
+            totalValue <= 0.0 || paidTotal <= 0.0 -> "Pendente"
+            paidTotal + 0.009 >= totalValue -> "Pago"
+            else -> "Parcial"
+        }
+        return mapOf(
+            "nome" to customerName,
+            "telefone" to customerPhone,
+            "cpf" to "",
+            "os" to workOrderNumber,
+            "orcamento" to "",
+            "status" to status,
+            "valor" to InputMasks.currencyFromDouble(totalValue),
+            "valor_pago" to InputMasks.currencyFromDouble(paidTotal),
+            "saldo" to InputMasks.currencyFromDouble(balance),
+            "status_pagamento" to paymentStatus,
+            "empresa" to uiState.value.companyName,
+            "data" to "",
+            "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, balance.takeIf { it > 0.0 } ?: totalValue),
+            "PIX_QR" to "",
+        )
     }
 
     companion object {

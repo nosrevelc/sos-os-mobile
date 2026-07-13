@@ -299,7 +299,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 onCheckedChange = { printWorkOrderHeaderBold = it },
             )
             Text(
-                text = "Tokens: {empresa}, {data}, {os}, {nome}, {telefone}, {valor}, {status}.",
+                text = "Tokens: {empresa}, {data}, {os}, {nome}, {telefone}, {valor}, {valor_pago}, {saldo}, {status_pagamento}, {status}.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -411,7 +411,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {status}, {empresa}, {data}, {dias}, {PIX}, {PIX_QR}.",
+            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {empresa}, {data}, {dias}, {PIX}, {PIX_QR}.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

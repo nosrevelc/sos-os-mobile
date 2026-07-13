@@ -116,6 +116,8 @@ fun WorkOrderScreen(
     var paymentMethod by remember { mutableStateOf("PIX") }
     var paymentNote by remember { mutableStateOf("") }
     val totalValue = form.items.sumOf { item -> item.subtotal }
+    val pendingPayment = if (form.editingId == null) WorkOrderFormValidator.parseDecimal(paymentValue) ?: 0.0 else 0.0
+    val paidTotalForMessage = viewModel.payments.sumOf { it.valor } + pendingPayment
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     val currentMessage = selectedCustomer?.let {
         renderWorkOrderMessage(
@@ -125,6 +127,7 @@ fun WorkOrderScreen(
             workOrderNumber = form.editingNumber ?: "nova",
             status = form.status.label,
             totalValue = totalValue,
+            paidTotal = paidTotalForMessage,
             companyName = uiState.companyName,
             pixName = uiState.pixName,
             pixKey = uiState.pixKey,
@@ -250,6 +253,7 @@ fun WorkOrderScreen(
                                     workOrderNumber = form.editingNumber ?: "nova",
                                     status = status.label,
                                     totalValue = form.items.sumOf { item -> item.subtotal },
+                                    paidTotal = viewModel.payments.sumOf { it.valor },
                                     companyName = uiState.companyName,
                                     pixName = uiState.pixName,
                                     pixKey = uiState.pixKey,
@@ -271,7 +275,13 @@ fun WorkOrderScreen(
                     val isNewWorkOrder = form.editingId == null
                     val shouldAutoPrint = isNewWorkOrder && uiState.printWorkOrderAuto && uiState.printWorkOrderCopies > 0
                     val shouldAskPrint = isNewWorkOrder && !uiState.printWorkOrderAuto && uiState.printWorkOrderCopies > 0
-                    viewModel.saveWorkOrderThenWithId { savedId ->
+                    viewModel.saveWorkOrderThenWithId(
+                        initialPaymentValue = paymentValue,
+                        initialPaymentMethod = paymentMethod,
+                        initialPaymentNote = paymentNote,
+                    ) { savedId ->
+                        paymentValue = ""
+                        paymentNote = ""
                         if (shouldAutoPrint) {
                             viewModel.showThermalDocumentThen(savedId) { printThermalContent(it) }
                         } else if (shouldAskPrint) {
@@ -490,9 +500,9 @@ fun WorkOrderScreen(
                     }
                 }
             }
-            if (uiState.financeEnabled && form.editingId != null) {
+            if (uiState.financeEnabled) {
                 Text("Financeiro", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                val paidTotal = viewModel.payments.sumOf { it.valor }
+                val paidTotal = viewModel.payments.sumOf { it.valor } + pendingPayment
                 val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
                 Text(
                     "Total: ${formatCurrency(totalValue)} | Pago: ${formatCurrency(paidTotal)} | Saldo: ${formatCurrency(balance)}",
@@ -523,15 +533,23 @@ fun WorkOrderScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Button(
-                    onClick = {
-                        viewModel.addPayment(paymentValue, paymentMethod, paymentNote)
-                        paymentValue = ""
-                        paymentNote = ""
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Registrar pagamento")
+                if (form.editingId == null) {
+                    Text(
+                        "Este pagamento sera registrado automaticamente ao salvar a OS.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Button(
+                        onClick = {
+                            viewModel.addPayment(paymentValue, paymentMethod, paymentNote)
+                            paymentValue = ""
+                            paymentNote = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Registrar pagamento")
+                    }
                 }
                 viewModel.payments.forEach { payment ->
                     Row(
@@ -594,6 +612,7 @@ fun WorkOrderScreen(
                                 workOrderNumber = form.editingNumber ?: "nova",
                                 status = form.status.label,
                                 totalValue = totalValue,
+                                paidTotal = paidTotalForMessage,
                                 companyName = uiState.companyName,
                                 pixName = uiState.pixName,
                                 pixKey = uiState.pixKey,
@@ -1304,12 +1323,19 @@ private fun renderWorkOrderMessage(
     workOrderNumber: String,
     status: String,
     totalValue: Double,
+    paidTotal: Double,
     companyName: String,
     pixName: String,
     pixKey: String,
     template: String,
-): String =
-    MessageTemplateRenderer.render(
+): String {
+    val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
+    val paymentStatus = when {
+        totalValue <= 0.0 || paidTotal <= 0.0 -> "Pendente"
+        paidTotal + 0.009 >= totalValue -> "Pago"
+        else -> "Parcial"
+    }
+    return MessageTemplateRenderer.render(
         template = template,
         tokens = mapOf(
             "nome" to customerName,
@@ -1319,9 +1345,13 @@ private fun renderWorkOrderMessage(
             "orcamento" to "",
             "status" to status,
             "valor" to formatCurrency(totalValue),
+            "valor_pago" to formatCurrency(paidTotal),
+            "saldo" to formatCurrency(balance),
+            "status_pagamento" to paymentStatus,
             "empresa" to companyName,
             "data" to formatDate(System.currentTimeMillis()),
-            "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),
+            "PIX" to PixPayloadGenerator.generate(pixKey, pixName, balance.takeIf { it > 0.0 } ?: totalValue),
             "PIX_QR" to "",
         ),
     )
+}
