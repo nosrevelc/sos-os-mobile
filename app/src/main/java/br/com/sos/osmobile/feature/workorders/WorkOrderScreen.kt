@@ -1,6 +1,7 @@
 package br.com.sos.osmobile.feature.workorders
 
 import android.Manifest
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -185,6 +186,11 @@ fun WorkOrderScreen(
             bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
         }
     }
+    val photoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) viewModel.addPhoto(uri)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -305,6 +311,50 @@ fun WorkOrderScreen(
             }
             thermalPrintMessage?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            }
+            if (uiState.photosEnabled && form.editingId != null) {
+                Text("Fotos da OS", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                OutlinedButton(
+                    onClick = { photoLauncher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Adicionar foto")
+                }
+                if (viewModel.photos.isEmpty()) {
+                    Text("Nenhuma foto adicionada.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    viewModel.photos.forEach { photo ->
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(photo.fileName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                TextButton(
+                                    onClick = {
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Intent.ACTION_VIEW)
+                                                    .setDataAndType(viewModel.photoUri(photo), photo.mimeType)
+                                                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                                            )
+                                        }.onFailure {
+                                            thermalPrintMessage = "Nao foi possivel abrir a foto."
+                                        }
+                                    },
+                                ) {
+                                    Text("Abrir")
+                                }
+                                TextButton(onClick = { viewModel.deletePhoto(photo.id) }) {
+                                    Text("Remover")
+                                }
+                            }
+                        }
+                    }
+                }
             }
             viewModel.messageText?.let {
                 Text(

@@ -1,5 +1,6 @@
 package br.com.sos.osmobile.feature.workorders
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
@@ -36,6 +38,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_OPEN_KEY
 import br.com.sos.osmobile.data.repository.WorkOrderItemInput
+import br.com.sos.osmobile.data.repository.WorkOrderPhotoRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalPrintStyle
@@ -80,6 +83,7 @@ data class WorkOrderUiState(
     val workOrderStatusTemplates: Map<String, String> = emptyMap(),
     val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
     val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
+    val photosEnabled: Boolean = false,
     val printBluetoothAddress: String = "",
     val printWorkOrderAuto: Boolean = false,
     val printWorkOrderCopies: Int = 0,
@@ -94,6 +98,7 @@ class WorkOrderViewModel(
     private val customerRepository: CustomerRepository,
     private val serviceProductRepository: ServiceProductRepository,
     private val settingsRepository: SettingsRepository,
+    private val photoRepository: WorkOrderPhotoRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
@@ -118,6 +123,7 @@ class WorkOrderViewModel(
             ),
             reviewRequestTemplate = values[TEMPLATE_REVIEW_REQUEST_KEY] ?: MessageTemplateRenderer.reviewRequestTemplate,
             pickupReminderTemplate = values[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
+            photosEnabled = values["modulo_fotos"]?.toBooleanStrictOrNull() ?: false,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY]?.toBooleanStrictOrNull() ?: false,
             printWorkOrderCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -148,6 +154,9 @@ class WorkOrderViewModel(
         private set
 
     var historyText by mutableStateOf<String?>(null)
+        private set
+
+    var photos by mutableStateOf<List<WorkOrderPhotoEntity>>(emptyList())
         private set
 
     fun selectCustomer(id: Long) {
@@ -290,6 +299,7 @@ class WorkOrderViewModel(
                 message = message ?: "Editando OS ${workOrder.numero}.",
             )
             loadHistory(workOrderId)
+            loadPhotos(workOrderId)
         }
     }
 
@@ -393,6 +403,34 @@ class WorkOrderViewModel(
         }
     }
 
+    fun addPhoto(uri: Uri) {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de adicionar fotos.")
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                photoRepository.addPhoto(workOrderId, uri)
+                loadPhotos(workOrderId)
+            }.onSuccess {
+                formState = formState.copy(message = "Foto adicionada.")
+            }.onFailure {
+                formState = formState.copy(message = "Nao foi possivel adicionar a foto: ${it.message.orEmpty()}")
+            }
+        }
+    }
+
+    fun deletePhoto(photoId: Long) {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            photoRepository.deletePhoto(photoId)
+            loadPhotos(workOrderId)
+            formState = formState.copy(message = "Foto removida.")
+        }
+    }
+
+    fun photoUri(photo: WorkOrderPhotoEntity): Uri = photoRepository.uriFor(photo)
+
     private suspend fun loadHistory(workOrderId: Long) {
         val logs = auditRepository.listForRecord("ordens_servico", workOrderId)
         historyText = if (logs.isEmpty()) {
@@ -400,6 +438,10 @@ class WorkOrderViewModel(
         } else {
             logs.joinToString("\n") { "${it.acao}: ${it.detalhes.orEmpty()}" }
         }
+    }
+
+    private suspend fun loadPhotos(workOrderId: Long) {
+        photos = photoRepository.listByWorkOrder(workOrderId)
     }
 
     companion object {
@@ -412,6 +454,7 @@ class WorkOrderViewModel(
             customerRepository: CustomerRepository,
             serviceProductRepository: ServiceProductRepository,
             settingsRepository: SettingsRepository,
+            photoRepository: WorkOrderPhotoRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -422,6 +465,7 @@ class WorkOrderViewModel(
                         customerRepository = customerRepository,
                         serviceProductRepository = serviceProductRepository,
                         settingsRepository = settingsRepository,
+                        photoRepository = photoRepository,
                     ) as T
                 }
             }

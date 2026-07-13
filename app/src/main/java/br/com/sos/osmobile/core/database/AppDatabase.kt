@@ -8,6 +8,7 @@ import br.com.sos.osmobile.data.local.dao.QuoteDao
 import br.com.sos.osmobile.data.local.dao.ServiceProductDao
 import br.com.sos.osmobile.data.local.dao.SettingsDao
 import br.com.sos.osmobile.data.local.dao.WorkOrderDao
+import br.com.sos.osmobile.data.local.dao.WorkOrderPhotoDao
 import br.com.sos.osmobile.data.local.entity.AppSettingEntity
 import br.com.sos.osmobile.data.local.entity.AuditLogEntity
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
@@ -16,6 +17,7 @@ import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
+import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 
 @Database(
     entities = [
@@ -27,8 +29,9 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
         QuoteItemEntity::class,
         AuditLogEntity::class,
         AppSettingEntity::class,
+        WorkOrderPhotoEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +41,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun quoteDao(): QuoteDao
     abstract fun auditLogDao(): AuditLogDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun workOrderPhotoDao(): WorkOrderPhotoDao
 }
