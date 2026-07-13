@@ -1,0 +1,5 @@
+ID;Nome;CPF_CNPJ;Telefone;Email;Endereco;Observacoes;Ativo;Criado_em;Atualizado_em
+1;Cleverson Vieira;01728667808;35999978632;cleverson.vieira@gmail.com;Rua Francisco Fanuchi, 197;;true;1783601739237;1783601739237
+2;Angela Vieira;;35998482827;;;;true;1783607239589;1783607239589
+3;José teste;;35999999999;testejose@gmail.com;;;true;1783612504151;1783612504151
+4;Cindy Vieira Teste;;35000000000;condyteste@gmail.com;;;true;1783620952329;1783620952329

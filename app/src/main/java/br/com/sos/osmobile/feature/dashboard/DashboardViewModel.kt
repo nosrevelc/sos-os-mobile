@@ -17,6 +17,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import br.com.sos.osmobile.ui.input.InputMasks
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+private data class DashboardDateRange(
+    val startDate: String,
+    val endDate: String,
+)
 
 data class DashboardSearchResult(
     val customers: List<CustomerEntity> = emptyList(),
@@ -29,15 +39,35 @@ class DashboardViewModel(
     quoteRepository: QuoteRepository,
     customerRepository: CustomerRepository,
 ) : ViewModel() {
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+    private val displayFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    private val today = LocalDate.now()
+
     var query by mutableStateOf("")
         private set
     private val queryFlow = MutableStateFlow("")
 
+    var startDate by mutableStateOf(today.withDayOfMonth(1).format(dateFormatter))
+        private set
+
+    var endDate by mutableStateOf(today.format(dateFormatter))
+        private set
+
+    val todayLabel: String = today.format(displayFormatter)
+
+    private val dateRangeFlow = MutableStateFlow(DashboardDateRange(startDate, endDate))
+
     val metrics: StateFlow<DashboardMetrics> = combine(
         workOrderRepository.observeSummaries(),
         quoteRepository.observeSummaries(),
-    ) { workOrders, quotes ->
-        DashboardMetricsCalculator.calculate(workOrders, quotes)
+        workOrderRepository.observeServiceUsage(),
+        dateRangeFlow,
+    ) { workOrders, quotes, serviceUsage, range ->
+        val start = parseDate(range.startDate) ?: today.withDayOfMonth(1)
+        val end = parseDate(range.endDate) ?: today
+        val startMillis = start.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endMillis = end.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        DashboardMetricsCalculator.calculate(workOrders, quotes, serviceUsage, startMillis, endMillis)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardMetrics(0, 0.0, 0, 0.0, 0, 0))
 
     val searchResult: StateFlow<DashboardSearchResult> = combine(
@@ -68,6 +98,25 @@ class DashboardViewModel(
         query = value
         queryFlow.value = value
     }
+
+    fun onStartDateChanged(value: String) {
+        startDate = InputMasks.dateIso(value)
+        dateRangeFlow.value = DashboardDateRange(startDate, endDate)
+    }
+
+    fun onEndDateChanged(value: String) {
+        endDate = InputMasks.dateIso(value)
+        dateRangeFlow.value = DashboardDateRange(startDate, endDate)
+    }
+
+    fun resetToCurrentMonth() {
+        startDate = today.withDayOfMonth(1).format(dateFormatter)
+        endDate = today.format(dateFormatter)
+        dateRangeFlow.value = DashboardDateRange(startDate, endDate)
+    }
+
+    private fun parseDate(value: String): LocalDate? =
+        runCatching { LocalDate.parse(value, dateFormatter) }.getOrNull()
 
     companion object {
         fun factory(

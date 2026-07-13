@@ -7,8 +7,29 @@ import br.com.sos.osmobile.data.model.CpfCnpjPolicy
 import br.com.sos.osmobile.data.repository.ContactAccount
 import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CONTACTS_GOOGLE_ACCOUNT_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CPF_CNPJ_POLICY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_BLUETOOTH_ADDRESS_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_AUTO_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_COPIES_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_FONT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_FOOTER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_ALIGN_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_BOLD_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_REVIEW_REQUEST_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_CANCELED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_COMPLETED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_OPEN_KEY
+import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,6 +46,26 @@ data class SettingsUiState(
     val financeiro: Boolean = false,
     val cpfCnpjPolicy: CpfCnpjPolicy = CpfCnpjPolicy.Optional,
     val contactsGoogleAccount: String = "",
+    val companyName: String = "",
+    val pixName: String = "",
+    val pixKey: String = "",
+    val printBluetoothAddress: String = "",
+    val printWorkOrderAuto: Boolean = false,
+    val printWorkOrderCopies: String = "0",
+    val printWorkOrderHeader: String = "{empresa}\nOS {os}\n{data}",
+    val printWorkOrderFooter: String = "Obrigado pela preferencia",
+    val printWorkOrderFont: String = "A",
+    val printWorkOrderTextSize: String = "normal",
+    val printWorkOrderHeaderBold: Boolean = true,
+    val printWorkOrderHeaderAlign: String = "center",
+    val workOrderTemplate: String = MessageTemplateRenderer.workOrderDefaultTemplate,
+    val workOrderOpenTemplate: String = MessageTemplateRenderer.workOrderOpenTemplate,
+    val workOrderInProgressTemplate: String = MessageTemplateRenderer.workOrderInProgressTemplate,
+    val workOrderCompletedTemplate: String = MessageTemplateRenderer.workOrderCompletedTemplate,
+    val workOrderCanceledTemplate: String = MessageTemplateRenderer.workOrderCanceledTemplate,
+    val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
+    val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
+    val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
     val contactAccounts: List<ContactAccount> = emptyList(),
     val contactsMessage: String? = null,
 )
@@ -58,6 +99,26 @@ class SettingsViewModel(
                     settingsEntities.firstOrNull { it.chave == CPF_CNPJ_POLICY_KEY }?.valor,
                 ),
                 contactsGoogleAccount = rawValues[CONTACTS_GOOGLE_ACCOUNT_KEY].orEmpty(),
+                companyName = rawValues[COMPANY_NAME_KEY].orEmpty(),
+                pixName = rawValues[PIX_NAME_KEY].orEmpty(),
+                pixKey = rawValues[PIX_KEY_KEY].orEmpty(),
+                printBluetoothAddress = rawValues[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
+                printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY] ?: false,
+                printWorkOrderCopies = rawValues[PRINT_WORK_ORDER_COPIES_KEY]?.takeIf { it.isNotBlank() } ?: "0",
+                printWorkOrderHeader = rawValues[PRINT_WORK_ORDER_HEADER_KEY] ?: "{empresa}\nOS {os}\n{data}",
+                printWorkOrderFooter = rawValues[PRINT_WORK_ORDER_FOOTER_KEY] ?: "Obrigado pela preferencia",
+                printWorkOrderFont = rawValues[PRINT_WORK_ORDER_FONT_KEY] ?: "A",
+                printWorkOrderTextSize = rawValues[PRINT_WORK_ORDER_TEXT_SIZE_KEY] ?: "normal",
+                printWorkOrderHeaderBold = values[PRINT_WORK_ORDER_HEADER_BOLD_KEY] ?: true,
+                printWorkOrderHeaderAlign = rawValues[PRINT_WORK_ORDER_HEADER_ALIGN_KEY] ?: "center",
+                workOrderTemplate = rawValues[TEMPLATE_WORK_ORDER_KEY] ?: MessageTemplateRenderer.workOrderDefaultTemplate,
+                workOrderOpenTemplate = rawValues[TEMPLATE_WORK_ORDER_OPEN_KEY] ?: MessageTemplateRenderer.workOrderOpenTemplate,
+                workOrderInProgressTemplate = rawValues[TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY] ?: MessageTemplateRenderer.workOrderInProgressTemplate,
+                workOrderCompletedTemplate = rawValues[TEMPLATE_WORK_ORDER_COMPLETED_KEY] ?: MessageTemplateRenderer.workOrderCompletedTemplate,
+                workOrderCanceledTemplate = rawValues[TEMPLATE_WORK_ORDER_CANCELED_KEY] ?: MessageTemplateRenderer.workOrderCanceledTemplate,
+                reviewRequestTemplate = rawValues[TEMPLATE_REVIEW_REQUEST_KEY] ?: MessageTemplateRenderer.reviewRequestTemplate,
+                pickupReminderTemplate = rawValues[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
+                quoteTemplate = rawValues[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
                 contactAccounts = entities.second,
                 contactsMessage = entities.third,
             )
@@ -82,17 +143,100 @@ class SettingsViewModel(
         }
     }
 
+    fun setCompanyName(value: String) {
+        viewModelScope.launch {
+            settingsRepository.set(COMPANY_NAME_KEY, value.trim())
+        }
+    }
+
+    fun setPixData(name: String, key: String) {
+        viewModelScope.launch {
+            settingsRepository.set(PIX_NAME_KEY, name.trim())
+            settingsRepository.set(PIX_KEY_KEY, key.trim())
+        }
+    }
+
+    fun setPrintSettings(
+        bluetoothAddress: String,
+        autoWorkOrder: Boolean,
+        workOrderCopies: String,
+        workOrderHeader: String,
+        workOrderFooter: String,
+        workOrderFont: String,
+        workOrderTextSize: String,
+        workOrderHeaderBold: Boolean,
+        workOrderHeaderAlign: String,
+    ) {
+        viewModelScope.launch {
+            settingsRepository.set(PRINT_BLUETOOTH_ADDRESS_KEY, bluetoothAddress.trim())
+            settingsRepository.set(PRINT_WORK_ORDER_AUTO_KEY, autoWorkOrder.toString())
+            settingsRepository.set(PRINT_WORK_ORDER_COPIES_KEY, (workOrderCopies.toIntOrNull() ?: 0).coerceIn(0, 9).toString())
+            settingsRepository.set(PRINT_WORK_ORDER_HEADER_KEY, workOrderHeader.trim())
+            settingsRepository.set(PRINT_WORK_ORDER_FOOTER_KEY, workOrderFooter.trim())
+            settingsRepository.set(PRINT_WORK_ORDER_FONT_KEY, workOrderFont)
+            settingsRepository.set(PRINT_WORK_ORDER_TEXT_SIZE_KEY, workOrderTextSize)
+            settingsRepository.set(PRINT_WORK_ORDER_HEADER_BOLD_KEY, workOrderHeaderBold.toString())
+            settingsRepository.set(PRINT_WORK_ORDER_HEADER_ALIGN_KEY, workOrderHeaderAlign)
+        }
+    }
+
+    fun setWorkOrderTemplate(value: String) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_WORK_ORDER_KEY, value.trim())
+        }
+    }
+
+    fun setQuoteTemplate(value: String) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_QUOTE_KEY, value.trim())
+        }
+    }
+
+    fun setReviewRequestTemplate(value: String) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_REVIEW_REQUEST_KEY, value.trim())
+        }
+    }
+
+    fun setPickupReminderTemplate(value: String) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_PICKUP_REMINDER_KEY, value.trim())
+        }
+    }
+
+    fun setWorkOrderStatusTemplates(open: String, inProgress: String, completed: String, canceled: String) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_WORK_ORDER_OPEN_KEY, open.trim())
+            settingsRepository.set(TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY, inProgress.trim())
+            settingsRepository.set(TEMPLATE_WORK_ORDER_COMPLETED_KEY, completed.trim())
+            settingsRepository.set(TEMPLATE_WORK_ORDER_CANCELED_KEY, canceled.trim())
+        }
+    }
+
+    fun resetTemplates() {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_WORK_ORDER_KEY, MessageTemplateRenderer.workOrderDefaultTemplate)
+            settingsRepository.set(TEMPLATE_WORK_ORDER_OPEN_KEY, MessageTemplateRenderer.workOrderOpenTemplate)
+            settingsRepository.set(TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY, MessageTemplateRenderer.workOrderInProgressTemplate)
+            settingsRepository.set(TEMPLATE_WORK_ORDER_COMPLETED_KEY, MessageTemplateRenderer.workOrderCompletedTemplate)
+            settingsRepository.set(TEMPLATE_WORK_ORDER_CANCELED_KEY, MessageTemplateRenderer.workOrderCanceledTemplate)
+            settingsRepository.set(TEMPLATE_REVIEW_REQUEST_KEY, MessageTemplateRenderer.reviewRequestTemplate)
+            settingsRepository.set(TEMPLATE_PICKUP_REMINDER_KEY, MessageTemplateRenderer.pickupReminderTemplate)
+            settingsRepository.set(TEMPLATE_QUOTE_KEY, MessageTemplateRenderer.quoteDefaultTemplate)
+        }
+    }
+
     fun loadContactAccounts() {
         viewModelScope.launch {
             runCatching {
-                contactsRepository.listGoogleContactAccounts()
+                contactsRepository.listContactAccounts()
             }.fold(
                 onSuccess = {
                     contactAccounts.value = it
                     contactsMessage.value = if (it.isEmpty()) {
-                        "Nenhuma conta Google de contatos encontrada. Use agenda local ou verifique a sincronizacao do aparelho."
+                        "Nenhuma conta de contatos encontrada. Use agenda local ou verifique a sincronizacao do aparelho."
                     } else {
-                        "${it.size} agenda(s) Google encontrada(s)."
+                        "${it.size} agenda(s) encontrada(s)."
                     }
                 },
                 onFailure = {

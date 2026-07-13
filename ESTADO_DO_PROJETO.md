@@ -58,8 +58,10 @@ C:\SOS\app\build\outputs\bundle\release\app-release.aab
 - Detalhe do cliente com OS e orcamentos vinculados.
 - Vínculos clicaveis para detalhe de OS/orcamento.
 - Sincronizacao manual de cliente para agenda Android/Google.
+- Ao cadastrar cliente, verifica se o contato ja existe; se nao existir, pergunta se deseja adicionar.
+- Se o contato ja existir, avisa o operador e evita duplicidade.
 - Permissao de contatos solicitada somente ao usar a acao de agenda.
-- Configuracoes buscam as agendas Google disponiveis no aparelho.
+- Configuracoes buscam as agendas/contas de contatos disponiveis no aparelho.
 
 ### Servicos/Produtos
 
@@ -85,7 +87,9 @@ C:\SOS\app\build\outputs\bundle\release\app-release.aab
 - Compartilhamento de texto e arquivo `.txt`.
 - Compartilhamento de PDF basico.
 - Mensagem por token.
+- Template de mensagem configuravel em Configuracoes.
 - WhatsApp direto usando telefone do cliente.
+- Botoes de mensagem na tela: WhatsApp, SMS e Email.
 - Historico por registro.
 - Detalhe do orcamento com itens e historico.
 
@@ -101,12 +105,15 @@ C:\SOS\app\build\outputs\bundle\release\app-release.aab
 - Status: Aberta, Em andamento, Concluida, Cancelada.
 - Status no formulario em botoes compactos, com o selecionado destacado.
 - Alteracao de status.
+- Ao alterar status de uma OS em edicao, o app pergunta se deseja avisar o cliente por WhatsApp, SMS, Email ou cancelar.
 - Data de conclusao quando status vira Concluida.
 - Documento em texto.
 - Compartilhamento de texto e arquivo `.txt`.
 - Compartilhamento de PDF basico.
 - Mensagem por token.
+- Template de mensagem configuravel em Configuracoes.
 - WhatsApp direto usando telefone do cliente.
+- Botoes de mensagem na tela: WhatsApp, SMS e Email.
 - Historico por registro.
 - Detalhe da OS com itens e historico.
 - Historico aparece abaixo do formulario ao editar uma OS.
@@ -131,8 +138,11 @@ C:\SOS\app\build\outputs\bundle\release\app-release.aab
 
 - Ativar/desativar modulos.
 - CPF/CNPJ: nao usar, opcional ou obrigatorio.
-- Conta Google para salvar contatos sincronizados.
-- Lista de agendas Google disponiveis no aparelho para selecao.
+- Conta/agenda Android para salvar contatos sincronizados.
+- Lista de agendas/contas de contatos disponiveis no aparelho para selecao.
+- Nome da empresa.
+- Templates editaveis para mensagens de OS e orcamento.
+- Tokens disponiveis: `{nome}`, `{telefone}`, `{cpf}`, `{os}`, `{orcamento}`, `{valor}`, `{status}`, `{empresa}`, `{data}`.
 
 ### Navegacao/UI
 
@@ -215,7 +225,7 @@ Fluxo minimo:
 10. Confirmar historico abaixo do formulario.
 11. Gerar documento.
 12. Gerar mensagem.
-13. Abrir WhatsApp.
+13. Abrir WhatsApp/SMS/Email.
 14. Gerar backup JSON.
 15. Em Clientes, tocar em Agenda e validar contato criado no app Contatos.
 

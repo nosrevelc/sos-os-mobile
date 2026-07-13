@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -39,12 +40,14 @@ import br.com.sos.osmobile.feature.details.QuoteDetailViewModel
 import br.com.sos.osmobile.feature.details.WorkOrderDetailScreen
 import br.com.sos.osmobile.feature.details.WorkOrderDetailViewModel
 import br.com.sos.osmobile.feature.quotes.QuoteScreen
+import br.com.sos.osmobile.feature.quotes.QuoteListScreen
 import br.com.sos.osmobile.feature.quotes.QuoteViewModel
 import br.com.sos.osmobile.feature.services.ServiceProductScreen
 import br.com.sos.osmobile.feature.services.ServiceProductViewModel
 import br.com.sos.osmobile.feature.settings.SettingsScreen
 import br.com.sos.osmobile.feature.settings.SettingsViewModel
 import br.com.sos.osmobile.feature.workorders.WorkOrderListScreen
+import br.com.sos.osmobile.feature.workorders.WorkOrderPickupScreen
 import br.com.sos.osmobile.feature.workorders.WorkOrderScreen
 import br.com.sos.osmobile.feature.workorders.WorkOrderViewModel
 import kotlinx.coroutines.launch
@@ -58,13 +61,22 @@ fun OSMobileApp(appContainer: AppContainer) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route ?: AppRoute.Dashboard.route
     val currentLabel = AppRoute.entries.firstOrNull { it.route == currentRoute }?.label ?: "OS Mobile"
+    val settings by appContainer.settingsRepository.observeAll().collectAsState(initial = emptyList())
+    val moduleValues = settings.associate { it.chave to it.valor.toBooleanStrictOrNull() }
+    val visibleRoutes = AppRoute.entries.filter { route ->
+        when (route) {
+            AppRoute.Quotes -> moduleValues["modulo_orcamento"] ?: true
+            AppRoute.QuoteList -> moduleValues["modulo_orcamento"] ?: true
+            else -> true
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 Text("OS Mobile", modifier = Modifier.padding(24.dp, 20.dp, 16.dp, 12.dp))
-                AppRoute.entries.forEach { route ->
+                visibleRoutes.forEach { route ->
                     NavigationDrawerItem(
                         label = { Text(route.label) },
                         selected = currentRoute == route.route,
@@ -166,9 +178,40 @@ fun OSMobileApp(appContainer: AppContainer) {
                             auditRepository = appContainer.auditRepository,
                             customerRepository = appContainer.customerRepository,
                             serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
                         ),
                     )
                     QuoteScreen(viewModel = quoteViewModel)
+                }
+                composable(AppRoute.QuoteList.route) {
+                    val quoteViewModel: QuoteViewModel = viewModel(
+                        factory = QuoteViewModel.factory(
+                            quoteRepository = appContainer.quoteRepository,
+                            quoteConversionRepository = appContainer.quoteConversionRepository,
+                            auditRepository = appContainer.auditRepository,
+                            customerRepository = appContainer.customerRepository,
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
+                        ),
+                    )
+                    QuoteListScreen(
+                        viewModel = quoteViewModel,
+                        onEdit = { navController.navigate("quotes/edit/$it") },
+                    )
+                }
+                composable("quotes/edit/{id}") { backStack ->
+                    val id = backStack.arguments?.getString("id")?.toLongOrNull()
+                    val quoteViewModel: QuoteViewModel = viewModel(
+                        factory = QuoteViewModel.factory(
+                            quoteRepository = appContainer.quoteRepository,
+                            quoteConversionRepository = appContainer.quoteConversionRepository,
+                            auditRepository = appContainer.auditRepository,
+                            customerRepository = appContainer.customerRepository,
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
+                        ),
+                    )
+                    QuoteScreen(viewModel = quoteViewModel, initialEditId = id)
                 }
                 composable(AppRoute.WorkOrders.route) {
                     val workOrderViewModel: WorkOrderViewModel = viewModel(
@@ -177,6 +220,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             auditRepository = appContainer.auditRepository,
                             customerRepository = appContainer.customerRepository,
                             serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel)
@@ -188,12 +232,25 @@ fun OSMobileApp(appContainer: AppContainer) {
                             auditRepository = appContainer.auditRepository,
                             customerRepository = appContainer.customerRepository,
                             serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
                         ),
                     )
                     WorkOrderListScreen(
                         viewModel = workOrderViewModel,
                         onEdit = { navController.navigate("work_orders/edit/$it") },
                     )
+                }
+                composable(AppRoute.WorkOrderPickup.route) {
+                    val workOrderViewModel: WorkOrderViewModel = viewModel(
+                        factory = WorkOrderViewModel.factory(
+                            workOrderRepository = appContainer.workOrderRepository,
+                            auditRepository = appContainer.auditRepository,
+                            customerRepository = appContainer.customerRepository,
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
+                        ),
+                    )
+                    WorkOrderPickupScreen(viewModel = workOrderViewModel)
                 }
                 composable("work_orders/edit/{id}") { backStack ->
                     val id = backStack.arguments?.getString("id")?.toLongOrNull()
@@ -203,6 +260,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             auditRepository = appContainer.auditRepository,
                             customerRepository = appContainer.customerRepository,
                             serviceProductRepository = appContainer.serviceProductRepository,
+                            settingsRepository = appContainer.settingsRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel, initialEditId = id)

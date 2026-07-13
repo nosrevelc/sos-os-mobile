@@ -24,7 +24,11 @@ object QuoteFormValidator {
     }
 
     fun parseDecimal(value: String): Double? =
-        value.trim().let { trimmed ->
+        value.trim()
+            .replace("R$", "")
+            .replace("\u00A0", "")
+            .replace(" ", "")
+            .let { trimmed ->
             if (trimmed.contains(",") && trimmed.contains(".")) {
                 trimmed.replace(".", "").replace(",", ".")
             } else {

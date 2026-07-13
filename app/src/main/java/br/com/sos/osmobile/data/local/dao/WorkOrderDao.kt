@@ -9,6 +9,7 @@ import androidx.room.Update
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
 import br.com.sos.osmobile.data.local.model.DocumentItem
+import br.com.sos.osmobile.data.local.model.WorkOrderServiceUsage
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import kotlinx.coroutines.flow.Flow
 
@@ -22,6 +23,23 @@ interface WorkOrderDao {
 
     @Query("SELECT * FROM itens_os ORDER BY id_os, id_item_os")
     suspend fun listAllItems(): List<WorkOrderItemEntity>
+
+    @Query(
+        """
+        SELECT
+            sp.id_servico_produto AS serviceId,
+            sp.nome AS serviceName,
+            i.quantidade AS quantity,
+            i.subtotal AS totalValue,
+            os.data_abertura AS openedAt
+        FROM itens_os i
+        INNER JOIN ordens_servico os ON os.id_os = i.id_os
+        INNER JOIN servicos_produtos sp ON sp.id_servico_produto = i.id_servico_produto
+        WHERE os.status != 'Cancelada'
+        ORDER BY os.data_abertura DESC
+        """,
+    )
+    fun observeServiceUsage(): Flow<List<WorkOrderServiceUsage>>
 
     @Query("SELECT * FROM ordens_servico WHERE status = :status ORDER BY data_abertura DESC")
     fun observeByStatus(status: String): Flow<List<WorkOrderEntity>>
@@ -81,7 +99,8 @@ interface WorkOrderDao {
             os.status AS status,
             os.valor_total AS totalValue,
             COUNT(i.id_item_os) AS itemCount,
-            os.data_abertura AS openedAt
+            os.data_abertura AS openedAt,
+            os.data_conclusao AS concludedAt
         FROM ordens_servico os
         INNER JOIN clientes c ON c.id_cliente = os.id_cliente
         LEFT JOIN itens_os i ON i.id_os = os.id_os
@@ -101,7 +120,8 @@ interface WorkOrderDao {
             os.status AS status,
             os.valor_total AS totalValue,
             COUNT(i.id_item_os) AS itemCount,
-            os.data_abertura AS openedAt
+            os.data_abertura AS openedAt,
+            os.data_conclusao AS concludedAt
         FROM ordens_servico os
         INNER JOIN clientes c ON c.id_cliente = os.id_cliente
         LEFT JOIN itens_os i ON i.id_os = os.id_os
@@ -121,7 +141,8 @@ interface WorkOrderDao {
             os.status AS status,
             os.valor_total AS totalValue,
             COUNT(i.id_item_os) AS itemCount,
-            os.data_abertura AS openedAt
+            os.data_abertura AS openedAt,
+            os.data_conclusao AS concludedAt
         FROM ordens_servico os
         INNER JOIN clientes c ON c.id_cliente = os.id_cliente
         LEFT JOIN itens_os i ON i.id_os = os.id_os

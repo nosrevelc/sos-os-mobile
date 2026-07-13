@@ -12,9 +12,15 @@ interface SettingsDao {
     @Query("SELECT * FROM configuracoes ORDER BY chave")
     fun observeAll(): Flow<List<AppSettingEntity>>
 
+    @Query("SELECT * FROM configuracoes ORDER BY chave")
+    suspend fun listAll(): List<AppSettingEntity>
+
     @Query("SELECT * FROM configuracoes WHERE chave = :key")
     suspend fun findByKey(key: String): AppSettingEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(setting: AppSettingEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(settings: List<AppSettingEntity>)
 }

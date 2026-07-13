@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation("com.google.zxing:core:3.5.3")
 
     testImplementation(libs.junit)
 }

@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
+import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -77,7 +78,7 @@ class ServiceProductViewModel(
     }
 
     fun onUnitPriceChanged(value: String) {
-        formState = formState.copy(unitPrice = value, message = null)
+        formState = formState.copy(unitPrice = InputMasks.currency(value), message = null)
     }
 
     fun startEditing(item: ServiceProductEntity) {
@@ -87,7 +88,7 @@ class ServiceProductViewModel(
             name = item.nome,
             category = item.categoria.orEmpty(),
             description = item.descricao.orEmpty(),
-            unitPrice = item.unitPrice.toString().replace(".", ","),
+            unitPrice = InputMasks.currencyFromDouble(item.unitPrice),
         )
     }
 
@@ -113,7 +114,7 @@ class ServiceProductViewModel(
                         description = formState.description,
                         unitPrice = price,
                     )
-                    formState = ServiceProductFormState(message = "Servico/produto cadastrado.")
+                    formState = ServiceProductFormState(message = "Servico/produto cadastrado com sucesso.")
                 } else {
                     serviceProductRepository.update(
                         id = editingId,
@@ -123,7 +124,7 @@ class ServiceProductViewModel(
                         description = formState.description,
                         unitPrice = price,
                     )
-                    formState = ServiceProductFormState(message = "Servico/produto atualizado.")
+                    formState = ServiceProductFormState(message = "Servico/produto atualizado com sucesso.")
                 }
             } catch (_: SQLiteConstraintException) {
                 formState = formState.copy(message = "Codigo ja cadastrado.")

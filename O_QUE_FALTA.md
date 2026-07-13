@@ -12,7 +12,7 @@ O que ainda falta esta concentrado em integracoes, configuracoes avancadas, qual
 
 ### 1. Agenda Android / Google Contatos
 
-Status: parcialmente implementado.
+Status: implementado no MVP.
 
 Implementado:
 
@@ -62,16 +62,15 @@ Status: parcialmente implementado.
 Implementado:
 
 - Templates fixos no codigo para OS e orcamento.
-- Tokens basicos: nome, OS/orcamento, status e valor.
-- Compartilhamento/WhatsApp.
+- Tela para editar templates em Configuracoes.
+- Tokens: `{nome}`, `{telefone}`, `{cpf}`, `{os}`, `{orcamento}`, `{valor}`, `{status}`, `{empresa}`, `{data}`.
+- Campo de empresa para preencher `{empresa}`.
+- Compartilhamento, WhatsApp, SMS e Email.
+- Ao alterar status de OS em edicao, o app pergunta se deseja avisar por WhatsApp, SMS, Email ou cancelar.
 
 Falta:
 
-- Tela para editar templates.
 - Templates por evento.
-- Canais SMS e Email.
-- Tokens completos previstos: `{nome}`, `{telefone}`, `{cpf}`, `{os}`, `{orcamento}`, `{valor}`, `{status}`, `{empresa}`, `{data}`.
-- Configuracao de dados da empresa para preencher `{empresa}`.
 
 ### 4. Configuracoes Modulares Reais
 

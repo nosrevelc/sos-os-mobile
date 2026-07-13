@@ -13,6 +13,7 @@ import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CONTACTS_GOOGLE_ACCOUNT_KEY
+import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -71,6 +72,12 @@ class CustomerViewModel(
     var listMessage by mutableStateOf<String?>(null)
         private set
 
+    var newCustomerContactCheck by mutableStateOf<CustomerEntity?>(null)
+        private set
+
+    var addContactPrompt by mutableStateOf<CustomerEntity?>(null)
+        private set
+
     fun onQueryChanged(value: String) {
         query = value
         searchQuery.value = value
@@ -81,11 +88,11 @@ class CustomerViewModel(
     }
 
     fun onPhoneChanged(value: String) {
-        formState = formState.copy(phone = value, message = null)
+        formState = formState.copy(phone = InputMasks.phone(value), message = null)
     }
 
     fun onCpfCnpjChanged(value: String) {
-        formState = formState.copy(cpfCnpj = value, message = null)
+        formState = formState.copy(cpfCnpj = InputMasks.cpfCnpj(value), message = null)
     }
 
     fun onEmailChanged(value: String) {
@@ -130,7 +137,7 @@ class CustomerViewModel(
             try {
                 val editingId = formState.editingId
                 if (editingId == null) {
-                    customerRepository.create(
+                    val id = customerRepository.create(
                         name = formState.name,
                         phone = formState.phone,
                         cpfCnpj = formState.cpfCnpj,
@@ -138,7 +145,8 @@ class CustomerViewModel(
                         address = formState.address,
                         notes = formState.notes,
                     )
-                    formState = CustomerFormState(message = "Cliente cadastrado.")
+                    formState = CustomerFormState(message = "Cliente cadastrado com sucesso.")
+                    newCustomerContactCheck = customerRepository.findById(id)
                 } else {
                     customerRepository.update(
                         id = editingId,
@@ -149,7 +157,7 @@ class CustomerViewModel(
                         address = formState.address,
                         notes = formState.notes,
                     )
-                    formState = CustomerFormState(message = "Cliente atualizado.")
+                    formState = CustomerFormState(message = "Cliente atualizado com sucesso.")
                 }
             } catch (_: SQLiteConstraintException) {
                 formState = formState.copy(message = "CPF/CNPJ ja cadastrado.")
@@ -171,6 +179,9 @@ class CustomerViewModel(
             listMessage = runCatching {
                 val account = settingsRepository.getString(CONTACTS_GOOGLE_ACCOUNT_KEY)
                 val currentRawContactId = settingsRepository.getContactRawId(customer.id)
+                if (currentRawContactId == null && contactsRepository.contactExists(customer)) {
+                    return@runCatching "Cliente ja existe na agenda. Nao foi aberto novo cadastro para evitar duplicidade."
+                }
                 val rawContactId = contactsRepository.syncCustomer(
                     customer = customer,
                     googleAccount = account,
@@ -184,6 +195,28 @@ class CustomerViewModel(
                 "Nao foi possivel salvar na agenda: ${it.message ?: "verifique a permissao de contatos"}"
             }
         }
+    }
+
+    fun checkNewCustomerContact(customer: CustomerEntity) {
+        viewModelScope.launch {
+            if (contactsRepository.contactExists(customer)) {
+                val message = "Cliente cadastrado com sucesso. Cliente ja existe na agenda; nao foi aberto novo cadastro."
+                listMessage = message
+                formState = formState.copy(message = message)
+            } else {
+                formState = formState.copy(message = "Cliente cadastrado com sucesso. Confirme se deseja adicionar na agenda.")
+                addContactPrompt = customer
+            }
+            newCustomerContactCheck = null
+        }
+    }
+
+    fun consumeNewCustomerContactCheck() {
+        newCustomerContactCheck = null
+    }
+
+    fun dismissAddContactPrompt() {
+        addContactPrompt = null
     }
 
     companion object {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,10 +34,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.core.content.ContextCompat
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
+import br.com.sos.osmobile.ui.input.InputMasks
 
 @Composable
 fun CustomerScreen(viewModel: CustomerViewModel) {
@@ -43,13 +50,31 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
     val form = viewModel.formState
     val context = LocalContext.current
     var pendingContact by remember { mutableStateOf<CustomerEntity?>(null) }
+    var pendingAction by remember { mutableStateOf<ContactAction?>(null) }
     val contactPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            pendingContact?.let(viewModel::syncContact)
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { grants ->
+        val canWrite = grants[Manifest.permission.WRITE_CONTACTS] == true
+        val canRead = grants[Manifest.permission.READ_CONTACTS] == true
+        when (pendingAction) {
+            ContactAction.CheckAfterCreate -> if (canRead) pendingContact?.let(viewModel::checkNewCustomerContact)
+            ContactAction.Sync -> if (canRead && canWrite) pendingContact?.let(viewModel::syncContact)
+            null -> Unit
         }
         pendingContact = null
+        pendingAction = null
+    }
+    val newCustomerContactCheck = viewModel.newCustomerContactCheck
+    LaunchedEffect(newCustomerContactCheck) {
+        newCustomerContactCheck?.let { customer ->
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                viewModel.checkNewCustomerContact(customer)
+            } else {
+                pendingContact = customer
+                pendingAction = ContactAction.CheckAfterCreate
+                contactPermissionLauncher.launch(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS))
+            }
+        }
     }
 
     LazyColumn(
@@ -113,17 +138,56 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
                     onEdit = { viewModel.startEditing(customer) },
                     onArchive = { viewModel.archiveCustomer(customer.id) },
                     onSyncContact = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                        if (
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                        ) {
                             viewModel.syncContact(customer)
                         } else {
                             pendingContact = customer
-                            contactPermissionLauncher.launch(Manifest.permission.WRITE_CONTACTS)
+                            pendingAction = ContactAction.Sync
+                            contactPermissionLauncher.launch(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS))
                         }
                     },
                 )
             }
         }
     }
+
+    viewModel.addContactPrompt?.let { customer ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissAddContactPrompt,
+            title = { Text("Adicionar na agenda?") },
+            text = { Text("Deseja salvar este cliente nos contatos do aparelho?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.dismissAddContactPrompt()
+                    if (
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        viewModel.syncContact(customer)
+                    } else {
+                        pendingContact = customer
+                        pendingAction = ContactAction.Sync
+                        contactPermissionLauncher.launch(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS))
+                    }
+                }) {
+                    Text("Adicionar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissAddContactPrompt) {
+                    Text("Agora nao")
+                }
+            },
+        )
+    }
+}
+
+private enum class ContactAction {
+    CheckAfterCreate,
+    Sync,
 }
 
 @Composable
@@ -139,6 +203,15 @@ private fun CustomerForm(
     onSubmit: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    var phoneField by remember { mutableStateOf(TextFieldValue(form.phone, TextRange(form.phone.length))) }
+    var cpfCnpjField by remember { mutableStateOf(TextFieldValue(form.cpfCnpj, TextRange(form.cpfCnpj.length))) }
+    LaunchedEffect(form.phone) {
+        if (phoneField.text != form.phone) phoneField = TextFieldValue(form.phone, TextRange(form.phone.length))
+    }
+    LaunchedEffect(form.cpfCnpj) {
+        if (cpfCnpjField.text != form.cpfCnpj) cpfCnpjField = TextFieldValue(form.cpfCnpj, TextRange(form.cpfCnpj.length))
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = if (form.editingId == null) "Novo cliente" else "Editar cliente",
@@ -153,18 +226,28 @@ private fun CustomerForm(
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = form.phone,
-            onValueChange = onPhoneChanged,
+            value = phoneField,
+            onValueChange = {
+                val masked = InputMasks.phone(it.text)
+                phoneField = TextFieldValue(masked, TextRange(masked.length))
+                onPhoneChanged(masked)
+            },
             label = { Text("Telefone") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             modifier = Modifier.fillMaxWidth(),
         )
         if (cpfCnpjPolicy != CpfCnpjPolicy.NotUsed) {
             OutlinedTextField(
-                value = form.cpfCnpj,
-                onValueChange = onCpfCnpjChanged,
+                value = cpfCnpjField,
+                onValueChange = {
+                    val masked = InputMasks.cpfCnpj(it.text)
+                    cpfCnpjField = TextFieldValue(masked, TextRange(masked.length))
+                    onCpfCnpjChanged(masked)
+                },
                 label = { Text(if (cpfCnpjPolicy == CpfCnpjPolicy.Required) "CPF/CNPJ obrigatorio" else "CPF/CNPJ") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -188,17 +271,19 @@ private fun CustomerForm(
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
+        form.message?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = form.message.orEmpty(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.weight(1f),
-            )
             if (form.editingId != null) {
                 OutlinedButton(onClick = onCancel) {
                     Text("Cancelar")

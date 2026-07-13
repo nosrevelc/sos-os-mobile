@@ -2,6 +2,7 @@ package br.com.sos.osmobile.data.repository
 
 import android.content.ContentProviderOperation
 import android.content.Context
+import android.net.Uri
 import android.provider.ContactsContract
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +13,7 @@ data class ContactAccount(
     val type: String,
 ) {
     val label: String = if (type == "com.google") "$name (Google)" else name
+    val storageKey: String = "$type|$name"
 }
 
 class ContactsRepository(
@@ -19,15 +21,15 @@ class ContactsRepository(
 ) {
     private val contentResolver = context.applicationContext.contentResolver
 
-    suspend fun listGoogleContactAccounts(): List<ContactAccount> = withContext(Dispatchers.IO) {
+    suspend fun listContactAccounts(): List<ContactAccount> = withContext(Dispatchers.IO) {
         contentResolver.query(
             ContactsContract.Settings.CONTENT_URI,
             arrayOf(
                 ContactsContract.Settings.ACCOUNT_NAME,
                 ContactsContract.Settings.ACCOUNT_TYPE,
             ),
-            "${ContactsContract.Settings.ACCOUNT_TYPE} = ?",
-            arrayOf(GOOGLE_ACCOUNT_TYPE),
+            null,
+            null,
             ContactsContract.Settings.ACCOUNT_NAME,
         )?.use { cursor ->
             val nameIndex = cursor.getColumnIndexOrThrow(ContactsContract.Settings.ACCOUNT_NAME)
@@ -44,6 +46,16 @@ class ContactsRepository(
         }.orEmpty()
     }
 
+    suspend fun listGoogleContactAccounts(): List<ContactAccount> = listContactAccounts()
+
+    suspend fun contactExists(customer: CustomerEntity): Boolean = withContext(Dispatchers.IO) {
+        val phone = customer.telefone.filter { it.isDigit() }
+        if (phone.isBlank()) return@withContext false
+        val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phone))
+        contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup._ID), null, null, null)
+            ?.use { it.moveToFirst() } ?: false
+    }
+
     suspend fun syncCustomer(
         customer: CustomerEntity,
         googleAccount: String?,
@@ -52,13 +64,13 @@ class ContactsRepository(
         existingRawContactId?.takeIf { it > 0 }?.let { deleteRawContact(it) }
 
         val operations = arrayListOf<ContentProviderOperation>()
-        val accountName = googleAccount?.trim()?.takeIf { it.isNotBlank() }
+        val account = googleAccount?.trim()?.takeIf { it.isNotBlank() }?.let(::parseAccount)
 
         val rawContactInsert = ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
-        if (accountName != null) {
+        if (account != null) {
             rawContactInsert
-                .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, GOOGLE_ACCOUNT_TYPE)
-                .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, accountName)
+                .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, account.type)
+                .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, account.name)
         } else {
             rawContactInsert
                 .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
@@ -111,6 +123,15 @@ class ContactsRepository(
             "${ContactsContract.RawContacts._ID} = ?",
             arrayOf(rawContactId.toString()),
         )
+    }
+
+    private fun parseAccount(value: String): ContactAccount {
+        val parts = value.split("|", limit = 2)
+        return if (parts.size == 2) {
+            ContactAccount(name = parts[1], type = parts[0])
+        } else {
+            ContactAccount(name = value, type = GOOGLE_ACCOUNT_TYPE)
+        }
     }
 
     private companion object {

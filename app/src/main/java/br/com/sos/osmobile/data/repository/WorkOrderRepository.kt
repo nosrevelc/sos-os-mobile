@@ -6,12 +6,18 @@ import br.com.sos.osmobile.data.local.dao.WorkOrderDao
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
 import br.com.sos.osmobile.data.local.model.DocumentItem
+import br.com.sos.osmobile.data.local.model.WorkOrderServiceUsage
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
+import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.model.WorkOrderStatus
+import br.com.sos.osmobile.data.print.ThermalPrintContent
+import br.com.sos.osmobile.data.print.ThermalTextBlock
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.text.NumberFormat
+import java.util.Locale
 
 data class WorkOrderItemInput(
     val serviceProductId: Long,
@@ -26,6 +32,8 @@ class WorkOrderRepository(
     fun observeAll(): Flow<List<WorkOrderEntity>> = workOrderDao.observeAll()
 
     fun observeSummaries(): Flow<List<WorkOrderSummary>> = workOrderDao.observeSummaries()
+
+    fun observeServiceUsage(): Flow<List<WorkOrderServiceUsage>> = workOrderDao.observeServiceUsage()
 
     suspend fun findSummaryById(id: Long): WorkOrderSummary? = workOrderDao.findSummaryById(id)
 
@@ -143,6 +151,82 @@ class WorkOrderRepository(
         )
     }
 
+    suspend fun generateThermalPrintContent(
+        id: Long,
+        headerTemplate: String,
+        footerTemplate: String,
+        companyName: String,
+    ): ThermalPrintContent? {
+        val workOrder = workOrderDao.findById(id) ?: return null
+        val summary = workOrderDao.findSummaryById(id) ?: return null
+        val tokens = mapOf(
+            "empresa" to companyName,
+            "data" to formatDate(workOrder.openedAt),
+            "os" to workOrder.numero,
+            "nome" to summary.customerName,
+            "telefone" to summary.customerPhone,
+            "valor" to money(workOrder.totalValue),
+            "status" to workOrder.status,
+        )
+        return ThermalPrintContent(
+            header = MessageTemplateRenderer.render(headerTemplate, tokens).trim(),
+            body = ServiceDocumentGenerator.generate(
+                title = "ORDEM DE SERVICO",
+                number = workOrder.numero,
+                customerName = summary.customerName,
+                status = workOrder.status,
+                totalValue = workOrder.totalValue,
+                notes = workOrder.observacoes,
+                items = workOrderDao.findDocumentItems(id),
+            ),
+            footer = MessageTemplateRenderer.render(footerTemplate, tokens).trim(),
+        )
+    }
+
+    suspend fun generateShelfLabelBlocks(id: Long): List<ThermalTextBlock>? {
+        val workOrder = workOrderDao.findById(id) ?: return null
+        val summary = workOrderDao.findSummaryById(id) ?: return null
+        return listOf(
+            ThermalTextBlock(
+                text = "OS",
+                alignment = "center",
+                bold = true,
+                size = "large",
+            ),
+            ThermalTextBlock(
+                text = workOrder.numero,
+                alignment = "center",
+                bold = true,
+                size = "large",
+            ),
+            ThermalTextBlock(
+                text = "----------------",
+                alignment = "center",
+            ),
+            ThermalTextBlock(
+                text = summary.customerName,
+                alignment = "center",
+                bold = true,
+                size = "large",
+            ),
+            ThermalTextBlock(
+                text = "Tel: ${summary.customerPhone}",
+                alignment = "center",
+                bold = true,
+            ),
+            ThermalTextBlock(
+                text = "Valor: ${money(workOrder.totalValue)}",
+                alignment = "center",
+                bold = true,
+            ),
+            ThermalTextBlock(
+                text = formatDate(workOrder.openedAt),
+                alignment = "center",
+                font = "B",
+            ),
+        )
+    }
+
     private suspend fun generateWorkOrderNumber(nowMillis: Long): String {
         val zone = ZoneId.systemDefault()
         val date = Instant.ofEpochMilli(nowMillis).atZone(zone)
@@ -157,4 +241,12 @@ class WorkOrderRepository(
         val datePart = date.format(DateTimeFormatter.ofPattern("yyMMdd"))
         return "$datePart${sequence.toString().padStart(4, '0')}"
     }
+
+    private fun formatDate(value: Long): String {
+        val date = Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault())
+        return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    }
+
+    private fun money(value: Double): String =
+        NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 }

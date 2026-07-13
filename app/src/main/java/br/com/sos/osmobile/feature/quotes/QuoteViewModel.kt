@@ -10,6 +10,7 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.QuoteSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
+import br.com.sos.osmobile.data.message.PixPayloadGenerator
 import br.com.sos.osmobile.data.model.QuoteStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
@@ -18,6 +19,12 @@ import br.com.sos.osmobile.data.repository.QuoteConversionResult
 import br.com.sos.osmobile.data.repository.QuoteItemInput
 import br.com.sos.osmobile.data.repository.QuoteRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
+import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -35,6 +42,7 @@ data class QuoteDraftItem(
 
 data class QuoteFormState(
     val editingId: Long? = null,
+    val editingNumber: String? = null,
     val selectedCustomerId: Long? = null,
     val selectedServiceProductId: Long? = null,
     val status: QuoteStatus = QuoteStatus.Pending,
@@ -49,6 +57,10 @@ data class QuoteUiState(
     val customers: List<CustomerEntity> = emptyList(),
     val services: List<ServiceProductEntity> = emptyList(),
     val quotes: List<QuoteSummary> = emptyList(),
+    val companyName: String = "",
+    val pixName: String = "",
+    val pixKey: String = "",
+    val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
 )
 
 class QuoteViewModel(
@@ -57,13 +69,24 @@ class QuoteViewModel(
     private val auditRepository: AuditRepository,
     private val customerRepository: CustomerRepository,
     private val serviceProductRepository: ServiceProductRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
     val uiState: StateFlow<QuoteUiState> = combine(
         customerRepository.observeActive(),
         serviceProductRepository.observeActive(),
         quoteRepository.observeSummaries(),
-    ) { customers, services, quotes ->
-        QuoteUiState(customers = customers, services = services, quotes = quotes)
+        settingsRepository.observeAll(),
+    ) { customers, services, quotes, settings ->
+        val values = settings.associate { it.chave to it.valor }
+        QuoteUiState(
+            customers = customers,
+            services = services,
+            quotes = quotes,
+            companyName = values[COMPANY_NAME_KEY].orEmpty(),
+            pixName = values[PIX_NAME_KEY].orEmpty(),
+            pixKey = values[PIX_KEY_KEY].orEmpty(),
+            quoteTemplate = values[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), QuoteUiState())
 
     var formState by mutableStateOf(QuoteFormState())
@@ -91,7 +114,7 @@ class QuoteViewModel(
     fun selectServiceProduct(item: ServiceProductEntity) {
         formState = formState.copy(
             selectedServiceProductId = item.id,
-            unitPrice = item.unitPrice.toString().replace(".", ","),
+            unitPrice = InputMasks.currencyFromDouble(item.unitPrice),
             message = null,
         )
     }
@@ -101,11 +124,11 @@ class QuoteViewModel(
     }
 
     fun onQuantityChanged(value: String) {
-        formState = formState.copy(quantity = value, message = null)
+        formState = formState.copy(quantity = InputMasks.decimal(value, integerDigits = 5, decimalDigits = 2), message = null)
     }
 
     fun onUnitPriceChanged(value: String) {
-        formState = formState.copy(unitPrice = value, message = null)
+        formState = formState.copy(unitPrice = InputMasks.currency(value), message = null)
     }
 
     fun onNotesChanged(value: String) {
@@ -196,6 +219,7 @@ class QuoteViewModel(
             val services = uiState.value.services
             formState = QuoteFormState(
                 editingId = quote.id,
+                editingNumber = quote.numero,
                 selectedCustomerId = quote.customerId,
                 status = statusFromLabel(quote.status),
                 notes = quote.observacoes.orEmpty(),
@@ -244,12 +268,19 @@ class QuoteViewModel(
     fun showMessage(quote: QuoteSummary) {
         messagePhone = quote.customerPhone
         messageText = MessageTemplateRenderer.render(
-            template = MessageTemplateRenderer.quoteDefaultTemplate,
+            template = uiState.value.quoteTemplate,
             tokens = mapOf(
                 "nome" to quote.customerName,
+                "telefone" to quote.customerPhone,
+                "cpf" to "",
+                "os" to "",
                 "orcamento" to quote.number,
                 "status" to quote.status,
                 "valor" to quote.totalValue.toString(),
+                "empresa" to uiState.value.companyName,
+                "data" to "",
+                "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, quote.totalValue),
+                "PIX_QR" to "",
             ),
         )
     }
@@ -275,6 +306,7 @@ class QuoteViewModel(
             auditRepository: AuditRepository,
             customerRepository: CustomerRepository,
             serviceProductRepository: ServiceProductRepository,
+            settingsRepository: SettingsRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -285,6 +317,7 @@ class QuoteViewModel(
                         auditRepository = auditRepository,
                         customerRepository = customerRepository,
                         serviceProductRepository = serviceProductRepository,
+                        settingsRepository = settingsRepository,
                     ) as T
                 }
             }

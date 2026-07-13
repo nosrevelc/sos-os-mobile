@@ -9,4 +9,5 @@ data class WorkOrderSummary(
     val totalValue: Double,
     val itemCount: Int,
     val openedAt: Long,
+    val concludedAt: Long? = null,
 )

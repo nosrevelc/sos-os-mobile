@@ -3,6 +3,7 @@ package br.com.sos.osmobile.data.backup
 import br.com.sos.osmobile.core.database.AppDatabase
 import br.com.sos.osmobile.core.time.Clock
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
+import br.com.sos.osmobile.data.local.entity.AppSettingEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
@@ -18,9 +19,24 @@ data class BackupImportResult(
     val workOrders: Int,
 )
 
+data class SettingsBackupImportResult(
+    val settings: Int,
+)
+
 class BackupRepository(
     private val database: AppDatabase,
 ) {
+    suspend fun exportSettingsJson(): String {
+        val settings = database.settingsDao().listAll()
+
+        return buildString {
+            appendLine("{")
+            appendLine("\"tipo\":\"configuracoes\",")
+            appendLine("\"configuracoes\":${settings.joinToString(prefix = "[", postfix = "]") { """{"chave":${str(it.chave)},"valor":${str(it.valor)},"updatedAt":${it.updatedAt}}""" }}")
+            appendLine("}")
+        }
+    }
+
     suspend fun exportJson(): String {
         val customers = database.customerDao().listAll()
         val services = database.serviceProductDao().listAll()
@@ -140,6 +156,22 @@ class BackupRepository(
             quotes = quotes.size,
             workOrders = workOrders.size,
         )
+    }
+
+    suspend fun importSettingsJson(json: String): SettingsBackupImportResult {
+        val root = JSONObject(json)
+        val settings = root.array("configuracoes").mapObjects { item ->
+            AppSettingEntity(
+                chave = item.getString("chave"),
+                valor = item.getString("valor"),
+                updatedAt = item.optLong("updatedAt", Clock.nowMillis()),
+            )
+        }
+        require(settings.isNotEmpty()) { "Backup de configuracoes vazio." }
+
+        database.settingsDao().upsertAll(settings)
+
+        return SettingsBackupImportResult(settings = settings.size)
     }
 
     private fun esc(value: String): String =

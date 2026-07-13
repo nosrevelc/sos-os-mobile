@@ -10,12 +10,37 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
+import br.com.sos.osmobile.data.message.PixPayloadGenerator
 import br.com.sos.osmobile.data.model.WorkOrderStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_BLUETOOTH_ADDRESS_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_AUTO_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_COPIES_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_FONT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_FOOTER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_ALIGN_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_BOLD_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_REVIEW_REQUEST_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_CANCELED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_COMPLETED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_OPEN_KEY
 import br.com.sos.osmobile.data.repository.WorkOrderItemInput
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
+import br.com.sos.osmobile.data.print.ThermalPrintContent
+import br.com.sos.osmobile.data.print.ThermalPrintStyle
+import br.com.sos.osmobile.data.print.ThermalTextBlock
+import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -33,6 +58,7 @@ data class WorkOrderDraftItem(
 
 data class WorkOrderFormState(
     val editingId: Long? = null,
+    val editingNumber: String? = null,
     val selectedCustomerId: Long? = null,
     val selectedServiceProductId: Long? = null,
     val status: WorkOrderStatus = WorkOrderStatus.Open,
@@ -47,6 +73,19 @@ data class WorkOrderUiState(
     val customers: List<CustomerEntity> = emptyList(),
     val services: List<ServiceProductEntity> = emptyList(),
     val workOrders: List<WorkOrderSummary> = emptyList(),
+    val companyName: String = "",
+    val pixName: String = "",
+    val pixKey: String = "",
+    val workOrderTemplate: String = MessageTemplateRenderer.workOrderDefaultTemplate,
+    val workOrderStatusTemplates: Map<String, String> = emptyMap(),
+    val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
+    val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
+    val printBluetoothAddress: String = "",
+    val printWorkOrderAuto: Boolean = false,
+    val printWorkOrderCopies: Int = 0,
+    val printWorkOrderHeader: String = "{empresa}\nOS {os}\n{data}",
+    val printWorkOrderFooter: String = "Obrigado pela preferencia",
+    val printWorkOrderStyle: ThermalPrintStyle = ThermalPrintStyle(),
 )
 
 class WorkOrderViewModel(
@@ -54,13 +93,43 @@ class WorkOrderViewModel(
     private val auditRepository: AuditRepository,
     private val customerRepository: CustomerRepository,
     private val serviceProductRepository: ServiceProductRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
         serviceProductRepository.observeActive(),
         workOrderRepository.observeSummaries(),
-    ) { customers, services, workOrders ->
-        WorkOrderUiState(customers = customers, services = services, workOrders = workOrders)
+        settingsRepository.observeAll(),
+    ) { customers, services, workOrders, settings ->
+        val values = settings.associate { it.chave to it.valor }
+        WorkOrderUiState(
+            customers = customers,
+            services = services,
+            workOrders = workOrders,
+            companyName = values[COMPANY_NAME_KEY].orEmpty(),
+            pixName = values[PIX_NAME_KEY].orEmpty(),
+            pixKey = values[PIX_KEY_KEY].orEmpty(),
+            workOrderTemplate = values[TEMPLATE_WORK_ORDER_KEY] ?: MessageTemplateRenderer.workOrderDefaultTemplate,
+            workOrderStatusTemplates = mapOf(
+                WorkOrderStatus.Open.label to (values[TEMPLATE_WORK_ORDER_OPEN_KEY] ?: MessageTemplateRenderer.workOrderOpenTemplate),
+                WorkOrderStatus.InProgress.label to (values[TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY] ?: MessageTemplateRenderer.workOrderInProgressTemplate),
+                WorkOrderStatus.Completed.label to (values[TEMPLATE_WORK_ORDER_COMPLETED_KEY] ?: MessageTemplateRenderer.workOrderCompletedTemplate),
+                WorkOrderStatus.Canceled.label to (values[TEMPLATE_WORK_ORDER_CANCELED_KEY] ?: MessageTemplateRenderer.workOrderCanceledTemplate),
+            ),
+            reviewRequestTemplate = values[TEMPLATE_REVIEW_REQUEST_KEY] ?: MessageTemplateRenderer.reviewRequestTemplate,
+            pickupReminderTemplate = values[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
+            printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
+            printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY]?.toBooleanStrictOrNull() ?: false,
+            printWorkOrderCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
+            printWorkOrderHeader = values[PRINT_WORK_ORDER_HEADER_KEY] ?: "{empresa}\nOS {os}\n{data}",
+            printWorkOrderFooter = values[PRINT_WORK_ORDER_FOOTER_KEY] ?: "Obrigado pela preferencia",
+            printWorkOrderStyle = ThermalPrintStyle(
+                font = values[PRINT_WORK_ORDER_FONT_KEY] ?: "A",
+                textSize = values[PRINT_WORK_ORDER_TEXT_SIZE_KEY] ?: "normal",
+                headerBold = values[PRINT_WORK_ORDER_HEADER_BOLD_KEY]?.toBooleanStrictOrNull() ?: true,
+                headerAlignment = values[PRINT_WORK_ORDER_HEADER_ALIGN_KEY] ?: "center",
+            ),
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkOrderUiState())
 
     var formState by mutableStateOf(WorkOrderFormState())
@@ -88,7 +157,7 @@ class WorkOrderViewModel(
     fun selectServiceProduct(item: ServiceProductEntity) {
         formState = formState.copy(
             selectedServiceProductId = item.id,
-            unitPrice = item.unitPrice.toString().replace(".", ","),
+            unitPrice = InputMasks.currencyFromDouble(item.unitPrice),
             message = null,
         )
     }
@@ -98,11 +167,11 @@ class WorkOrderViewModel(
     }
 
     fun onQuantityChanged(value: String) {
-        formState = formState.copy(quantity = value, message = null)
+        formState = formState.copy(quantity = InputMasks.decimal(value, integerDigits = 5, decimalDigits = 2), message = null)
     }
 
     fun onUnitPriceChanged(value: String) {
-        formState = formState.copy(unitPrice = value, message = null)
+        formState = formState.copy(unitPrice = InputMasks.currency(value), message = null)
     }
 
     fun onNotesChanged(value: String) {
@@ -144,6 +213,18 @@ class WorkOrderViewModel(
     }
 
     fun saveWorkOrder() {
+        saveWorkOrderInternal()
+    }
+
+    fun saveWorkOrderThen(onSaved: () -> Unit) {
+        saveWorkOrderInternal { onSaved() }
+    }
+
+    fun saveWorkOrderThenWithId(onSaved: (Long) -> Unit) {
+        saveWorkOrderInternal(onSaved)
+    }
+
+    private fun saveWorkOrderInternal(onSaved: ((Long) -> Unit)? = null) {
         val validationMessage = WorkOrderFormValidator.validate(formState)
         if (validationMessage != null) {
             formState = formState.copy(message = validationMessage)
@@ -160,13 +241,14 @@ class WorkOrderViewModel(
             }
             val editingId = formState.editingId
             if (editingId == null) {
-                workOrderRepository.create(
+                val createdId = workOrderRepository.create(
                     customerId = formState.selectedCustomerId ?: return@launch,
                     status = formState.status.label,
                     notes = formState.notes,
                     items = items,
                 )
-                formState = WorkOrderFormState(message = "OS criada.")
+                editWorkOrder(createdId, "OS criada com sucesso.")
+                onSaved?.invoke(createdId)
             } else {
                 val updated = workOrderRepository.updateContent(
                     id = editingId,
@@ -177,6 +259,7 @@ class WorkOrderViewModel(
                 )
                 if (updated) {
                     editWorkOrder(editingId, "OS atualizada.")
+                    onSaved?.invoke(editingId)
                 } else {
                     formState = formState.copy(message = "Nao foi possivel atualizar a OS.")
                 }
@@ -191,6 +274,7 @@ class WorkOrderViewModel(
             val services = uiState.value.services
             formState = WorkOrderFormState(
                 editingId = workOrder.id,
+                editingNumber = workOrder.numero,
                 selectedCustomerId = workOrder.customerId,
                 status = statusFromLabel(workOrder.status),
                 notes = workOrder.observacoes.orEmpty(),
@@ -221,20 +305,56 @@ class WorkOrderViewModel(
     }
 
     fun showDocument(workOrderId: Long) {
+        showDocumentThen(workOrderId)
+    }
+
+    fun showDocumentThen(workOrderId: Long, onLoaded: ((String) -> Unit)? = null) {
         viewModelScope.launch {
-            documentText = workOrderRepository.generateDocumentText(workOrderId) ?: "Documento nao encontrado."
+            val text = workOrderRepository.generateDocumentText(workOrderId) ?: "Documento nao encontrado."
+            documentText = text
+            onLoaded?.invoke(text)
+        }
+    }
+
+    fun showThermalDocumentThen(workOrderId: Long, onLoaded: (ThermalPrintContent) -> Unit) {
+        viewModelScope.launch {
+            val settings = uiState.value
+            val content = workOrderRepository.generateThermalPrintContent(
+                id = workOrderId,
+                headerTemplate = settings.printWorkOrderHeader,
+                footerTemplate = settings.printWorkOrderFooter,
+                companyName = settings.companyName,
+            ) ?: ThermalPrintContent(body = "Documento nao encontrado.")
+            documentText = content.asText()
+            onLoaded(content)
+        }
+    }
+
+    fun showShelfLabelThen(workOrderId: Long, onLoaded: (List<ThermalTextBlock>) -> Unit) {
+        viewModelScope.launch {
+            val blocks = workOrderRepository.generateShelfLabelBlocks(workOrderId)
+                ?: listOf(ThermalTextBlock(text = "Etiqueta nao encontrada."))
+            documentText = blocks.joinToString(separator = "\n") { it.text }
+            onLoaded(blocks)
         }
     }
 
     fun showMessage(workOrder: WorkOrderSummary) {
         messagePhone = workOrder.customerPhone
         messageText = MessageTemplateRenderer.render(
-            template = MessageTemplateRenderer.workOrderDefaultTemplate,
+            template = uiState.value.workOrderStatusTemplates[workOrder.status] ?: uiState.value.workOrderTemplate,
             tokens = mapOf(
                 "nome" to workOrder.customerName,
+                "telefone" to workOrder.customerPhone,
+                "cpf" to "",
                 "os" to workOrder.number,
+                "orcamento" to "",
                 "status" to workOrder.status,
                 "valor" to workOrder.totalValue.toString(),
+                "empresa" to uiState.value.companyName,
+                "data" to "",
+                "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, workOrder.totalValue),
+                "PIX_QR" to "",
             ),
         )
     }
@@ -263,6 +383,7 @@ class WorkOrderViewModel(
             auditRepository: AuditRepository,
             customerRepository: CustomerRepository,
             serviceProductRepository: ServiceProductRepository,
+            settingsRepository: SettingsRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -272,6 +393,7 @@ class WorkOrderViewModel(
                         auditRepository = auditRepository,
                         customerRepository = customerRepository,
                         serviceProductRepository = serviceProductRepository,
+                        settingsRepository = settingsRepository,
                     ) as T
                 }
             }

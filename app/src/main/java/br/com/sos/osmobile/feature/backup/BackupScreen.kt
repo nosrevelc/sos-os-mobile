@@ -26,6 +26,7 @@ fun BackupScreen(viewModel: BackupViewModel) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Text("Backup completo", style = MaterialTheme.typography.titleMedium)
         Button(onClick = viewModel::exportJson, modifier = Modifier.fillMaxWidth()) {
             Text("Gerar backup JSON")
         }
@@ -35,6 +36,22 @@ fun BackupScreen(viewModel: BackupViewModel) {
             ShareTextButton(label = "Compartilhar backup", text = viewModel.exportText)
             ShareFileButton(label = "Compartilhar arquivo JSON", fileName = "os-mobile-backup.json", text = viewModel.exportText, mimeType = "application/json")
             Text(viewModel.exportText, style = MaterialTheme.typography.bodySmall)
+        }
+        Text("Backup das configuracoes", style = MaterialTheme.typography.titleMedium)
+        Button(onClick = viewModel::exportSettingsJson, modifier = Modifier.fillMaxWidth()) {
+            Text("Gerar backup das configuracoes")
+        }
+        if (viewModel.settingsExportText.isBlank()) {
+            Text("Nenhum backup de configuracoes gerado.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            ShareTextButton(label = "Compartilhar configuracoes", text = viewModel.settingsExportText)
+            ShareFileButton(
+                label = "Compartilhar arquivo de configuracoes",
+                fileName = "os-mobile-configuracoes.json",
+                text = viewModel.settingsExportText,
+                mimeType = "application/json",
+            )
+            Text(viewModel.settingsExportText, style = MaterialTheme.typography.bodySmall)
         }
         Text("Restaurar backup", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
@@ -51,7 +68,17 @@ fun BackupScreen(viewModel: BackupViewModel) {
         ) {
             Text("Substituir dados pelo backup")
         }
+        Button(
+            onClick = viewModel::importSettingsJson,
+            enabled = viewModel.importText.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Restaurar apenas configuracoes")
+        }
         viewModel.importMessage?.let {
+            Text(it, color = MaterialTheme.colorScheme.secondary)
+        }
+        viewModel.settingsImportMessage?.let {
             Text(it, color = MaterialTheme.colorScheme.secondary)
         }
     }

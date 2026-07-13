@@ -19,13 +19,22 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.ui.input.InputMasks
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -101,6 +110,14 @@ private fun ServiceProductForm(
     onSubmit: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
+
+    LaunchedEffect(form.unitPrice) {
+        if (unitPriceField.text != form.unitPrice) {
+            unitPriceField = TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = if (form.editingId == null) "Novo servico/produto" else "Editar servico/produto",
@@ -130,10 +147,15 @@ private fun ServiceProductForm(
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = form.unitPrice,
-            onValueChange = onUnitPriceChanged,
+            value = unitPriceField,
+            onValueChange = {
+                val masked = InputMasks.currency(it.text)
+                unitPriceField = TextFieldValue(masked, TextRange(masked.length))
+                onUnitPriceChanged(masked)
+            },
             label = { Text("Valor padrao") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
@@ -143,17 +165,19 @@ private fun ServiceProductForm(
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
+        form.message?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = form.message.orEmpty(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.weight(1f),
-            )
             if (form.editingId != null) {
                 OutlinedButton(onClick = onCancel) {
                     Text("Cancelar")
