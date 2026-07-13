@@ -518,11 +518,9 @@ fun WorkOrderScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f),
                     )
-                    OutlinedTextField(
-                        value = paymentMethod,
-                        onValueChange = { paymentMethod = it },
-                        label = { Text("Forma") },
-                        singleLine = true,
+                    PaymentMethodSelector(
+                        selected = paymentMethod,
+                        onSelected = { paymentMethod = it },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -1217,6 +1215,30 @@ private fun formatCurrency(value: Double): String =
 
 private fun formatDate(timestamp: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))
+
+@Composable
+private fun PaymentMethodSelector(
+    selected: String,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val methods = listOf("PIX", "Dinheiro", "Debito", "Credito", "Transferencia", "Outro")
+    OutlinedButton(onClick = { expanded = true }, modifier = modifier.fillMaxWidth()) {
+        Text("Forma: $selected")
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        methods.forEach { method ->
+            DropdownMenuItem(
+                text = { Text(if (method == selected) "$method *" else method) },
+                onClick = {
+                    onSelected(method)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
 
 @Composable
 private fun SignatureCapture(
