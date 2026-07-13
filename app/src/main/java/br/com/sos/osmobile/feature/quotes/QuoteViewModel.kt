@@ -23,7 +23,17 @@ import br.com.sos.osmobile.data.repository.SettingsRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_BLUETOOTH_ADDRESS_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_COPIES_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_FONT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_FOOTER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_ALIGN_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_BOLD_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
+import br.com.sos.osmobile.data.print.ThermalPrintContent
+import br.com.sos.osmobile.data.print.ThermalPrintStyle
 import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +71,11 @@ data class QuoteUiState(
     val pixName: String = "",
     val pixKey: String = "",
     val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
+    val printBluetoothAddress: String = "",
+    val printCopies: Int = 0,
+    val printHeader: String = "{empresa}\n{orcamento}\n{data}",
+    val printFooter: String = "Obrigado pela preferencia",
+    val printStyle: ThermalPrintStyle = ThermalPrintStyle(),
 )
 
 class QuoteViewModel(
@@ -86,6 +101,16 @@ class QuoteViewModel(
             pixName = values[PIX_NAME_KEY].orEmpty(),
             pixKey = values[PIX_KEY_KEY].orEmpty(),
             quoteTemplate = values[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
+            printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
+            printCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
+            printHeader = values[PRINT_WORK_ORDER_HEADER_KEY] ?: "{empresa}\n{orcamento}\n{data}",
+            printFooter = values[PRINT_WORK_ORDER_FOOTER_KEY] ?: "Obrigado pela preferencia",
+            printStyle = ThermalPrintStyle(
+                font = values[PRINT_WORK_ORDER_FONT_KEY] ?: "A",
+                textSize = values[PRINT_WORK_ORDER_TEXT_SIZE_KEY] ?: "normal",
+                headerBold = values[PRINT_WORK_ORDER_HEADER_BOLD_KEY]?.toBooleanStrictOrNull() ?: true,
+                headerAlignment = values[PRINT_WORK_ORDER_HEADER_ALIGN_KEY] ?: "center",
+            ),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), QuoteUiState())
 
@@ -262,6 +287,20 @@ class QuoteViewModel(
     fun showDocument(quoteId: Long) {
         viewModelScope.launch {
             documentText = quoteRepository.generateDocumentText(quoteId) ?: "Documento nao encontrado."
+        }
+    }
+
+    fun showThermalDocumentThen(quoteId: Long, onLoaded: (ThermalPrintContent) -> Unit) {
+        viewModelScope.launch {
+            val settings = uiState.value
+            val content = quoteRepository.generateThermalPrintContent(
+                id = quoteId,
+                headerTemplate = settings.printHeader,
+                footerTemplate = settings.printFooter,
+                companyName = settings.companyName,
+            ) ?: ThermalPrintContent(body = "Orcamento nao encontrado.")
+            documentText = content.asText()
+            onLoaded(content)
         }
     }
 

@@ -286,6 +286,22 @@ fun WorkOrderScreen(
                 ) {
                     Text("Imprimir etiqueta OS")
                 }
+                OutlinedButton(
+                    onClick = {
+                        viewModel.showReceiptThen(form.editingId) { printThermalWithPermission(it) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Imprimir recibo")
+                }
+                OutlinedButton(
+                    onClick = {
+                        viewModel.showWarrantyThen(form.editingId) { printThermalWithPermission(it) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Imprimir garantia")
+                }
             }
             thermalPrintMessage?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)

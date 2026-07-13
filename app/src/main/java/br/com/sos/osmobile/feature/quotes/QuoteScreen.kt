@@ -1,5 +1,8 @@
 package br.com.sos.osmobile.feature.quotes
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -27,9 +30,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,6 +46,8 @@ import br.com.sos.osmobile.data.local.model.QuoteSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
 import br.com.sos.osmobile.data.model.QuoteStatus
+import br.com.sos.osmobile.data.print.BluetoothThermalPrinter
+import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.ui.components.CustomerSearchSelector
 import br.com.sos.osmobile.ui.components.MessageActionButtons
 import br.com.sos.osmobile.ui.components.PixQrCode
@@ -55,6 +62,7 @@ import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @Composable
 fun QuoteScreen(
@@ -63,11 +71,48 @@ fun QuoteScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val form = viewModel.formState
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var pendingThermalContent by remember { mutableStateOf<ThermalPrintContent?>(null) }
+    var thermalPrintMessage by remember { mutableStateOf<String?>(null) }
     val selectedCustomer = uiState.customers.firstOrNull { it.id == form.selectedCustomerId }
     val totalValue = form.items.sumOf { item -> item.subtotal }
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     LaunchedEffect(initialEditId) {
         initialEditId?.let(viewModel::editQuote)
+    }
+    fun printThermal(content: ThermalPrintContent) {
+        coroutineScope.launch {
+            thermalPrintMessage = BluetoothThermalPrinter.print58mm(
+                context = context,
+                deviceAddress = uiState.printBluetoothAddress,
+                content = content,
+                copies = uiState.printCopies,
+                style = uiState.printStyle,
+            ).fold(
+                onSuccess = { "Impressao enviada." },
+                onFailure = { "Falha na impressao: ${it.message ?: "verifique a impressora"}" },
+            )
+        }
+    }
+    val bluetoothLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val content = pendingThermalContent
+        pendingThermalContent = null
+        if (granted && content != null) {
+            printThermal(content)
+        } else {
+            thermalPrintMessage = "Permissao Bluetooth negada."
+        }
+    }
+    fun printThermalWithPermission(content: ThermalPrintContent) {
+        if (BluetoothThermalPrinter.hasBluetoothPermission(context)) {
+            printThermal(content)
+        } else {
+            pendingThermalContent = content
+            bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        }
     }
     val currentMessage = selectedCustomer?.let {
         renderQuoteMessage(
@@ -131,6 +176,19 @@ fun QuoteScreen(
                 SharePdfButton(label = "Compartilhar PDF", fileName = "orcamento.pdf", text = it)
                 PrintDocumentButton(label = "Imprimir", jobName = "Orcamento", text = it)
             }
+            if (form.editingId != null && uiState.printCopies > 0) {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.showThermalDocumentThen(form.editingId) { printThermalWithPermission(it) }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Imprimir orcamento")
+                }
+            }
+            thermalPrintMessage?.let {
+                Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            }
             viewModel.messageText?.let {
                 Text(
                     text = it,
@@ -167,6 +225,43 @@ fun QuoteListScreen(
     onEdit: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var pendingThermalContent by remember { mutableStateOf<ThermalPrintContent?>(null) }
+    var thermalPrintMessage by remember { mutableStateOf<String?>(null) }
+    fun printThermal(content: ThermalPrintContent) {
+        coroutineScope.launch {
+            thermalPrintMessage = BluetoothThermalPrinter.print58mm(
+                context = context,
+                deviceAddress = uiState.printBluetoothAddress,
+                content = content,
+                copies = uiState.printCopies,
+                style = uiState.printStyle,
+            ).fold(
+                onSuccess = { "Impressao enviada." },
+                onFailure = { "Falha na impressao: ${it.message ?: "verifique a impressora"}" },
+            )
+        }
+    }
+    val bluetoothLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val content = pendingThermalContent
+        pendingThermalContent = null
+        if (granted && content != null) {
+            printThermal(content)
+        } else {
+            thermalPrintMessage = "Permissao Bluetooth negada."
+        }
+    }
+    fun printThermalWithPermission(content: ThermalPrintContent) {
+        if (BluetoothThermalPrinter.hasBluetoothPermission(context)) {
+            printThermal(content)
+        } else {
+            pendingThermalContent = content
+            bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -182,6 +277,9 @@ fun QuoteListScreen(
             viewModel.listMessage?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
+            thermalPrintMessage?.let {
+                Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            }
         }
         if (uiState.quotes.isEmpty()) {
             item {
@@ -191,9 +289,13 @@ fun QuoteListScreen(
             items(uiState.quotes, key = { it.id }) { quote ->
                 QuoteRow(
                     quote = quote,
+                    showPrint = uiState.printCopies > 0,
                     onConvert = { viewModel.convertToWorkOrder(quote.id) },
                     onStatusSelected = { viewModel.updateQuoteStatus(quote.id, it) },
                     onShowDocument = { viewModel.showDocument(quote.id) },
+                    onPrintThermal = {
+                        viewModel.showThermalDocumentThen(quote.id) { printThermalWithPermission(it) }
+                    },
                     onShowMessage = { viewModel.showMessage(quote) },
                     onShowHistory = { viewModel.showHistory(quote.id) },
                     onEdit = { onEdit(quote.id) },
@@ -388,9 +490,11 @@ private fun DraftItemRow(
 @Composable
 private fun QuoteRow(
     quote: QuoteSummary,
+    showPrint: Boolean,
     onConvert: () -> Unit,
     onStatusSelected: (QuoteStatus) -> Unit,
     onShowDocument: () -> Unit,
+    onPrintThermal: () -> Unit,
     onShowMessage: () -> Unit,
     onShowHistory: () -> Unit,
     onEdit: () -> Unit,
@@ -425,6 +529,11 @@ private fun QuoteRow(
                 }
                 TextButton(onClick = onShowDocument) {
                     Text("Documento")
+                }
+                if (showPrint) {
+                    TextButton(onClick = onPrintThermal) {
+                        Text("Imprimir")
+                    }
                 }
                 TextButton(onClick = onShowMessage) {
                     Text("Mensagem")

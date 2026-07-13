@@ -227,6 +227,80 @@ class WorkOrderRepository(
         )
     }
 
+    suspend fun generateReceiptPrintContent(
+        id: Long,
+        headerTemplate: String,
+        footerTemplate: String,
+        companyName: String,
+    ): ThermalPrintContent? {
+        val workOrder = workOrderDao.findById(id) ?: return null
+        val summary = workOrderDao.findSummaryById(id) ?: return null
+        val tokens = workOrderTokens(workOrder, summary, companyName)
+        return ThermalPrintContent(
+            header = MessageTemplateRenderer.render(headerTemplate, tokens).trim(),
+            body = buildString {
+                appendLine("RECIBO")
+                appendLine("OS: ${workOrder.numero}")
+                appendLine("Cliente: ${summary.customerName}")
+                appendLine("Telefone: ${summary.customerPhone}")
+                appendLine("Data: ${formatDate(Clock.nowMillis())}")
+                appendLine()
+                appendLine("Recebemos o valor de")
+                appendLine(money(workOrder.totalValue))
+                appendLine("referente aos servicos da OS.")
+                workOrder.observacoes?.takeIf { it.isNotBlank() }?.let {
+                    appendLine()
+                    appendLine("Obs: $it")
+                }
+            },
+            footer = MessageTemplateRenderer.render(footerTemplate, tokens).trim(),
+        )
+    }
+
+    suspend fun generateWarrantyPrintContent(
+        id: Long,
+        headerTemplate: String,
+        footerTemplate: String,
+        companyName: String,
+    ): ThermalPrintContent? {
+        val workOrder = workOrderDao.findById(id) ?: return null
+        val summary = workOrderDao.findSummaryById(id) ?: return null
+        val tokens = workOrderTokens(workOrder, summary, companyName)
+        return ThermalPrintContent(
+            header = MessageTemplateRenderer.render(headerTemplate, tokens).trim(),
+            body = buildString {
+                appendLine("GARANTIA")
+                appendLine("OS: ${workOrder.numero}")
+                appendLine("Cliente: ${summary.customerName}")
+                appendLine("Telefone: ${summary.customerPhone}")
+                appendLine("Data: ${formatDate(Clock.nowMillis())}")
+                appendLine()
+                appendLine("Garantia vinculada aos")
+                appendLine("servicos descritos nesta OS.")
+                appendLine("Apresente este comprovante")
+                appendLine("para atendimento.")
+                appendLine()
+                appendLine("Valor: ${money(workOrder.totalValue)}")
+            },
+            footer = MessageTemplateRenderer.render(footerTemplate, tokens).trim(),
+        )
+    }
+
+    private fun workOrderTokens(
+        workOrder: WorkOrderEntity,
+        summary: WorkOrderSummary,
+        companyName: String,
+    ): Map<String, String> =
+        mapOf(
+            "empresa" to companyName,
+            "data" to formatDate(workOrder.openedAt),
+            "os" to workOrder.numero,
+            "nome" to summary.customerName,
+            "telefone" to summary.customerPhone,
+            "valor" to money(workOrder.totalValue),
+            "status" to workOrder.status,
+        )
+
     private suspend fun generateWorkOrderNumber(nowMillis: Long): String {
         val zone = ZoneId.systemDefault()
         val date = Instant.ofEpochMilli(nowMillis).atZone(zone)

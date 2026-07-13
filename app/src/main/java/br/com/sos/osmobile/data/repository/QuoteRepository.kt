@@ -7,11 +7,15 @@ import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
 import br.com.sos.osmobile.data.local.model.DocumentItem
 import br.com.sos.osmobile.data.local.model.QuoteSummary
+import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.model.QuoteStatus
+import br.com.sos.osmobile.data.print.ThermalPrintContent
 import kotlinx.coroutines.flow.Flow
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 data class QuoteItemInput(
     val serviceProductId: Long,
@@ -126,6 +130,39 @@ class QuoteRepository(
         )
     }
 
+    suspend fun generateThermalPrintContent(
+        id: Long,
+        headerTemplate: String,
+        footerTemplate: String,
+        companyName: String,
+    ): ThermalPrintContent? {
+        val quote = quoteDao.findById(id) ?: return null
+        val summary = quoteDao.findSummaryById(id) ?: return null
+        val tokens = mapOf(
+            "empresa" to companyName,
+            "data" to formatDate(quote.createdAt),
+            "os" to "",
+            "orcamento" to quote.numero,
+            "nome" to summary.customerName,
+            "telefone" to summary.customerPhone,
+            "valor" to money(quote.totalValue),
+            "status" to quote.status,
+        )
+        return ThermalPrintContent(
+            header = MessageTemplateRenderer.render(headerTemplate, tokens).trim(),
+            body = ServiceDocumentGenerator.generate(
+                title = "ORCAMENTO",
+                number = quote.numero,
+                customerName = summary.customerName,
+                status = quote.status,
+                totalValue = quote.totalValue,
+                notes = quote.observacoes,
+                items = quoteDao.findDocumentItems(id),
+            ),
+            footer = MessageTemplateRenderer.render(footerTemplate, tokens).trim(),
+        )
+    }
+
     private suspend fun generateQuoteNumber(nowMillis: Long): String {
         val zone = ZoneId.systemDefault()
         val date = Instant.ofEpochMilli(nowMillis).atZone(zone)
@@ -140,4 +177,12 @@ class QuoteRepository(
         val datePart = date.format(DateTimeFormatter.ofPattern("yyMMdd"))
         return "OR$datePart${sequence.toString().padStart(4, '0')}"
     }
+
+    private fun formatDate(value: Long): String {
+        val date = Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault())
+        return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    }
+
+    private fun money(value: Double): String =
+        NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 }

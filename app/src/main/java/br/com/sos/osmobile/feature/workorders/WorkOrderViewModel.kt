@@ -339,6 +339,34 @@ class WorkOrderViewModel(
         }
     }
 
+    fun showReceiptThen(workOrderId: Long, onLoaded: (ThermalPrintContent) -> Unit) {
+        viewModelScope.launch {
+            val settings = uiState.value
+            val content = workOrderRepository.generateReceiptPrintContent(
+                id = workOrderId,
+                headerTemplate = settings.printWorkOrderHeader,
+                footerTemplate = settings.printWorkOrderFooter,
+                companyName = settings.companyName,
+            ) ?: ThermalPrintContent(body = "Recibo nao encontrado.")
+            documentText = content.asText()
+            onLoaded(content)
+        }
+    }
+
+    fun showWarrantyThen(workOrderId: Long, onLoaded: (ThermalPrintContent) -> Unit) {
+        viewModelScope.launch {
+            val settings = uiState.value
+            val content = workOrderRepository.generateWarrantyPrintContent(
+                id = workOrderId,
+                headerTemplate = settings.printWorkOrderHeader,
+                footerTemplate = settings.printWorkOrderFooter,
+                companyName = settings.companyName,
+            ) ?: ThermalPrintContent(body = "Garantia nao encontrada.")
+            documentText = content.asText()
+            onLoaded(content)
+        }
+    }
+
     fun showMessage(workOrder: WorkOrderSummary) {
         messagePhone = workOrder.customerPhone
         messageText = MessageTemplateRenderer.render(
