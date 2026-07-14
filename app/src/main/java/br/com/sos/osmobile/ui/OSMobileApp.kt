@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Description
@@ -60,6 +61,8 @@ import br.com.sos.osmobile.feature.finance.FinanceViewModel
 import br.com.sos.osmobile.feature.quotes.QuoteScreen
 import br.com.sos.osmobile.feature.quotes.QuoteListScreen
 import br.com.sos.osmobile.feature.quotes.QuoteViewModel
+import br.com.sos.osmobile.feature.reports.ReportsScreen
+import br.com.sos.osmobile.feature.reports.ReportsViewModel
 import br.com.sos.osmobile.feature.sales.SaleScreen
 import br.com.sos.osmobile.feature.sales.SaleViewModel
 import br.com.sos.osmobile.feature.services.ServiceProductScreen
@@ -326,6 +329,18 @@ fun OSMobileApp(appContainer: AppContainer) {
                     )
                     FinanceScreen(viewModel = financeViewModel)
                 }
+                composable(AppRoute.Reports.route) {
+                    val reportsViewModel: ReportsViewModel = viewModel(
+                        factory = ReportsViewModel.factory(
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                            stockRepository = appContainer.stockRepository,
+                            workOrderRepository = appContainer.workOrderRepository,
+                            paymentRepository = appContainer.workOrderPaymentRepository,
+                            saleRepository = appContainer.saleRepository,
+                        ),
+                    )
+                    ReportsScreen(viewModel = reportsViewModel)
+                }
                 composable("work_orders/edit/{id}") { backStack ->
                     val id = backStack.arguments?.getString("id")?.toLongOrNull()
                     val workOrderViewModel: WorkOrderViewModel = viewModel(
@@ -380,6 +395,7 @@ private fun routeIcon(route: AppRoute): ImageVector =
         AppRoute.WorkOrderPickup -> Icons.Filled.Assignment
         AppRoute.Sales -> Icons.Filled.ShoppingCart
         AppRoute.Finance -> Icons.Filled.Payment
+        AppRoute.Reports -> Icons.Filled.BarChart
         AppRoute.Backup -> Icons.Filled.Save
         AppRoute.Settings -> Icons.Filled.Settings
         AppRoute.Audit -> Icons.Filled.History

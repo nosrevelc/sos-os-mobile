@@ -14,6 +14,7 @@ enum class AppRoute(
     WorkOrderPickup("work_order_pickup", "OS para Retirada"),
     Sales("sales", "Vendas"),
     Finance("finance", "Financeiro"),
+    Reports("reports", "Relatorios"),
     Backup("backup", "Backup"),
     Settings("settings", "Configuracoes"),
     Audit("audit", "Auditoria"),
