@@ -205,6 +205,13 @@ Segundo os documentos de escopo, ficam para fases futuras:
   - colunas padrao: codigo, nome, tipo, categoria, descricao, valor, estoque_minimo, ncm, cfop, unidade, cst_csosn;
   - validacao antes de importar;
   - relatorio de linhas importadas e linhas com erro.
+- Licenciamento/comercializacao:
+  - tela de Licenca em Configuracoes;
+  - modo Demo com dados ficticios;
+  - Trial por prazo limitado;
+  - chave de ativacao por empresa e aparelho;
+  - servidor de licencas para evitar copia local simples;
+  - futuramente Google Play Billing e Play Integrity API.
 - Modulo fiscal / nota eletronica:
   - status fiscal na OS/venda;
   - configuracao fiscal da empresa;
