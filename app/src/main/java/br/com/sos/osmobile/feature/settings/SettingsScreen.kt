@@ -506,7 +506,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {linha_desconto}, {valor_minimo_aceite}, {sinal_minimo}, {linha_sinal_minimo}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {empresa}, {data}, {dias}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_QR}.",
+            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {linha_desconto}, {valor_minimo_aceite}, {sinal_minimo}, {linha_sinal_minimo}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {tipo_entrega}, {status_entrega}, {endereco_entrega}, {taxa_entrega}, {codigo_rastreio}, {empresa}, {data}, {dias}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_QR}.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

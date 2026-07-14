@@ -52,6 +52,12 @@ class WorkOrderRepository(
         notes: String?,
         items: List<WorkOrderItemInput>,
         discountValue: Double,
+        deliveryType: String,
+        deliveryStatus: String,
+        deliveryAddress: String?,
+        deliveryFee: Double,
+        trackingCode: String?,
+        deliveryNotes: String?,
     ): Long {
         val now = Clock.nowMillis()
         val number = generateWorkOrderNumber(now)
@@ -75,6 +81,12 @@ class WorkOrderRepository(
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
                 totalValue = (subtotal - discount).coerceAtLeast(0.0),
                 discountValue = discount,
+                deliveryType = deliveryType,
+                deliveryStatus = deliveryStatus,
+                deliveryAddress = deliveryAddress?.trim()?.takeIf { it.isNotBlank() },
+                deliveryFee = deliveryFee.coerceAtLeast(0.0),
+                trackingCode = trackingCode?.trim()?.takeIf { it.isNotBlank() },
+                deliveryNotes = deliveryNotes?.trim()?.takeIf { it.isNotBlank() },
                 concludedAt = if (status == "Concluida") now else null,
                 updatedAt = now,
             ),
@@ -110,6 +122,12 @@ class WorkOrderRepository(
         notes: String?,
         items: List<WorkOrderItemInput>,
         discountValue: Double,
+        deliveryType: String,
+        deliveryStatus: String,
+        deliveryAddress: String?,
+        deliveryFee: Double,
+        trackingCode: String?,
+        deliveryNotes: String?,
     ): Boolean {
         val current = workOrderDao.findById(id) ?: return false
         val now = Clock.nowMillis()
@@ -131,6 +149,12 @@ class WorkOrderRepository(
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
                 totalValue = (subtotal - discount).coerceAtLeast(0.0),
                 discountValue = discount,
+                deliveryType = deliveryType,
+                deliveryStatus = deliveryStatus,
+                deliveryAddress = deliveryAddress?.trim()?.takeIf { it.isNotBlank() },
+                deliveryFee = deliveryFee.coerceAtLeast(0.0),
+                trackingCode = trackingCode?.trim()?.takeIf { it.isNotBlank() },
+                deliveryNotes = deliveryNotes?.trim()?.takeIf { it.isNotBlank() },
                 concludedAt = if (status == WorkOrderStatus.Completed) now else current.concludedAt,
                 updatedAt = now,
             ),
@@ -175,6 +199,11 @@ class WorkOrderRepository(
             "nome" to summary.customerName,
             "telefone" to summary.customerPhone,
             "valor" to money(workOrder.totalValue),
+            "tipo_entrega" to workOrder.deliveryType,
+            "status_entrega" to workOrder.deliveryStatus,
+            "endereco_entrega" to workOrder.deliveryAddress.orEmpty(),
+            "taxa_entrega" to money(workOrder.deliveryFee),
+            "codigo_rastreio" to workOrder.trackingCode.orEmpty(),
             "status" to workOrder.status,
         )
         return ThermalPrintContent(
@@ -310,6 +339,11 @@ class WorkOrderRepository(
             "nome" to summary.customerName,
             "telefone" to summary.customerPhone,
             "valor" to money(workOrder.totalValue),
+            "tipo_entrega" to workOrder.deliveryType,
+            "status_entrega" to workOrder.deliveryStatus,
+            "endereco_entrega" to workOrder.deliveryAddress.orEmpty(),
+            "taxa_entrega" to money(workOrder.deliveryFee),
+            "codigo_rastreio" to workOrder.trackingCode.orEmpty(),
             "status" to workOrder.status,
         )
 

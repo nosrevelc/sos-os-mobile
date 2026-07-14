@@ -210,6 +210,17 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration12To13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN tipo_entrega TEXT NOT NULL DEFAULT 'Retirada no local'")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN status_entrega TEXT NOT NULL DEFAULT 'Aguardando retirada'")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN endereco_entrega TEXT")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN taxa_entrega REAL NOT NULL DEFAULT 0.0")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN codigo_rastreio TEXT")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN observacoes_entrega TEXT")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -227,6 +238,7 @@ class AppContainer(context: Context) {
             migration9To10,
             migration10To11,
             migration11To12,
+            migration12To13,
         )
         .build()
 

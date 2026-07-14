@@ -5,6 +5,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import br.com.sos.osmobile.data.model.DeliveryStatus
+import br.com.sos.osmobile.data.model.DeliveryType
 
 @Entity(
     tableName = "ordens_servico",
@@ -39,6 +41,18 @@ data class WorkOrderEntity(
     val totalValue: Double = 0.0,
     @ColumnInfo(name = "valor_desconto")
     val discountValue: Double = 0.0,
+    @ColumnInfo(name = "tipo_entrega")
+    val deliveryType: String = DeliveryType.PICKUP,
+    @ColumnInfo(name = "status_entrega")
+    val deliveryStatus: String = DeliveryStatus.WAITING_PICKUP,
+    @ColumnInfo(name = "endereco_entrega")
+    val deliveryAddress: String? = null,
+    @ColumnInfo(name = "taxa_entrega")
+    val deliveryFee: Double = 0.0,
+    @ColumnInfo(name = "codigo_rastreio")
+    val trackingCode: String? = null,
+    @ColumnInfo(name = "observacoes_entrega")
+    val deliveryNotes: String? = null,
     @ColumnInfo(name = "data_conclusao")
     val concludedAt: Long? = null,
     @ColumnInfo(name = "status_fiscal")

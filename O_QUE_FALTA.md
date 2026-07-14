@@ -212,6 +212,11 @@ Segundo os documentos de escopo, ficam para fases futuras:
   - chave de ativacao por empresa e aparelho;
   - servidor de licencas para evitar copia local simples;
   - futuramente Google Play Billing e Play Integrity API.
+- Entrega/retirada:
+  - templates especificos para pedido enviado, saiu para entrega, entregue e nao entregue;
+  - filtro/lista por status de entrega;
+  - comprovante ou foto de entrega;
+  - decidir se taxa de entrega soma no total da OS.
 - Modulo fiscal / nota eletronica:
   - status fiscal na OS/venda;
   - configuracao fiscal da empresa;

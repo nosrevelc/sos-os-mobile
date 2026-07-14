@@ -20,6 +20,8 @@ import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
+import br.com.sos.osmobile.data.model.DeliveryStatus
+import br.com.sos.osmobile.data.model.DeliveryType
 import br.com.sos.osmobile.data.model.WorkOrderStatus
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
@@ -82,6 +84,12 @@ data class WorkOrderFormState(
     val quantity: String = "1",
     val unitPrice: String = "",
     val discount: String = "",
+    val deliveryType: String = DeliveryType.PICKUP,
+    val deliveryStatus: String = DeliveryStatus.WAITING_PICKUP,
+    val deliveryAddress: String = "",
+    val deliveryFee: String = "",
+    val trackingCode: String = "",
+    val deliveryNotes: String = "",
     val notes: String = "",
     val items: List<WorkOrderDraftItem> = emptyList(),
     val originalItems: List<WorkOrderDraftItem> = emptyList(),
@@ -233,6 +241,30 @@ class WorkOrderViewModel(
         formState = formState.copy(discount = InputMasks.currency(value), message = null)
     }
 
+    fun onDeliveryTypeChanged(value: String) {
+        formState = formState.copy(deliveryType = value, message = null)
+    }
+
+    fun onDeliveryStatusChanged(value: String) {
+        formState = formState.copy(deliveryStatus = value, message = null)
+    }
+
+    fun onDeliveryAddressChanged(value: String) {
+        formState = formState.copy(deliveryAddress = value, message = null)
+    }
+
+    fun onDeliveryFeeChanged(value: String) {
+        formState = formState.copy(deliveryFee = InputMasks.currency(value), message = null)
+    }
+
+    fun onTrackingCodeChanged(value: String) {
+        formState = formState.copy(trackingCode = value, message = null)
+    }
+
+    fun onDeliveryNotesChanged(value: String) {
+        formState = formState.copy(deliveryNotes = value, message = null)
+    }
+
     fun onNotesChanged(value: String) {
         formState = formState.copy(notes = value, message = null)
     }
@@ -329,6 +361,7 @@ class WorkOrderViewModel(
                 )
             }
             val discount = WorkOrderFormValidator.parseDecimal(formState.discount) ?: 0.0
+            val deliveryFee = WorkOrderFormValidator.parseDecimal(formState.deliveryFee) ?: 0.0
             val editingId = formState.editingId
             if (editingId == null) {
                 val createdId = workOrderRepository.create(
@@ -337,6 +370,12 @@ class WorkOrderViewModel(
                     notes = formState.notes,
                     items = items,
                     discountValue = discount,
+                    deliveryType = formState.deliveryType,
+                    deliveryStatus = formState.deliveryStatus,
+                    deliveryAddress = formState.deliveryAddress,
+                    deliveryFee = deliveryFee,
+                    trackingCode = formState.trackingCode,
+                    deliveryNotes = formState.deliveryNotes,
                 )
                 applyStockMovements(createdId, emptyList(), formState.items)
                 if (initialPayment != null) {
@@ -352,6 +391,12 @@ class WorkOrderViewModel(
                     notes = formState.notes,
                     items = items,
                     discountValue = discount,
+                    deliveryType = formState.deliveryType,
+                    deliveryStatus = formState.deliveryStatus,
+                    deliveryAddress = formState.deliveryAddress,
+                    deliveryFee = deliveryFee,
+                    trackingCode = formState.trackingCode,
+                    deliveryNotes = formState.deliveryNotes,
                 )
                 if (updated) {
                     applyStockMovements(editingId, formState.originalItems, formState.items)
@@ -386,6 +431,12 @@ class WorkOrderViewModel(
                 status = statusFromLabel(workOrder.status),
                 notes = workOrder.observacoes.orEmpty(),
                 discount = InputMasks.currencyFromDouble(workOrder.discountValue),
+                deliveryType = workOrder.deliveryType,
+                deliveryStatus = workOrder.deliveryStatus,
+                deliveryAddress = workOrder.deliveryAddress.orEmpty(),
+                deliveryFee = InputMasks.currencyFromDouble(workOrder.deliveryFee),
+                trackingCode = workOrder.trackingCode.orEmpty(),
+                deliveryNotes = workOrder.deliveryNotes.orEmpty(),
                 items = draftItems,
                 originalItems = draftItems,
                 message = message ?: "Editando OS ${workOrder.numero}.",
@@ -492,6 +543,11 @@ class WorkOrderViewModel(
                     totalValue = workOrder.totalValue,
                     subtotalValue = workOrder.totalValue + discount,
                     discountValue = discount,
+                    deliveryType = entity?.deliveryType.orEmpty(),
+                    deliveryStatus = entity?.deliveryStatus.orEmpty(),
+                    deliveryAddress = entity?.deliveryAddress.orEmpty(),
+                    deliveryFee = entity?.deliveryFee ?: 0.0,
+                    trackingCode = entity?.trackingCode.orEmpty(),
                     paidTotal = paidTotal,
                 ) + itemTokens,
             )
@@ -699,6 +755,11 @@ class WorkOrderViewModel(
         totalValue: Double,
         subtotalValue: Double,
         discountValue: Double,
+        deliveryType: String,
+        deliveryStatus: String,
+        deliveryAddress: String,
+        deliveryFee: Double,
+        trackingCode: String,
         paidTotal: Double,
     ): Map<String, String> {
         val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
@@ -719,6 +780,11 @@ class WorkOrderViewModel(
             "desconto" to InputMasks.currencyFromDouble(discountValue),
             "linha_desconto" to if (discountValue > 0.0) "Desconto: ${InputMasks.currencyFromDouble(discountValue)}" else "",
             "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
+            "tipo_entrega" to deliveryType,
+            "status_entrega" to deliveryStatus,
+            "endereco_entrega" to deliveryAddress,
+            "taxa_entrega" to InputMasks.currencyFromDouble(deliveryFee),
+            "codigo_rastreio" to trackingCode,
             "valor_pago" to InputMasks.currencyFromDouble(paidTotal),
             "saldo" to InputMasks.currencyFromDouble(balance),
             "status_pagamento" to paymentStatus,

@@ -86,6 +86,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.text.KeyboardOptions
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
+import br.com.sos.osmobile.data.model.DeliveryStatus
+import br.com.sos.osmobile.data.model.DeliveryType
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
@@ -154,6 +156,11 @@ fun WorkOrderScreen(
             totalValue = totalValue,
             discountValue = discountValue,
             minAcceptanceValue = uiState.quoteMinAcceptanceValue,
+            deliveryType = form.deliveryType,
+            deliveryStatus = form.deliveryStatus,
+            deliveryAddress = form.deliveryAddress,
+            deliveryFee = WorkOrderFormValidator.parseDecimal(form.deliveryFee) ?: 0.0,
+            trackingCode = form.trackingCode,
             paidTotal = paidTotalForMessage,
             companyName = uiState.companyName,
             pixName = uiState.pixName,
@@ -283,6 +290,11 @@ fun WorkOrderScreen(
                                     totalValue = totalValue,
                                     discountValue = discountValue,
                                     minAcceptanceValue = uiState.quoteMinAcceptanceValue,
+                                    deliveryType = form.deliveryType,
+                                    deliveryStatus = form.deliveryStatus,
+                                    deliveryAddress = form.deliveryAddress,
+                                    deliveryFee = WorkOrderFormValidator.parseDecimal(form.deliveryFee) ?: 0.0,
+                                    trackingCode = form.trackingCode,
                                     paidTotal = viewModel.payments.sumOf { it.valor },
                                     companyName = uiState.companyName,
                                     pixName = uiState.pixName,
@@ -300,6 +312,12 @@ fun WorkOrderScreen(
                 onQuantityChanged = viewModel::onQuantityChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
                 onDiscountChanged = viewModel::onDiscountChanged,
+                onDeliveryTypeChanged = viewModel::onDeliveryTypeChanged,
+                onDeliveryStatusChanged = viewModel::onDeliveryStatusChanged,
+                onDeliveryAddressChanged = viewModel::onDeliveryAddressChanged,
+                onDeliveryFeeChanged = viewModel::onDeliveryFeeChanged,
+                onTrackingCodeChanged = viewModel::onTrackingCodeChanged,
+                onDeliveryNotesChanged = viewModel::onDeliveryNotesChanged,
                 onNotesChanged = viewModel::onNotesChanged,
                 onAddItem = viewModel::addSelectedItem,
                 onRemoveItem = viewModel::removeItem,
@@ -659,6 +677,11 @@ fun WorkOrderScreen(
                                     totalValue = totalValue,
                                     discountValue = discountValue,
                                     minAcceptanceValue = uiState.quoteMinAcceptanceValue,
+                                    deliveryType = form.deliveryType,
+                                    deliveryStatus = form.deliveryStatus,
+                                    deliveryAddress = form.deliveryAddress,
+                                    deliveryFee = WorkOrderFormValidator.parseDecimal(form.deliveryFee) ?: 0.0,
+                                    trackingCode = form.trackingCode,
                                     paidTotal = paidTotalForMessage,
                                     companyName = uiState.companyName,
                                     pixName = uiState.pixName,
@@ -1023,6 +1046,12 @@ private fun WorkOrderForm(
     onQuantityChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
     onDiscountChanged: (String) -> Unit,
+    onDeliveryTypeChanged: (String) -> Unit,
+    onDeliveryStatusChanged: (String) -> Unit,
+    onDeliveryAddressChanged: (String) -> Unit,
+    onDeliveryFeeChanged: (String) -> Unit,
+    onTrackingCodeChanged: (String) -> Unit,
+    onDeliveryNotesChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onAddItem: () -> Unit,
     onRemoveItem: (Int) -> Unit,
@@ -1032,6 +1061,7 @@ private fun WorkOrderForm(
     var quantityField by remember { mutableStateOf(TextFieldValue(form.quantity, TextRange(form.quantity.length))) }
     var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
     var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
+    var deliveryFeeField by remember { mutableStateOf(TextFieldValue(form.deliveryFee, TextRange(form.deliveryFee.length))) }
     LaunchedEffect(form.quantity) {
         if (quantityField.text != form.quantity) quantityField = TextFieldValue(form.quantity, TextRange(form.quantity.length))
     }
@@ -1040,6 +1070,9 @@ private fun WorkOrderForm(
     }
     LaunchedEffect(form.discount) {
         if (discountField.text != form.discount) discountField = TextFieldValue(form.discount, TextRange(form.discount.length))
+    }
+    LaunchedEffect(form.deliveryFee) {
+        if (deliveryFeeField.text != form.deliveryFee) deliveryFeeField = TextFieldValue(form.deliveryFee, TextRange(form.deliveryFee.length))
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1128,6 +1161,55 @@ private fun WorkOrderForm(
             value = form.notes,
             onValueChange = onNotesChanged,
             label = { Text("Observacoes") },
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Text("Entrega/Retirada", style = MaterialTheme.typography.titleSmall)
+        DeliveryOptionSelector(
+            label = "Tipo",
+            selected = form.deliveryType,
+            options = DeliveryType.all,
+            onSelected = onDeliveryTypeChanged,
+        )
+        DeliveryOptionSelector(
+            label = "Status",
+            selected = form.deliveryStatus,
+            options = DeliveryStatus.all,
+            onSelected = onDeliveryStatusChanged,
+        )
+        OutlinedTextField(
+            value = form.deliveryAddress,
+            onValueChange = onDeliveryAddressChanged,
+            label = { Text("Endereco de entrega") },
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = deliveryFeeField,
+                onValueChange = {
+                    val masked = InputMasks.currency(it.text)
+                    deliveryFeeField = TextFieldValue(masked, TextRange(masked.length))
+                    onDeliveryFeeChanged(masked)
+                },
+                label = { Text("Taxa") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = form.trackingCode,
+                onValueChange = onTrackingCodeChanged,
+                label = { Text("Rastreio") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        OutlinedTextField(
+            value = form.deliveryNotes,
+            onValueChange = onDeliveryNotesChanged,
+            label = { Text("Obs. entrega") },
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -1311,6 +1393,31 @@ private fun PaymentMethodSelector(
                 text = { Text(if (method == selected) "${paymentMethodLabel(method)} *" else paymentMethodLabel(method)) },
                 onClick = {
                     onSelected(method)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeliveryOptionSelector(
+    label: String,
+    selected: String,
+    options: List<String>,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    OutlinedButton(onClick = { expanded = true }, modifier = modifier.fillMaxWidth()) {
+        Text("$label: $selected")
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        options.forEach { option ->
+            DropdownMenuItem(
+                text = { Text(if (option == selected) "$option *" else option) },
+                onClick = {
+                    onSelected(option)
                     expanded = false
                 },
             )
@@ -1545,6 +1652,11 @@ private fun renderWorkOrderMessage(
     totalValue: Double,
     discountValue: Double,
     minAcceptanceValue: String,
+    deliveryType: String = "",
+    deliveryStatus: String = "",
+    deliveryAddress: String = "",
+    deliveryFee: Double = 0.0,
+    trackingCode: String = "",
     paidTotal: Double,
     companyName: String,
     pixName: String,
@@ -1573,6 +1685,11 @@ private fun renderWorkOrderMessage(
             "desconto" to formatCurrency(discountValue),
             "linha_desconto" to if (discountValue > 0.0) "Desconto: ${formatCurrency(discountValue)}" else "",
             "valor_minimo_aceite" to minAcceptanceValue,
+            "tipo_entrega" to deliveryType,
+            "status_entrega" to deliveryStatus,
+            "endereco_entrega" to deliveryAddress,
+            "taxa_entrega" to formatCurrency(deliveryFee),
+            "codigo_rastreio" to trackingCode,
             "valor_pago" to formatCurrency(paidTotal),
             "saldo" to formatCurrency(balance),
             "status_pagamento" to paymentStatus,
