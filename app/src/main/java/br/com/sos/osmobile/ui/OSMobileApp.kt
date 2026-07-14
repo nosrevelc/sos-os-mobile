@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -59,6 +60,8 @@ import br.com.sos.osmobile.feature.finance.FinanceViewModel
 import br.com.sos.osmobile.feature.quotes.QuoteScreen
 import br.com.sos.osmobile.feature.quotes.QuoteListScreen
 import br.com.sos.osmobile.feature.quotes.QuoteViewModel
+import br.com.sos.osmobile.feature.sales.SaleScreen
+import br.com.sos.osmobile.feature.sales.SaleViewModel
 import br.com.sos.osmobile.feature.services.ServiceProductScreen
 import br.com.sos.osmobile.feature.services.ServiceProductViewModel
 import br.com.sos.osmobile.feature.settings.SettingsScreen
@@ -303,6 +306,17 @@ fun OSMobileApp(appContainer: AppContainer) {
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
                 }
+                composable(AppRoute.Sales.route) {
+                    val saleViewModel: SaleViewModel = viewModel(
+                        factory = SaleViewModel.factory(
+                            saleRepository = appContainer.saleRepository,
+                            customerRepository = appContainer.customerRepository,
+                            serviceProductRepository = appContainer.serviceProductRepository,
+                            stockRepository = appContainer.stockRepository,
+                        ),
+                    )
+                    SaleScreen(viewModel = saleViewModel)
+                }
                 composable(AppRoute.Finance.route) {
                     val financeViewModel: FinanceViewModel = viewModel(
                         factory = FinanceViewModel.factory(
@@ -364,6 +378,7 @@ private fun routeIcon(route: AppRoute): ImageVector =
         AppRoute.WorkOrders -> Icons.Filled.Assignment
         AppRoute.WorkOrderList -> Icons.Filled.List
         AppRoute.WorkOrderPickup -> Icons.Filled.Assignment
+        AppRoute.Sales -> Icons.Filled.ShoppingCart
         AppRoute.Finance -> Icons.Filled.Payment
         AppRoute.Backup -> Icons.Filled.Save
         AppRoute.Settings -> Icons.Filled.Settings

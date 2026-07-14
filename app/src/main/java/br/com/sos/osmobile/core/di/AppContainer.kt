@@ -11,6 +11,7 @@ import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionRepository
 import br.com.sos.osmobile.data.repository.QuoteRepository
+import br.com.sos.osmobile.data.repository.SaleRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
 import br.com.sos.osmobile.data.repository.StockRepository
@@ -157,6 +158,45 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration9To10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS vendas (
+                    id_venda INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    numero TEXT NOT NULL,
+                    id_cliente INTEGER NOT NULL,
+                    valor_total REAL NOT NULL,
+                    valor_pago REAL NOT NULL,
+                    forma_pagamento TEXT NOT NULL,
+                    status_fiscal TEXT NOT NULL,
+                    data_criacao INTEGER NOT NULL,
+                    data_atualizacao INTEGER NOT NULL,
+                    FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente) ON UPDATE NO ACTION ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_vendas_numero ON vendas(numero)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_vendas_id_cliente ON vendas(id_cliente)")
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS itens_venda (
+                    id_item_venda INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    id_venda INTEGER NOT NULL,
+                    id_servico_produto INTEGER NOT NULL,
+                    quantidade REAL NOT NULL,
+                    preco_unitario REAL NOT NULL,
+                    subtotal REAL NOT NULL,
+                    FOREIGN KEY(id_venda) REFERENCES vendas(id_venda) ON UPDATE NO ACTION ON DELETE CASCADE,
+                    FOREIGN KEY(id_servico_produto) REFERENCES servicos_produtos(id_servico_produto) ON UPDATE NO ACTION ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_itens_venda_id_venda ON itens_venda(id_venda)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_itens_venda_id_servico_produto ON itens_venda(id_servico_produto)")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -171,6 +211,7 @@ class AppContainer(context: Context) {
             migration6To7,
             migration7To8,
             migration8To9,
+            migration9To10,
         )
         .build()
 
@@ -181,6 +222,7 @@ class AppContainer(context: Context) {
     val stockRepository = StockRepository(database.stockMovementDao(), auditRepository)
     val workOrderRepository = WorkOrderRepository(database.workOrderDao(), auditRepository)
     val quoteRepository = QuoteRepository(database.quoteDao(), auditRepository)
+    val saleRepository = SaleRepository(database.saleDao(), auditRepository)
     val quoteConversionRepository = QuoteConversionRepository(database, auditRepository)
     val settingsRepository = SettingsRepository(database.settingsDao(), auditRepository)
     val workOrderPhotoRepository = WorkOrderPhotoRepository(

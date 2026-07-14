@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import br.com.sos.osmobile.data.local.dao.AuditLogDao
 import br.com.sos.osmobile.data.local.dao.CustomerDao
 import br.com.sos.osmobile.data.local.dao.QuoteDao
+import br.com.sos.osmobile.data.local.dao.SaleDao
 import br.com.sos.osmobile.data.local.dao.ServiceProductDao
 import br.com.sos.osmobile.data.local.dao.SettingsDao
 import br.com.sos.osmobile.data.local.dao.StockMovementDao
@@ -19,6 +20,8 @@ import br.com.sos.osmobile.data.local.entity.AuditLogEntity
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
+import br.com.sos.osmobile.data.local.entity.SaleEntity
+import br.com.sos.osmobile.data.local.entity.SaleItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.StockMovementEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
@@ -38,6 +41,8 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
         WorkOrderItemEntity::class,
         QuoteEntity::class,
         QuoteItemEntity::class,
+        SaleEntity::class,
+        SaleItemEntity::class,
         AuditLogEntity::class,
         AppSettingEntity::class,
         WorkOrderPhotoEntity::class,
@@ -46,7 +51,7 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
         WorkOrderWarrantyEntity::class,
         WorkOrderPaymentEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,6 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stockMovementDao(): StockMovementDao
     abstract fun workOrderDao(): WorkOrderDao
     abstract fun quoteDao(): QuoteDao
+    abstract fun saleDao(): SaleDao
     abstract fun auditLogDao(): AuditLogDao
     abstract fun settingsDao(): SettingsDao
     abstract fun workOrderPhotoDao(): WorkOrderPhotoDao

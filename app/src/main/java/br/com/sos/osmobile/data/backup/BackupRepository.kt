@@ -8,6 +8,8 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.AppSettingEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
+import br.com.sos.osmobile.data.local.entity.SaleEntity
+import br.com.sos.osmobile.data.local.entity.SaleItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.StockMovementEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
@@ -60,6 +62,8 @@ class BackupRepository(
         val warranties = database.workOrderWarrantyDao().listAll()
         val payments = database.workOrderPaymentDao().listAll()
         val stockMovements = database.stockMovementDao().listAll()
+        val sales = database.saleDao().listAll()
+        val saleItems = database.saleDao().listAllItems()
 
         return buildString {
             appendLine("{")
@@ -74,7 +78,9 @@ class BackupRepository(
             appendLine("\"checklist_os\":${checklist.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"descricao":${str(it.descricao)},"concluido":${it.concluido},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"garantias_os\":${warranties.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"warrantyDays":${it.warrantyDays},"termos":${str(it.termos)},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"pagamentos_os\":${payments.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"valor":${it.valor},"forma":${str(it.forma)},"observacao":${str(it.observacao)},"paidAt":${it.paidAt}}""" }},")
-            appendLine("\"movimentacoes_estoque\":${stockMovements.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"serviceProductId":${it.serviceProductId},"tipo":${str(it.tipo)},"quantidade":${it.quantidade},"motivo":${str(it.motivo)},"workOrderId":${it.workOrderId ?: "null"},"createdAt":${it.createdAt}}""" }}")
+            appendLine("\"movimentacoes_estoque\":${stockMovements.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"serviceProductId":${it.serviceProductId},"tipo":${str(it.tipo)},"quantidade":${it.quantidade},"motivo":${str(it.motivo)},"workOrderId":${it.workOrderId ?: "null"},"createdAt":${it.createdAt}}""" }},")
+            appendLine("\"vendas\":${sales.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"totalValue":${it.totalValue},"paidValue":${it.paidValue},"paymentMethod":${str(it.paymentMethod)},"fiscalStatus":${str(it.fiscalStatus)},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"itens_venda\":${saleItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"saleId":${it.saleId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"unitPrice":${it.unitPrice},"subtotal":${it.subtotal}}""" }}")
             appendLine("}")
         }
     }
@@ -226,8 +232,33 @@ class BackupRepository(
                 createdAt = item.optLong("createdAt", now),
             )
         }
+        val sales = root.optionalArray("vendas").mapObjects { item ->
+            SaleEntity(
+                id = item.optLong("id", 0),
+                numero = item.getString("numero"),
+                customerId = item.optLong("customerId", item.optLong("cliente")),
+                totalValue = item.optDouble("totalValue", 0.0),
+                paidValue = item.optDouble("paidValue", 0.0),
+                paymentMethod = item.optString("paymentMethod", "Nao informado"),
+                fiscalStatus = item.optString("fiscalStatus", "Nao emitida"),
+                createdAt = item.optLong("createdAt", now),
+                updatedAt = item.optLong("updatedAt", now),
+            )
+        }
+        val saleItems = root.optionalArray("itens_venda").mapObjects { item ->
+            SaleItemEntity(
+                id = item.optLong("id", 0),
+                saleId = item.optLong("saleId", item.optLong("venda")),
+                serviceProductId = item.optLong("serviceProductId", item.optLong("servico")),
+                quantidade = item.optDouble("quantidade", item.optDouble("qtd", 0.0)),
+                unitPrice = item.optDouble("unitPrice", item.optDouble("valor", 0.0)),
+                subtotal = item.optDouble("subtotal", 0.0),
+            )
+        }
 
         database.withTransaction {
+            database.saleDao().deleteAllItems()
+            database.saleDao().deleteAll()
             database.stockMovementDao().deleteAll()
             database.workOrderPhotoDao().deleteAll()
             database.workOrderSignatureDao().deleteAll()
@@ -252,6 +283,8 @@ class BackupRepository(
             database.workOrderWarrantyDao().upsertBackup(warranties)
             database.workOrderPaymentDao().upsertBackup(payments)
             database.stockMovementDao().upsertBackup(stockMovements)
+            database.saleDao().upsertBackup(sales)
+            database.saleDao().upsertBackupItems(saleItems)
         }
         deleteFilesDir("work_order_photos")
         deleteFilesDir("work_order_signatures")
