@@ -75,6 +75,18 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     var workOrderCanceledTemplate by remember { mutableStateOf(settings.workOrderCanceledTemplate) }
     var reviewRequestTemplate by remember { mutableStateOf(settings.reviewRequestTemplate) }
     var pickupReminderTemplate by remember { mutableStateOf(settings.pickupReminderTemplate) }
+    var paymentPendingTemplate by remember { mutableStateOf(settings.paymentPendingTemplate) }
+    var paymentConfirmedTemplate by remember { mutableStateOf(settings.paymentConfirmedTemplate) }
+    var paymentProofRequestTemplate by remember { mutableStateOf(settings.paymentProofRequestTemplate) }
+    var orderSentTemplate by remember { mutableStateOf(settings.orderSentTemplate) }
+    var outForDeliveryTemplate by remember { mutableStateOf(settings.outForDeliveryTemplate) }
+    var deliveredTemplate by remember { mutableStateOf(settings.deliveredTemplate) }
+    var notDeliveredTemplate by remember { mutableStateOf(settings.notDeliveredTemplate) }
+    var thankYouTemplate by remember { mutableStateOf(settings.thankYouTemplate) }
+    var announcementTemplate by remember { mutableStateOf(settings.announcementTemplate) }
+    var welcomeTemplate by remember { mutableStateOf(settings.welcomeTemplate) }
+    var quoteExpiredTemplate by remember { mutableStateOf(settings.quoteExpiredTemplate) }
+    var quoteReminderTemplate by remember { mutableStateOf(settings.quoteReminderTemplate) }
     var quoteTemplate by remember { mutableStateOf(settings.quoteTemplate) }
     var resetConfirmation by remember { mutableStateOf("") }
     var bluetoothPrinters by remember { mutableStateOf(emptyList<BluetoothPrinterDevice>()) }
@@ -174,6 +186,18 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         workOrderCanceledTemplate = settings.workOrderCanceledTemplate
         reviewRequestTemplate = settings.reviewRequestTemplate
         pickupReminderTemplate = settings.pickupReminderTemplate
+        paymentPendingTemplate = settings.paymentPendingTemplate
+        paymentConfirmedTemplate = settings.paymentConfirmedTemplate
+        paymentProofRequestTemplate = settings.paymentProofRequestTemplate
+        orderSentTemplate = settings.orderSentTemplate
+        outForDeliveryTemplate = settings.outForDeliveryTemplate
+        deliveredTemplate = settings.deliveredTemplate
+        notDeliveredTemplate = settings.notDeliveredTemplate
+        thankYouTemplate = settings.thankYouTemplate
+        announcementTemplate = settings.announcementTemplate
+        welcomeTemplate = settings.welcomeTemplate
+        quoteExpiredTemplate = settings.quoteExpiredTemplate
+        quoteReminderTemplate = settings.quoteReminderTemplate
         quoteTemplate = settings.quoteTemplate
     }
 
@@ -499,6 +523,90 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
+            value = paymentPendingTemplate,
+            onValueChange = { paymentPendingTemplate = it },
+            label = { Text("Pagamento pendente") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = paymentConfirmedTemplate,
+            onValueChange = { paymentConfirmedTemplate = it },
+            label = { Text("Pagamento confirmado") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = paymentProofRequestTemplate,
+            onValueChange = { paymentProofRequestTemplate = it },
+            label = { Text("Solicitar comprovante") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = orderSentTemplate,
+            onValueChange = { orderSentTemplate = it },
+            label = { Text("Pedido enviado") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = outForDeliveryTemplate,
+            onValueChange = { outForDeliveryTemplate = it },
+            label = { Text("Saiu para entrega") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = deliveredTemplate,
+            onValueChange = { deliveredTemplate = it },
+            label = { Text("Entregue") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = notDeliveredTemplate,
+            onValueChange = { notDeliveredTemplate = it },
+            label = { Text("Nao entregue") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = thankYouTemplate,
+            onValueChange = { thankYouTemplate = it },
+            label = { Text("Agradecimento") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = announcementTemplate,
+            onValueChange = { announcementTemplate = it },
+            label = { Text("Comunicado") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = welcomeTemplate,
+            onValueChange = { welcomeTemplate = it },
+            label = { Text("Boas-vindas") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = quoteExpiredTemplate,
+            onValueChange = { quoteExpiredTemplate = it },
+            label = { Text("Orcamento expirado") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = quoteReminderTemplate,
+            onValueChange = { quoteReminderTemplate = it },
+            label = { Text("Lembrete de orcamento") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
             value = quoteTemplate,
             onValueChange = { quoteTemplate = it },
             label = { Text("Template orcamento") },
@@ -535,6 +643,20 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     )
                     viewModel.setReviewRequestTemplate(reviewRequestTemplate)
                     viewModel.setPickupReminderTemplate(pickupReminderTemplate)
+                    viewModel.setExtraMessageTemplates(
+                        paymentPendingTemplate,
+                        paymentConfirmedTemplate,
+                        paymentProofRequestTemplate,
+                        orderSentTemplate,
+                        outForDeliveryTemplate,
+                        deliveredTemplate,
+                        notDeliveredTemplate,
+                        thankYouTemplate,
+                        announcementTemplate,
+                        welcomeTemplate,
+                        quoteExpiredTemplate,
+                        quoteReminderTemplate,
+                    )
                     viewModel.setQuoteTemplate(quoteTemplate)
                 },
                 modifier = Modifier.weight(1f),

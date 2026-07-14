@@ -32,12 +32,15 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pix
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.RateReview
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Save
@@ -146,6 +149,41 @@ fun WorkOrderScreen(
     val pendingPayment = if (form.editingId == null) WorkOrderFormValidator.parseDecimal(paymentValue) ?: 0.0 else 0.0
     val paidTotalForMessage = viewModel.payments.sumOf { it.valor } + pendingPayment
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
+    fun renderCurrentWorkOrderTemplate(template: String): String =
+        selectedCustomer?.let {
+            renderWorkOrderMessage(
+                customerName = it.nome,
+                customerPhone = it.telefone,
+                customerCpfCnpj = it.cpfCnpj.orEmpty(),
+                workOrderNumber = form.editingNumber ?: "nova",
+                status = form.status.label,
+                totalValue = totalValue,
+                discountValue = discountValue,
+                minAcceptanceValue = uiState.quoteMinAcceptanceValue,
+                deliveryType = form.deliveryType,
+                deliveryStatus = form.deliveryStatus,
+                deliveryAddress = form.deliveryAddress,
+                deliveryFee = WorkOrderFormValidator.parseDecimal(form.deliveryFee) ?: 0.0,
+                trackingCode = form.trackingCode,
+                paidTotal = paidTotalForMessage,
+                companyName = uiState.companyName,
+                pixName = uiState.pixName,
+                pixKey = uiState.pixKey,
+                template = template,
+                items = form.items,
+            )
+        }.orEmpty()
+
+    fun pendingTemplateMessage(subject: String, template: String) {
+        selectedCustomer?.let {
+            pendingReviewMessage = ClientMessage(
+                phone = it.telefone,
+                email = it.email,
+                subject = subject,
+                text = renderCurrentWorkOrderTemplate(template),
+            )
+        }
+    }
     val currentMessage = selectedCustomer?.let {
         renderWorkOrderMessage(
             customerName = it.nome,
@@ -695,6 +733,62 @@ fun WorkOrderScreen(
                     ) {
                         Icon(Icons.Filled.RateReview, contentDescription = null)
                         Text("Solicitar avaliacao")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Pagamento pendente OS ${form.editingNumber ?: "nova"}", uiState.paymentPendingTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Payment, contentDescription = null)
+                        Text("Pagamento pendente")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Pagamento confirmado OS ${form.editingNumber ?: "nova"}", uiState.paymentConfirmedTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Payment, contentDescription = null)
+                        Text("Pagamento confirmado")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Comprovante OS ${form.editingNumber ?: "nova"}", uiState.paymentProofRequestTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.AttachMoney, contentDescription = null)
+                        Text("Pedir comprovante")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Pedido enviado OS ${form.editingNumber ?: "nova"}", uiState.orderSentTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.LocalShipping, contentDescription = null)
+                        Text("Pedido enviado")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Saiu para entrega OS ${form.editingNumber ?: "nova"}", uiState.outForDeliveryTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.LocalShipping, contentDescription = null)
+                        Text("Saiu para entrega")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Entregue OS ${form.editingNumber ?: "nova"}", uiState.deliveredTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                        Text("Entregue")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Nao entregue OS ${form.editingNumber ?: "nova"}", uiState.notDeliveredTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Warning, contentDescription = null)
+                        Text("Nao entregue")
+                    }
+                    OutlinedButton(
+                        onClick = { pendingTemplateMessage("Obrigado OS ${form.editingNumber ?: "nova"}", uiState.thankYouTemplate) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.RateReview, contentDescription = null)
+                        Text("Agradecimento")
                     }
                 }
                 if (pixPayload.isNotBlank()) {

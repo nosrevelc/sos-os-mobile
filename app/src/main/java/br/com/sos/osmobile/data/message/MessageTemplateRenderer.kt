@@ -34,6 +34,18 @@ object MessageTemplateRenderer {
     val workOrderCanceledTemplate = "Ola {nome}, sua OS {os} foi cancelada."
     val reviewRequestTemplate = "Ola {nome}, voce poderia avaliar nosso atendimento? Sua opiniao e muito importante para nos."
     val pickupReminderTemplate = "Ola {nome}, sua OS {os} esta pronta ha {dias} dia(s). Por favor, venha retirar."
+    val paymentPendingTemplate = "Ola {nome}, sua OS {os} possui saldo pendente de {saldo}. Total: {valor}. Pago: {valor_pago}."
+    val paymentConfirmedTemplate = "Ola {nome}, confirmamos o pagamento da OS {os}. Status: {status_pagamento}. Obrigado."
+    val paymentProofRequestTemplate = "Ola {nome}, por favor envie o comprovante de pagamento da OS {os}. Saldo: {saldo}."
+    val orderSentTemplate = "Ola {nome}, seu pedido da OS {os} foi enviado. Rastreio: {codigo_rastreio}."
+    val outForDeliveryTemplate = "Ola {nome}, seu pedido da OS {os} saiu para entrega. Endereco: {endereco_entrega}."
+    val deliveredTemplate = "Ola {nome}, sua OS {os} consta como entregue. Obrigado pela preferencia."
+    val notDeliveredTemplate = "Ola {nome}, nao conseguimos concluir a entrega da OS {os}. Entraremos em contato para combinar nova tentativa."
+    val thankYouTemplate = "Ola {nome}, agradecemos pela preferencia. Foi um prazer atender voce."
+    val announcementTemplate = "Ola {nome}, temos um comunicado: {empresa} informa que estamos a disposicao."
+    val welcomeTemplate = "Ola {nome}, seja bem-vindo(a) a {empresa}. Estamos felizes em atender voce."
+    val quoteExpiredTemplate = "Ola {nome}, seu orcamento {orcamento} expirou. Fale conosco se desejar atualizar os valores."
+    val quoteReminderTemplate = "Ola {nome}, passando para lembrar do orcamento {orcamento} no valor de {valor}."
 
     private fun money(value: Double): String =
         NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)

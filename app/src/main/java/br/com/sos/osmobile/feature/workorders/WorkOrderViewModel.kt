@@ -42,7 +42,15 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WO
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_ACCEPTANCE_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_DELIVERED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_NOT_DELIVERED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_ORDER_SENT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_OUT_FOR_DELIVERY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PAYMENT_CONFIRMED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PAYMENT_PENDING_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PAYMENT_PROOF_REQUEST_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_REVIEW_REQUEST_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_THANK_YOU_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_CANCELED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_COMPLETED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY
@@ -109,6 +117,14 @@ data class WorkOrderUiState(
     val workOrderStatusTemplates: Map<String, String> = emptyMap(),
     val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
     val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
+    val paymentPendingTemplate: String = MessageTemplateRenderer.paymentPendingTemplate,
+    val paymentConfirmedTemplate: String = MessageTemplateRenderer.paymentConfirmedTemplate,
+    val paymentProofRequestTemplate: String = MessageTemplateRenderer.paymentProofRequestTemplate,
+    val orderSentTemplate: String = MessageTemplateRenderer.orderSentTemplate,
+    val outForDeliveryTemplate: String = MessageTemplateRenderer.outForDeliveryTemplate,
+    val deliveredTemplate: String = MessageTemplateRenderer.deliveredTemplate,
+    val notDeliveredTemplate: String = MessageTemplateRenderer.notDeliveredTemplate,
+    val thankYouTemplate: String = MessageTemplateRenderer.thankYouTemplate,
     val photosEnabled: Boolean = false,
     val signatureEnabled: Boolean = false,
     val checklistEnabled: Boolean = false,
@@ -161,6 +177,14 @@ class WorkOrderViewModel(
             ),
             reviewRequestTemplate = values[TEMPLATE_REVIEW_REQUEST_KEY] ?: MessageTemplateRenderer.reviewRequestTemplate,
             pickupReminderTemplate = values[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
+            paymentPendingTemplate = values[TEMPLATE_PAYMENT_PENDING_KEY] ?: MessageTemplateRenderer.paymentPendingTemplate,
+            paymentConfirmedTemplate = values[TEMPLATE_PAYMENT_CONFIRMED_KEY] ?: MessageTemplateRenderer.paymentConfirmedTemplate,
+            paymentProofRequestTemplate = values[TEMPLATE_PAYMENT_PROOF_REQUEST_KEY] ?: MessageTemplateRenderer.paymentProofRequestTemplate,
+            orderSentTemplate = values[TEMPLATE_ORDER_SENT_KEY] ?: MessageTemplateRenderer.orderSentTemplate,
+            outForDeliveryTemplate = values[TEMPLATE_OUT_FOR_DELIVERY_KEY] ?: MessageTemplateRenderer.outForDeliveryTemplate,
+            deliveredTemplate = values[TEMPLATE_DELIVERED_KEY] ?: MessageTemplateRenderer.deliveredTemplate,
+            notDeliveredTemplate = values[TEMPLATE_NOT_DELIVERED_KEY] ?: MessageTemplateRenderer.notDeliveredTemplate,
+            thankYouTemplate = values[TEMPLATE_THANK_YOU_KEY] ?: MessageTemplateRenderer.thankYouTemplate,
             photosEnabled = values["modulo_fotos"]?.toBooleanStrictOrNull() ?: false,
             signatureEnabled = values["modulo_assinatura"]?.toBooleanStrictOrNull() ?: false,
             checklistEnabled = values["modulo_checklist"]?.toBooleanStrictOrNull() ?: false,

@@ -35,8 +35,20 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WO
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_ACCEPTANCE_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_DEPOSIT_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_ANNOUNCEMENT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_DELIVERED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_NOT_DELIVERED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_ORDER_SENT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_OUT_FOR_DELIVERY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PAYMENT_CONFIRMED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PAYMENT_PENDING_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PAYMENT_PROOF_REQUEST_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_EXPIRED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_REMINDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_REVIEW_REQUEST_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_THANK_YOU_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WELCOME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_CANCELED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_COMPLETED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_IN_PROGRESS_KEY
@@ -88,6 +100,18 @@ data class SettingsUiState(
     val workOrderCanceledTemplate: String = MessageTemplateRenderer.workOrderCanceledTemplate,
     val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
     val pickupReminderTemplate: String = MessageTemplateRenderer.pickupReminderTemplate,
+    val paymentPendingTemplate: String = MessageTemplateRenderer.paymentPendingTemplate,
+    val paymentConfirmedTemplate: String = MessageTemplateRenderer.paymentConfirmedTemplate,
+    val paymentProofRequestTemplate: String = MessageTemplateRenderer.paymentProofRequestTemplate,
+    val orderSentTemplate: String = MessageTemplateRenderer.orderSentTemplate,
+    val outForDeliveryTemplate: String = MessageTemplateRenderer.outForDeliveryTemplate,
+    val deliveredTemplate: String = MessageTemplateRenderer.deliveredTemplate,
+    val notDeliveredTemplate: String = MessageTemplateRenderer.notDeliveredTemplate,
+    val thankYouTemplate: String = MessageTemplateRenderer.thankYouTemplate,
+    val announcementTemplate: String = MessageTemplateRenderer.announcementTemplate,
+    val welcomeTemplate: String = MessageTemplateRenderer.welcomeTemplate,
+    val quoteExpiredTemplate: String = MessageTemplateRenderer.quoteExpiredTemplate,
+    val quoteReminderTemplate: String = MessageTemplateRenderer.quoteReminderTemplate,
     val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
     val contactAccounts: List<ContactAccount> = emptyList(),
     val contactsMessage: String? = null,
@@ -155,6 +179,18 @@ class SettingsViewModel(
                 workOrderCanceledTemplate = rawValues[TEMPLATE_WORK_ORDER_CANCELED_KEY] ?: MessageTemplateRenderer.workOrderCanceledTemplate,
                 reviewRequestTemplate = rawValues[TEMPLATE_REVIEW_REQUEST_KEY] ?: MessageTemplateRenderer.reviewRequestTemplate,
                 pickupReminderTemplate = rawValues[TEMPLATE_PICKUP_REMINDER_KEY] ?: MessageTemplateRenderer.pickupReminderTemplate,
+                paymentPendingTemplate = rawValues[TEMPLATE_PAYMENT_PENDING_KEY] ?: MessageTemplateRenderer.paymentPendingTemplate,
+                paymentConfirmedTemplate = rawValues[TEMPLATE_PAYMENT_CONFIRMED_KEY] ?: MessageTemplateRenderer.paymentConfirmedTemplate,
+                paymentProofRequestTemplate = rawValues[TEMPLATE_PAYMENT_PROOF_REQUEST_KEY] ?: MessageTemplateRenderer.paymentProofRequestTemplate,
+                orderSentTemplate = rawValues[TEMPLATE_ORDER_SENT_KEY] ?: MessageTemplateRenderer.orderSentTemplate,
+                outForDeliveryTemplate = rawValues[TEMPLATE_OUT_FOR_DELIVERY_KEY] ?: MessageTemplateRenderer.outForDeliveryTemplate,
+                deliveredTemplate = rawValues[TEMPLATE_DELIVERED_KEY] ?: MessageTemplateRenderer.deliveredTemplate,
+                notDeliveredTemplate = rawValues[TEMPLATE_NOT_DELIVERED_KEY] ?: MessageTemplateRenderer.notDeliveredTemplate,
+                thankYouTemplate = rawValues[TEMPLATE_THANK_YOU_KEY] ?: MessageTemplateRenderer.thankYouTemplate,
+                announcementTemplate = rawValues[TEMPLATE_ANNOUNCEMENT_KEY] ?: MessageTemplateRenderer.announcementTemplate,
+                welcomeTemplate = rawValues[TEMPLATE_WELCOME_KEY] ?: MessageTemplateRenderer.welcomeTemplate,
+                quoteExpiredTemplate = rawValues[TEMPLATE_QUOTE_EXPIRED_KEY] ?: MessageTemplateRenderer.quoteExpiredTemplate,
+                quoteReminderTemplate = rawValues[TEMPLATE_QUOTE_REMINDER_KEY] ?: MessageTemplateRenderer.quoteReminderTemplate,
                 quoteTemplate = rawValues[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
                 contactAccounts = entities.second,
                 contactsMessage = entities.third,
@@ -273,6 +309,36 @@ class SettingsViewModel(
         }
     }
 
+    fun setExtraMessageTemplates(
+        paymentPending: String,
+        paymentConfirmed: String,
+        paymentProofRequest: String,
+        orderSent: String,
+        outForDelivery: String,
+        delivered: String,
+        notDelivered: String,
+        thankYou: String,
+        announcement: String,
+        welcome: String,
+        quoteExpired: String,
+        quoteReminder: String,
+    ) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_PAYMENT_PENDING_KEY, paymentPending.trim())
+            settingsRepository.set(TEMPLATE_PAYMENT_CONFIRMED_KEY, paymentConfirmed.trim())
+            settingsRepository.set(TEMPLATE_PAYMENT_PROOF_REQUEST_KEY, paymentProofRequest.trim())
+            settingsRepository.set(TEMPLATE_ORDER_SENT_KEY, orderSent.trim())
+            settingsRepository.set(TEMPLATE_OUT_FOR_DELIVERY_KEY, outForDelivery.trim())
+            settingsRepository.set(TEMPLATE_DELIVERED_KEY, delivered.trim())
+            settingsRepository.set(TEMPLATE_NOT_DELIVERED_KEY, notDelivered.trim())
+            settingsRepository.set(TEMPLATE_THANK_YOU_KEY, thankYou.trim())
+            settingsRepository.set(TEMPLATE_ANNOUNCEMENT_KEY, announcement.trim())
+            settingsRepository.set(TEMPLATE_WELCOME_KEY, welcome.trim())
+            settingsRepository.set(TEMPLATE_QUOTE_EXPIRED_KEY, quoteExpired.trim())
+            settingsRepository.set(TEMPLATE_QUOTE_REMINDER_KEY, quoteReminder.trim())
+        }
+    }
+
     fun setWorkOrderStatusTemplates(open: String, inProgress: String, completed: String, canceled: String) {
         viewModelScope.launch {
             settingsRepository.set(TEMPLATE_WORK_ORDER_OPEN_KEY, open.trim())
@@ -291,6 +357,18 @@ class SettingsViewModel(
             settingsRepository.set(TEMPLATE_WORK_ORDER_CANCELED_KEY, MessageTemplateRenderer.workOrderCanceledTemplate)
             settingsRepository.set(TEMPLATE_REVIEW_REQUEST_KEY, MessageTemplateRenderer.reviewRequestTemplate)
             settingsRepository.set(TEMPLATE_PICKUP_REMINDER_KEY, MessageTemplateRenderer.pickupReminderTemplate)
+            settingsRepository.set(TEMPLATE_PAYMENT_PENDING_KEY, MessageTemplateRenderer.paymentPendingTemplate)
+            settingsRepository.set(TEMPLATE_PAYMENT_CONFIRMED_KEY, MessageTemplateRenderer.paymentConfirmedTemplate)
+            settingsRepository.set(TEMPLATE_PAYMENT_PROOF_REQUEST_KEY, MessageTemplateRenderer.paymentProofRequestTemplate)
+            settingsRepository.set(TEMPLATE_ORDER_SENT_KEY, MessageTemplateRenderer.orderSentTemplate)
+            settingsRepository.set(TEMPLATE_OUT_FOR_DELIVERY_KEY, MessageTemplateRenderer.outForDeliveryTemplate)
+            settingsRepository.set(TEMPLATE_DELIVERED_KEY, MessageTemplateRenderer.deliveredTemplate)
+            settingsRepository.set(TEMPLATE_NOT_DELIVERED_KEY, MessageTemplateRenderer.notDeliveredTemplate)
+            settingsRepository.set(TEMPLATE_THANK_YOU_KEY, MessageTemplateRenderer.thankYouTemplate)
+            settingsRepository.set(TEMPLATE_ANNOUNCEMENT_KEY, MessageTemplateRenderer.announcementTemplate)
+            settingsRepository.set(TEMPLATE_WELCOME_KEY, MessageTemplateRenderer.welcomeTemplate)
+            settingsRepository.set(TEMPLATE_QUOTE_EXPIRED_KEY, MessageTemplateRenderer.quoteExpiredTemplate)
+            settingsRepository.set(TEMPLATE_QUOTE_REMINDER_KEY, MessageTemplateRenderer.quoteReminderTemplate)
             settingsRepository.set(TEMPLATE_QUOTE_KEY, MessageTemplateRenderer.quoteDefaultTemplate)
         }
     }
