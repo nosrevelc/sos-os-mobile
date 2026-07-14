@@ -255,6 +255,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
+                            stockRepository = appContainer.stockRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel)
@@ -272,6 +273,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
+                            stockRepository = appContainer.stockRepository,
                         ),
                     )
                     WorkOrderListScreen(
@@ -292,6 +294,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
+                            stockRepository = appContainer.stockRepository,
                         ),
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
@@ -310,6 +313,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             checklistRepository = appContainer.workOrderChecklistRepository,
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
+                            stockRepository = appContainer.stockRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel, initialEditId = id)

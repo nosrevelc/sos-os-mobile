@@ -15,6 +15,8 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.data.local.entity.ServiceProductType
+import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
@@ -23,6 +25,7 @@ import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.StockRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
@@ -62,6 +65,7 @@ import kotlinx.coroutines.launch
 data class WorkOrderDraftItem(
     val serviceProductId: Long,
     val name: String,
+    val type: String = ServiceProductType.SERVICE,
     val quantity: Double,
     val unitPrice: Double,
 ) {
@@ -78,12 +82,14 @@ data class WorkOrderFormState(
     val unitPrice: String = "",
     val notes: String = "",
     val items: List<WorkOrderDraftItem> = emptyList(),
+    val originalItems: List<WorkOrderDraftItem> = emptyList(),
     val message: String? = null,
 )
 
 data class WorkOrderUiState(
     val customers: List<CustomerEntity> = emptyList(),
     val services: List<ServiceProductEntity> = emptyList(),
+    val stockByServiceProductId: Map<Long, Double> = emptyMap(),
     val workOrders: List<WorkOrderSummary> = emptyList(),
     val companyName: String = "",
     val pixName: String = "",
@@ -116,17 +122,20 @@ class WorkOrderViewModel(
     private val checklistRepository: WorkOrderChecklistRepository,
     private val warrantyRepository: WorkOrderWarrantyRepository,
     private val paymentRepository: WorkOrderPaymentRepository,
+    private val stockRepository: StockRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
         serviceProductRepository.observeActive(),
         workOrderRepository.observeSummaries(),
         settingsRepository.observeAll(),
-    ) { customers, services, workOrders, settings ->
+        stockRepository.observeSummaries(),
+    ) { customers, services, workOrders, settings, stockSummaries ->
         val values = settings.associate { it.chave to it.valor }
         WorkOrderUiState(
             customers = customers,
             services = services,
+            stockByServiceProductId = stockSummaries.associate { it.id to it.saldo },
             workOrders = workOrders,
             companyName = values[COMPANY_NAME_KEY].orEmpty(),
             pixName = values[PIX_NAME_KEY].orEmpty(),
@@ -233,10 +242,24 @@ class WorkOrderViewModel(
         }
         val quantity = WorkOrderFormValidator.parseDecimal(formState.quantity) ?: return
         val unitPrice = WorkOrderFormValidator.parseDecimal(formState.unitPrice) ?: return
+        if (service.tipo != ServiceProductType.SERVICE) {
+            val alreadyInDraft = formState.items
+                .filter { it.serviceProductId == service.id }
+                .sumOf { it.quantity }
+            val originalReserved = formState.originalItems
+                .filter { it.serviceProductId == service.id }
+                .sumOf { it.quantity }
+            val available = (uiState.value.stockByServiceProductId[service.id] ?: 0.0) + originalReserved
+            if (alreadyInDraft + quantity > available) {
+                formState = formState.copy(message = "Saldo insuficiente para ${service.nome}. Disponivel: ${formatQuantity(available)}.")
+                return
+            }
+        }
         formState = formState.copy(
             items = formState.items + WorkOrderDraftItem(
                 serviceProductId = service.id,
                 name = service.nome,
+                type = service.tipo,
                 quantity = quantity,
                 unitPrice = unitPrice,
             ),
@@ -305,6 +328,7 @@ class WorkOrderViewModel(
                     notes = formState.notes,
                     items = items,
                 )
+                applyStockMovements(createdId, emptyList(), formState.items)
                 if (initialPayment != null) {
                     paymentRepository.addPayment(createdId, initialPayment, initialPaymentMethod, initialPaymentNote)
                 }
@@ -319,6 +343,7 @@ class WorkOrderViewModel(
                     items = items,
                 )
                 if (updated) {
+                    applyStockMovements(editingId, formState.originalItems, formState.items)
                     editWorkOrder(editingId, "OS atualizada.")
                     onSaved?.invoke(editingId)
                 } else {
@@ -333,21 +358,24 @@ class WorkOrderViewModel(
             val workOrder = workOrderRepository.findById(workOrderId) ?: return@launch
             val items = workOrderRepository.listItems(workOrderId)
             val services = uiState.value.services
+            val draftItems = items.map { item ->
+                val service = services.firstOrNull { it.id == item.serviceProductId }
+                WorkOrderDraftItem(
+                    serviceProductId = item.serviceProductId,
+                    name = service?.nome ?: "Servico/produto ${item.serviceProductId}",
+                    type = service?.tipo ?: ServiceProductType.SERVICE,
+                    quantity = item.quantidade,
+                    unitPrice = item.practicedUnitPrice,
+                )
+            }
             formState = WorkOrderFormState(
                 editingId = workOrder.id,
                 editingNumber = workOrder.numero,
                 selectedCustomerId = workOrder.customerId,
                 status = statusFromLabel(workOrder.status),
                 notes = workOrder.observacoes.orEmpty(),
-                items = items.map { item ->
-                    val service = services.firstOrNull { it.id == item.serviceProductId }
-                    WorkOrderDraftItem(
-                        serviceProductId = item.serviceProductId,
-                        name = service?.nome ?: "Servico/produto ${item.serviceProductId}",
-                        quantity = item.quantidade,
-                        unitPrice = item.practicedUnitPrice,
-                    )
-                },
+                items = draftItems,
+                originalItems = draftItems,
                 message = message ?: "Editando OS ${workOrder.numero}.",
             )
             loadHistory(workOrderId)
@@ -597,6 +625,35 @@ class WorkOrderViewModel(
         }
     }
 
+    private suspend fun applyStockMovements(
+        workOrderId: Long,
+        originalItems: List<WorkOrderDraftItem>,
+        newItems: List<WorkOrderDraftItem>,
+    ) {
+        val serviceTypes = uiState.value.services.associate { it.id to it.tipo }
+        val originalByService = originalItems.stockControlledTotals(serviceTypes)
+        val newByService = newItems.stockControlledTotals(serviceTypes)
+        (originalByService.keys + newByService.keys).forEach { serviceProductId ->
+            val delta = (newByService[serviceProductId] ?: 0.0) - (originalByService[serviceProductId] ?: 0.0)
+            when {
+                delta > 0.0 -> stockRepository.move(
+                    serviceProductId = serviceProductId,
+                    type = StockMovementType.OUT,
+                    quantity = delta,
+                    reason = "Baixa pela OS $workOrderId",
+                    workOrderId = workOrderId,
+                )
+                delta < 0.0 -> stockRepository.move(
+                    serviceProductId = serviceProductId,
+                    type = StockMovementType.IN,
+                    quantity = -delta,
+                    reason = "Correcao pela OS $workOrderId",
+                    workOrderId = workOrderId,
+                )
+            }
+        }
+    }
+
     private suspend fun loadPhotos(workOrderId: Long) {
         photos = photoRepository.listByWorkOrder(workOrderId)
     }
@@ -664,6 +721,7 @@ class WorkOrderViewModel(
             checklistRepository: WorkOrderChecklistRepository,
             warrantyRepository: WorkOrderWarrantyRepository,
             paymentRepository: WorkOrderPaymentRepository,
+            stockRepository: StockRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -679,8 +737,17 @@ class WorkOrderViewModel(
                         checklistRepository = checklistRepository,
                         warrantyRepository = warrantyRepository,
                         paymentRepository = paymentRepository,
+                        stockRepository = stockRepository,
                     ) as T
                 }
             }
     }
 }
+
+private fun List<WorkOrderDraftItem>.stockControlledTotals(serviceTypes: Map<Long, String>): Map<Long, Double> =
+    filter { (serviceTypes[it.serviceProductId] ?: it.type) != ServiceProductType.SERVICE }
+        .groupBy { it.serviceProductId }
+        .mapValues { entry -> entry.value.sumOf { it.quantity } }
+
+private fun formatQuantity(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(value)
