@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import br.com.sos.osmobile.data.local.entity.WorkOrderPaymentEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkOrderPaymentDao {
@@ -13,6 +14,9 @@ interface WorkOrderPaymentDao {
 
     @Query("SELECT * FROM pagamentos_os ORDER BY id_os, data_pagamento")
     suspend fun listAll(): List<WorkOrderPaymentEntity>
+
+    @Query("SELECT * FROM pagamentos_os ORDER BY data_pagamento DESC")
+    fun observeAll(): Flow<List<WorkOrderPaymentEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(payment: WorkOrderPaymentEntity): Long

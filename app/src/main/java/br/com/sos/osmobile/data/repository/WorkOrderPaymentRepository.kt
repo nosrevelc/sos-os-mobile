@@ -3,6 +3,7 @@ package br.com.sos.osmobile.data.repository
 import br.com.sos.osmobile.core.time.Clock
 import br.com.sos.osmobile.data.local.dao.WorkOrderPaymentDao
 import br.com.sos.osmobile.data.local.entity.WorkOrderPaymentEntity
+import kotlinx.coroutines.flow.Flow
 
 class WorkOrderPaymentRepository(
     private val paymentDao: WorkOrderPaymentDao,
@@ -10,6 +11,8 @@ class WorkOrderPaymentRepository(
 ) {
     suspend fun listByWorkOrder(workOrderId: Long): List<WorkOrderPaymentEntity> =
         paymentDao.listByWorkOrder(workOrderId)
+
+    fun observeAll(): Flow<List<WorkOrderPaymentEntity>> = paymentDao.observeAll()
 
     suspend fun addPayment(workOrderId: Long, value: Double, method: String, note: String?): Long {
         val payment = WorkOrderPaymentEntity(

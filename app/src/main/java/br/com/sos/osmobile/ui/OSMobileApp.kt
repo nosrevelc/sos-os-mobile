@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
@@ -53,6 +54,8 @@ import br.com.sos.osmobile.feature.details.QuoteDetailScreen
 import br.com.sos.osmobile.feature.details.QuoteDetailViewModel
 import br.com.sos.osmobile.feature.details.WorkOrderDetailScreen
 import br.com.sos.osmobile.feature.details.WorkOrderDetailViewModel
+import br.com.sos.osmobile.feature.finance.FinanceScreen
+import br.com.sos.osmobile.feature.finance.FinanceViewModel
 import br.com.sos.osmobile.feature.quotes.QuoteScreen
 import br.com.sos.osmobile.feature.quotes.QuoteListScreen
 import br.com.sos.osmobile.feature.quotes.QuoteViewModel
@@ -81,6 +84,7 @@ fun OSMobileApp(appContainer: AppContainer) {
         when (route) {
             AppRoute.Quotes -> moduleValues["modulo_orcamento"] ?: true
             AppRoute.QuoteList -> moduleValues["modulo_orcamento"] ?: true
+            AppRoute.Finance -> moduleValues["modulo_financeiro"] ?: false
             else -> true
         }
     }
@@ -299,6 +303,15 @@ fun OSMobileApp(appContainer: AppContainer) {
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
                 }
+                composable(AppRoute.Finance.route) {
+                    val financeViewModel: FinanceViewModel = viewModel(
+                        factory = FinanceViewModel.factory(
+                            workOrderRepository = appContainer.workOrderRepository,
+                            paymentRepository = appContainer.workOrderPaymentRepository,
+                        ),
+                    )
+                    FinanceScreen(viewModel = financeViewModel)
+                }
                 composable("work_orders/edit/{id}") { backStack ->
                     val id = backStack.arguments?.getString("id")?.toLongOrNull()
                     val workOrderViewModel: WorkOrderViewModel = viewModel(
@@ -351,6 +364,7 @@ private fun routeIcon(route: AppRoute): ImageVector =
         AppRoute.WorkOrders -> Icons.Filled.Assignment
         AppRoute.WorkOrderList -> Icons.Filled.List
         AppRoute.WorkOrderPickup -> Icons.Filled.Assignment
+        AppRoute.Finance -> Icons.Filled.Payment
         AppRoute.Backup -> Icons.Filled.Save
         AppRoute.Settings -> Icons.Filled.Settings
         AppRoute.Audit -> Icons.Filled.History
