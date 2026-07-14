@@ -1563,6 +1563,7 @@ private fun renderWorkOrderMessage(
             "valor" to formatCurrency(totalValue),
             "subtotal" to formatCurrency(subtotalValue),
             "desconto" to formatCurrency(discountValue),
+            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${formatCurrency(discountValue)}" else "",
             "valor_minimo_aceite" to minAcceptanceValue,
             "valor_pago" to formatCurrency(paidTotal),
             "saldo" to formatCurrency(balance),

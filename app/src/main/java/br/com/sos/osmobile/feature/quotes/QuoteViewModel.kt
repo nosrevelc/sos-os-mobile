@@ -333,6 +333,7 @@ class QuoteViewModel(
                     "valor" to InputMasks.currencyFromDouble(quote.totalValue),
                     "subtotal" to InputMasks.currencyFromDouble(quote.totalValue + discount),
                     "desconto" to InputMasks.currencyFromDouble(discount),
+                    "linha_desconto" to if (discount > 0.0) "Desconto: ${InputMasks.currencyFromDouble(discount)}" else "",
                     "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
                     "empresa" to uiState.value.companyName,
                     "data" to "",

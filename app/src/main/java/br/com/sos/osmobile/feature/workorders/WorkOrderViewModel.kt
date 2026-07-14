@@ -717,6 +717,7 @@ class WorkOrderViewModel(
             "valor" to InputMasks.currencyFromDouble(totalValue),
             "subtotal" to InputMasks.currencyFromDouble(subtotalValue),
             "desconto" to InputMasks.currencyFromDouble(discountValue),
+            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${InputMasks.currencyFromDouble(discountValue)}" else "",
             "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
             "valor_pago" to InputMasks.currencyFromDouble(paidTotal),
             "saldo" to InputMasks.currencyFromDouble(balance),

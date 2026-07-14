@@ -624,6 +624,7 @@ private fun renderQuoteMessage(
             "valor" to formatCurrency(totalValue),
             "subtotal" to formatCurrency(subtotalValue),
             "desconto" to formatCurrency(discountValue),
+            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${formatCurrency(discountValue)}" else "",
             "valor_minimo_aceite" to minAcceptanceValue,
             "empresa" to companyName,
             "data" to formatDate(System.currentTimeMillis()),
