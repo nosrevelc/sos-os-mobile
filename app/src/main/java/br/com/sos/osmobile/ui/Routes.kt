@@ -12,6 +12,7 @@ enum class AppRoute(
     WorkOrders("work_orders", "Nova OS"),
     WorkOrderList("work_order_list", "Lista de OS"),
     WorkOrderPickup("work_order_pickup", "OS para Retirada"),
+    QuickMessages("quick_messages", "Mensagens Rapidas"),
     Sales("sales", "Vendas"),
     Finance("finance", "Financeiro"),
     Reports("reports", "Relatorios"),

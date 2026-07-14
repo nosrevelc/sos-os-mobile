@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
@@ -58,6 +59,8 @@ import br.com.sos.osmobile.feature.details.WorkOrderDetailScreen
 import br.com.sos.osmobile.feature.details.WorkOrderDetailViewModel
 import br.com.sos.osmobile.feature.finance.FinanceScreen
 import br.com.sos.osmobile.feature.finance.FinanceViewModel
+import br.com.sos.osmobile.feature.messages.QuickMessagesScreen
+import br.com.sos.osmobile.feature.messages.QuickMessagesViewModel
 import br.com.sos.osmobile.feature.quotes.QuoteScreen
 import br.com.sos.osmobile.feature.quotes.QuoteListScreen
 import br.com.sos.osmobile.feature.quotes.QuoteViewModel
@@ -309,6 +312,15 @@ fun OSMobileApp(appContainer: AppContainer) {
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
                 }
+                composable(AppRoute.QuickMessages.route) {
+                    val quickMessagesViewModel: QuickMessagesViewModel = viewModel(
+                        factory = QuickMessagesViewModel.factory(
+                            customerRepository = appContainer.customerRepository,
+                            settingsRepository = appContainer.settingsRepository,
+                        ),
+                    )
+                    QuickMessagesScreen(viewModel = quickMessagesViewModel)
+                }
                 composable(AppRoute.Sales.route) {
                     val saleViewModel: SaleViewModel = viewModel(
                         factory = SaleViewModel.factory(
@@ -394,6 +406,7 @@ private fun routeIcon(route: AppRoute): ImageVector =
         AppRoute.WorkOrders -> Icons.Filled.Assignment
         AppRoute.WorkOrderList -> Icons.Filled.List
         AppRoute.WorkOrderPickup -> Icons.Filled.Assignment
+        AppRoute.QuickMessages -> Icons.Filled.Message
         AppRoute.Sales -> Icons.Filled.ShoppingCart
         AppRoute.Finance -> Icons.Filled.Payment
         AppRoute.Reports -> Icons.Filled.BarChart
