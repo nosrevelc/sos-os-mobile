@@ -11,6 +11,7 @@ object ServiceDocumentGenerator {
         customerName: String,
         status: String,
         totalValue: Double,
+        discountValue: Double = 0.0,
         notes: String?,
         items: List<DocumentItem>,
     ): String = buildString {
@@ -25,6 +26,10 @@ object ServiceDocumentGenerator {
             appendLine("${item.quantity} x ${money(item.unitPrice)} = ${money(item.subtotal)}")
         }
         appendLine()
+        if (discountValue > 0.0) {
+            appendLine("Subtotal: ${money(totalValue + discountValue)}")
+            appendLine("Desconto: ${money(discountValue)}")
+        }
         appendLine("Total: ${money(totalValue)}")
         notes?.takeIf { it.isNotBlank() }?.let {
             appendLine()

@@ -37,6 +37,8 @@ data class WorkOrderEntity(
     val observacoes: String? = null,
     @ColumnInfo(name = "valor_total")
     val totalValue: Double = 0.0,
+    @ColumnInfo(name = "valor_desconto")
+    val discountValue: Double = 0.0,
     @ColumnInfo(name = "data_conclusao")
     val concludedAt: Long? = null,
     @ColumnInfo(name = "status_fiscal")

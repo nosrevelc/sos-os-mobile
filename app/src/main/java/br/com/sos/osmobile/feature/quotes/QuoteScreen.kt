@@ -76,7 +76,9 @@ fun QuoteScreen(
     var pendingThermalContent by remember { mutableStateOf<ThermalPrintContent?>(null) }
     var thermalPrintMessage by remember { mutableStateOf<String?>(null) }
     val selectedCustomer = uiState.customers.firstOrNull { it.id == form.selectedCustomerId }
-    val totalValue = form.items.sumOf { item -> item.subtotal }
+    val subtotalValue = form.items.sumOf { item -> item.subtotal }
+    val discountValue = QuoteFormValidator.parseDecimal(form.discount)?.coerceIn(0.0, subtotalValue) ?: 0.0
+    val totalValue = (subtotalValue - discountValue).coerceAtLeast(0.0)
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     LaunchedEffect(initialEditId) {
         initialEditId?.let(viewModel::editQuote)
@@ -122,6 +124,8 @@ fun QuoteScreen(
             quoteNumber = form.editingNumber ?: "novo",
             status = form.status.label,
             totalValue = totalValue,
+            discountValue = discountValue,
+            minAcceptanceValue = uiState.quoteMinAcceptanceValue,
             companyName = uiState.companyName,
             pixName = uiState.pixName,
             pixKey = uiState.pixKey,
@@ -146,6 +150,7 @@ fun QuoteScreen(
                 onStatusSelected = viewModel::selectStatus,
                 onQuantityChanged = viewModel::onQuantityChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
+                onDiscountChanged = viewModel::onDiscountChanged,
                 onNotesChanged = viewModel::onNotesChanged,
                 onAddItem = viewModel::addSelectedItem,
                 onRemoveItem = viewModel::removeItem,
@@ -316,6 +321,7 @@ private fun QuoteForm(
     onStatusSelected: (QuoteStatus) -> Unit,
     onQuantityChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
+    onDiscountChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onAddItem: () -> Unit,
     onRemoveItem: (Int) -> Unit,
@@ -324,6 +330,7 @@ private fun QuoteForm(
 ) {
     var quantityField by remember { mutableStateOf(TextFieldValue(form.quantity, TextRange(form.quantity.length))) }
     var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
+    var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
 
     LaunchedEffect(form.quantity) {
         if (quantityField.text != form.quantity) {
@@ -333,6 +340,11 @@ private fun QuoteForm(
     LaunchedEffect(form.unitPrice) {
         if (unitPriceField.text != form.unitPrice) {
             unitPriceField = TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))
+        }
+    }
+    LaunchedEffect(form.discount) {
+        if (discountField.text != form.discount) {
+            discountField = TextFieldValue(form.discount, TextRange(form.discount.length))
         }
     }
 
@@ -406,8 +418,22 @@ private fun QuoteForm(
             DraftItemRow(index = index, item = item, onRemoveItem = onRemoveItem)
         }
 
+        OutlinedTextField(
+            value = discountField,
+            onValueChange = {
+                val masked = InputMasks.currency(it.text)
+                discountField = TextFieldValue(masked, TextRange(masked.length))
+                onDiscountChanged(masked)
+            },
+            label = { Text("Desconto") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val subtotal = form.items.sumOf { it.subtotal }
+        val discount = QuoteFormValidator.parseDecimal(form.discount) ?: 0.0
         Text(
-            text = "Total: ${formatCurrency(form.items.sumOf { it.subtotal })}",
+            text = "Subtotal: ${formatCurrency(subtotal)} | Desconto: ${formatCurrency(discount)} | Total: ${formatCurrency((subtotal - discount).coerceAtLeast(0.0))}",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -577,13 +603,16 @@ private fun renderQuoteMessage(
     quoteNumber: String,
     status: String,
     totalValue: Double,
+    discountValue: Double,
+    minAcceptanceValue: String,
     companyName: String,
     pixName: String,
     pixKey: String,
     template: String,
     items: List<QuoteDraftItem> = emptyList(),
-): String =
-    MessageTemplateRenderer.render(
+): String {
+    val subtotalValue = totalValue + discountValue
+    return MessageTemplateRenderer.render(
         template = template,
         tokens = mapOf(
             "nome" to customerName,
@@ -593,12 +622,16 @@ private fun renderQuoteMessage(
             "orcamento" to quoteNumber,
             "status" to status,
             "valor" to formatCurrency(totalValue),
+            "subtotal" to formatCurrency(subtotalValue),
+            "desconto" to formatCurrency(discountValue),
+            "valor_minimo_aceite" to minAcceptanceValue,
             "empresa" to companyName,
             "data" to formatDate(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),
             "PIX_QR" to "",
         ) + quoteItemTokens(items),
     )
+}
 
 private fun quoteItemTokens(items: List<QuoteDraftItem>): Map<String, String> {
     val formatted = items.joinToString("\n") {

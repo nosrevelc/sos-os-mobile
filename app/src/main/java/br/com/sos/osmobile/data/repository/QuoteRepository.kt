@@ -47,6 +47,7 @@ class QuoteRepository(
         status: String,
         notes: String?,
         items: List<QuoteItemInput>,
+        discountValue: Double,
     ): Long {
         val now = Clock.nowMillis()
         val number = generateQuoteNumber(now)
@@ -59,6 +60,8 @@ class QuoteRepository(
                 subtotal = it.quantity * it.practicedUnitPrice,
             )
         }
+        val subtotal = quoteItems.sumOf { it.subtotal }
+        val discount = discountValue.coerceIn(0.0, subtotal)
         val id = quoteDao.insertWithItems(
             quote = QuoteEntity(
                 numero = number,
@@ -66,7 +69,8 @@ class QuoteRepository(
                 createdAt = now,
                 status = status,
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
-                totalValue = quoteItems.sumOf { it.subtotal },
+                totalValue = (subtotal - discount).coerceAtLeast(0.0),
+                discountValue = discount,
                 updatedAt = now,
             ),
             items = quoteItems,
@@ -87,6 +91,7 @@ class QuoteRepository(
         status: QuoteStatus,
         notes: String?,
         items: List<QuoteItemInput>,
+        discountValue: Double,
     ): Boolean {
         val current = quoteDao.findById(id) ?: return false
         if (current.status == QuoteStatus.Converted.label) {
@@ -101,12 +106,15 @@ class QuoteRepository(
                 subtotal = it.quantity * it.practicedUnitPrice,
             )
         }
+        val subtotal = quoteItems.sumOf { it.subtotal }
+        val discount = discountValue.coerceIn(0.0, subtotal)
         quoteDao.updateWithItems(
             quote = current.copy(
                 customerId = customerId,
                 status = status.label,
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
-                totalValue = quoteItems.sumOf { it.subtotal },
+                totalValue = (subtotal - discount).coerceAtLeast(0.0),
+                discountValue = discount,
                 updatedAt = Clock.nowMillis(),
             ),
             items = quoteItems,
@@ -125,6 +133,7 @@ class QuoteRepository(
             customerName = summary.customerName,
             status = quote.status,
             totalValue = quote.totalValue,
+            discountValue = quote.discountValue,
             notes = quote.observacoes,
             items = items,
         )
@@ -156,6 +165,7 @@ class QuoteRepository(
                 customerName = summary.customerName,
                 status = quote.status,
                 totalValue = quote.totalValue,
+                discountValue = quote.discountValue,
                 notes = quote.observacoes,
                 items = quoteDao.findDocumentItems(id),
             ),

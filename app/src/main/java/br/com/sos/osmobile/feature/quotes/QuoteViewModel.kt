@@ -31,6 +31,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WO
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_BOLD_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_ACCEPTANCE_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalPrintStyle
@@ -58,6 +59,7 @@ data class QuoteFormState(
     val status: QuoteStatus = QuoteStatus.Pending,
     val quantity: String = "1",
     val unitPrice: String = "",
+    val discount: String = "",
     val notes: String = "",
     val items: List<QuoteDraftItem> = emptyList(),
     val message: String? = null,
@@ -70,6 +72,7 @@ data class QuoteUiState(
     val companyName: String = "",
     val pixName: String = "",
     val pixKey: String = "",
+    val quoteMinAcceptanceValue: String = "",
     val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
     val printBluetoothAddress: String = "",
     val printCopies: Int = 0,
@@ -100,6 +103,7 @@ class QuoteViewModel(
             companyName = values[COMPANY_NAME_KEY].orEmpty(),
             pixName = values[PIX_NAME_KEY].orEmpty(),
             pixKey = values[PIX_KEY_KEY].orEmpty(),
+            quoteMinAcceptanceValue = values[QUOTE_MIN_ACCEPTANCE_VALUE_KEY].orEmpty(),
             quoteTemplate = values[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -156,6 +160,10 @@ class QuoteViewModel(
         formState = formState.copy(unitPrice = InputMasks.currency(value), message = null)
     }
 
+    fun onDiscountChanged(value: String) {
+        formState = formState.copy(discount = InputMasks.currency(value), message = null)
+    }
+
     fun onNotesChanged(value: String) {
         formState = formState.copy(notes = value, message = null)
     }
@@ -209,6 +217,7 @@ class QuoteViewModel(
                     practicedUnitPrice = it.unitPrice,
                 )
             }
+            val discount = QuoteFormValidator.parseDecimal(formState.discount) ?: 0.0
             val editingId = formState.editingId
             if (editingId == null) {
                 quoteRepository.create(
@@ -216,6 +225,7 @@ class QuoteViewModel(
                     status = formState.status.label,
                     notes = formState.notes,
                     items = items,
+                    discountValue = discount,
                 )
                 formState = QuoteFormState(message = "Orcamento criado.")
             } else {
@@ -225,6 +235,7 @@ class QuoteViewModel(
                     status = formState.status,
                     notes = formState.notes,
                     items = items,
+                    discountValue = discount,
                 )
                 formState = QuoteFormState(
                     message = if (updated) "Orcamento atualizado." else "Orcamento convertido nao pode ser editado.",
@@ -248,6 +259,7 @@ class QuoteViewModel(
                 selectedCustomerId = quote.customerId,
                 status = statusFromLabel(quote.status),
                 notes = quote.observacoes.orEmpty(),
+                discount = InputMasks.currencyFromDouble(quote.discountValue),
                 items = items.map { item ->
                     val service = services.firstOrNull { it.id == item.serviceProductId }
                     QuoteDraftItem(
@@ -306,6 +318,8 @@ class QuoteViewModel(
 
     fun showMessage(quote: QuoteSummary) {
         viewModelScope.launch {
+            val entity = quoteRepository.findById(quote.id)
+            val discount = entity?.discountValue ?: 0.0
             messagePhone = quote.customerPhone
             messageText = MessageTemplateRenderer.render(
                 template = uiState.value.quoteTemplate,
@@ -316,7 +330,10 @@ class QuoteViewModel(
                     "os" to "",
                     "orcamento" to quote.number,
                     "status" to quote.status,
-                    "valor" to quote.totalValue.toString(),
+                    "valor" to InputMasks.currencyFromDouble(quote.totalValue),
+                    "subtotal" to InputMasks.currencyFromDouble(quote.totalValue + discount),
+                    "desconto" to InputMasks.currencyFromDouble(discount),
+                    "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
                     "empresa" to uiState.value.companyName,
                     "data" to "",
                     "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, quote.totalValue),

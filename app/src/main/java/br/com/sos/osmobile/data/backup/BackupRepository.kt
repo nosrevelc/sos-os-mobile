@@ -69,9 +69,9 @@ class BackupRepository(
             appendLine("{")
             appendLine("\"clientes\":${customers.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"nome":${str(it.nome)},"cpfCnpj":${str(it.cpfCnpj)},"telefone":${str(it.telefone)},"email":${str(it.email)},"endereco":${str(it.endereco)},"observacoes":${str(it.observacoes)},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"servicos_produtos\":${services.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"codigo":${str(it.codigo)},"nome":${str(it.nome)},"tipo":${str(it.tipo)},"categoria":${str(it.categoria)},"descricao":${str(it.descricao)},"unitPrice":${it.unitPrice},"minimumStock":${it.minimumStock},"ncm":${str(it.ncm)},"cfop":${str(it.cfop)},"unidade":${str(it.unidade)},"cstCsosn":${str(it.cstCsosn)},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
-            appendLine("\"orcamentos\":${quotes.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"createdAt":${it.createdAt},"validUntil":${it.validUntil ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"orcamentos\":${quotes.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"createdAt":${it.createdAt},"validUntil":${it.validUntil ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"discountValue":${it.discountValue},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"itens_orcamento\":${quoteItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"quoteId":${it.quoteId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }},")
-            appendLine("\"ordens_servico\":${workOrders.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"openedAt":${it.openedAt},"expectedConclusionAt":${it.expectedConclusionAt ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"concludedAt":${it.concludedAt ?: "null"},"fiscalStatus":${str(it.fiscalStatus)},"fiscalKey":${str(it.fiscalKey)},"fiscalProtocol":${str(it.fiscalProtocol)},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"ordens_servico\":${workOrders.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"openedAt":${it.openedAt},"expectedConclusionAt":${it.expectedConclusionAt ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"discountValue":${it.discountValue},"concludedAt":${it.concludedAt ?: "null"},"fiscalStatus":${str(it.fiscalStatus)},"fiscalKey":${str(it.fiscalKey)},"fiscalProtocol":${str(it.fiscalProtocol)},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"itens_os\":${workOrderItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }},")
             appendLine("\"fotos_os\":${photos.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"fileName":${str(it.fileName)},"relativePath":${str(it.relativePath)},"mimeType":${str(it.mimeType)},"createdAt":${it.createdAt},"conteudoBase64":${str(fileBase64(it.relativePath))}}""" }},")
             appendLine("\"assinaturas_os\":${signatures.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"fileName":${str(it.fileName)},"relativePath":${str(it.relativePath)},"signerName":${str(it.signerName)},"createdAt":${it.createdAt},"conteudoBase64":${str(fileBase64(it.relativePath))}}""" }},")
@@ -131,6 +131,7 @@ class BackupRepository(
                 status = item.getString("status"),
                 observacoes = item.nullableString("observacoes"),
                 totalValue = item.optDouble("totalValue", item.optDouble("total", 0.0)),
+                discountValue = item.optDouble("discountValue", 0.0),
                 updatedAt = item.optLong("updatedAt", now),
             )
         }
@@ -154,6 +155,7 @@ class BackupRepository(
                 status = item.getString("status"),
                 observacoes = item.nullableString("observacoes"),
                 totalValue = item.optDouble("totalValue", item.optDouble("total", 0.0)),
+                discountValue = item.optDouble("discountValue", 0.0),
                 concludedAt = item.nullableLong("concludedAt"),
                 fiscalStatus = item.optString("fiscalStatus", "Nao emitida"),
                 fiscalKey = item.nullableString("fiscalKey"),

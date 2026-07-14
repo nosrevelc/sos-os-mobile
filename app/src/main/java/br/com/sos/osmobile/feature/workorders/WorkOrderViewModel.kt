@@ -38,6 +38,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WO
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_BOLD_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_ACCEPTANCE_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_REVIEW_REQUEST_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_CANCELED_KEY
@@ -80,6 +81,7 @@ data class WorkOrderFormState(
     val status: WorkOrderStatus = WorkOrderStatus.Open,
     val quantity: String = "1",
     val unitPrice: String = "",
+    val discount: String = "",
     val notes: String = "",
     val items: List<WorkOrderDraftItem> = emptyList(),
     val originalItems: List<WorkOrderDraftItem> = emptyList(),
@@ -94,6 +96,7 @@ data class WorkOrderUiState(
     val companyName: String = "",
     val pixName: String = "",
     val pixKey: String = "",
+    val quoteMinAcceptanceValue: String = "",
     val workOrderTemplate: String = MessageTemplateRenderer.workOrderDefaultTemplate,
     val workOrderStatusTemplates: Map<String, String> = emptyMap(),
     val reviewRequestTemplate: String = MessageTemplateRenderer.reviewRequestTemplate,
@@ -140,6 +143,7 @@ class WorkOrderViewModel(
             companyName = values[COMPANY_NAME_KEY].orEmpty(),
             pixName = values[PIX_NAME_KEY].orEmpty(),
             pixKey = values[PIX_KEY_KEY].orEmpty(),
+            quoteMinAcceptanceValue = values[QUOTE_MIN_ACCEPTANCE_VALUE_KEY].orEmpty(),
             workOrderTemplate = values[TEMPLATE_WORK_ORDER_KEY] ?: MessageTemplateRenderer.workOrderDefaultTemplate,
             workOrderStatusTemplates = mapOf(
                 WorkOrderStatus.Open.label to (values[TEMPLATE_WORK_ORDER_OPEN_KEY] ?: MessageTemplateRenderer.workOrderOpenTemplate),
@@ -223,6 +227,10 @@ class WorkOrderViewModel(
 
     fun onUnitPriceChanged(value: String) {
         formState = formState.copy(unitPrice = InputMasks.currency(value), message = null)
+    }
+
+    fun onDiscountChanged(value: String) {
+        formState = formState.copy(discount = InputMasks.currency(value), message = null)
     }
 
     fun onNotesChanged(value: String) {
@@ -320,6 +328,7 @@ class WorkOrderViewModel(
                     practicedUnitPrice = it.unitPrice,
                 )
             }
+            val discount = WorkOrderFormValidator.parseDecimal(formState.discount) ?: 0.0
             val editingId = formState.editingId
             if (editingId == null) {
                 val createdId = workOrderRepository.create(
@@ -327,6 +336,7 @@ class WorkOrderViewModel(
                     status = formState.status.label,
                     notes = formState.notes,
                     items = items,
+                    discountValue = discount,
                 )
                 applyStockMovements(createdId, emptyList(), formState.items)
                 if (initialPayment != null) {
@@ -341,6 +351,7 @@ class WorkOrderViewModel(
                     status = formState.status,
                     notes = formState.notes,
                     items = items,
+                    discountValue = discount,
                 )
                 if (updated) {
                     applyStockMovements(editingId, formState.originalItems, formState.items)
@@ -374,6 +385,7 @@ class WorkOrderViewModel(
                 selectedCustomerId = workOrder.customerId,
                 status = statusFromLabel(workOrder.status),
                 notes = workOrder.observacoes.orEmpty(),
+                discount = InputMasks.currencyFromDouble(workOrder.discountValue),
                 items = draftItems,
                 originalItems = draftItems,
                 message = message ?: "Editando OS ${workOrder.numero}.",
@@ -466,6 +478,8 @@ class WorkOrderViewModel(
     fun showMessage(workOrder: WorkOrderSummary) {
         viewModelScope.launch {
             val paidTotal = paymentRepository.listByWorkOrder(workOrder.id).sumOf { it.valor }
+            val entity = workOrderRepository.findById(workOrder.id)
+            val discount = entity?.discountValue ?: 0.0
             val itemTokens = MessageTemplateRenderer.itemTokens(workOrderRepository.listDocumentItems(workOrder.id))
             messagePhone = workOrder.customerPhone
             messageText = MessageTemplateRenderer.render(
@@ -476,6 +490,8 @@ class WorkOrderViewModel(
                     workOrderNumber = workOrder.number,
                     status = workOrder.status,
                     totalValue = workOrder.totalValue,
+                    subtotalValue = workOrder.totalValue + discount,
+                    discountValue = discount,
                     paidTotal = paidTotal,
                 ) + itemTokens,
             )
@@ -681,6 +697,8 @@ class WorkOrderViewModel(
         workOrderNumber: String,
         status: String,
         totalValue: Double,
+        subtotalValue: Double,
+        discountValue: Double,
         paidTotal: Double,
     ): Map<String, String> {
         val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
@@ -697,6 +715,9 @@ class WorkOrderViewModel(
             "orcamento" to "",
             "status" to status,
             "valor" to InputMasks.currencyFromDouble(totalValue),
+            "subtotal" to InputMasks.currencyFromDouble(subtotalValue),
+            "desconto" to InputMasks.currencyFromDouble(discountValue),
+            "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
             "valor_pago" to InputMasks.currencyFromDouble(paidTotal),
             "saldo" to InputMasks.currencyFromDouble(balance),
             "status_pagamento" to paymentStatus,

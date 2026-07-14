@@ -57,6 +57,7 @@ class QuoteConversionRepository(
                     status = WorkOrderStatus.Open.label,
                     observacoes = quote.observacoes,
                     totalValue = quote.totalValue,
+                    discountValue = quote.discountValue,
                     updatedAt = now,
                 ),
                 items = workOrderItems,

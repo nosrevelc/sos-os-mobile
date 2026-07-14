@@ -136,7 +136,9 @@ fun WorkOrderScreen(
     var paymentValue by remember { mutableStateOf("") }
     var paymentMethod by remember { mutableStateOf("PIX") }
     var paymentNote by remember { mutableStateOf("") }
-    val totalValue = form.items.sumOf { item -> item.subtotal }
+    val subtotalValue = form.items.sumOf { item -> item.subtotal }
+    val discountValue = WorkOrderFormValidator.parseDecimal(form.discount)?.coerceIn(0.0, subtotalValue) ?: 0.0
+    val totalValue = (subtotalValue - discountValue).coerceAtLeast(0.0)
     val pendingPayment = if (form.editingId == null) WorkOrderFormValidator.parseDecimal(paymentValue) ?: 0.0 else 0.0
     val paidTotalForMessage = viewModel.payments.sumOf { it.valor } + pendingPayment
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
@@ -148,6 +150,8 @@ fun WorkOrderScreen(
             workOrderNumber = form.editingNumber ?: "nova",
             status = form.status.label,
             totalValue = totalValue,
+            discountValue = discountValue,
+            minAcceptanceValue = uiState.quoteMinAcceptanceValue,
             paidTotal = paidTotalForMessage,
             companyName = uiState.companyName,
             pixName = uiState.pixName,
@@ -274,7 +278,9 @@ fun WorkOrderScreen(
                                     customerCpfCnpj = customer.cpfCnpj.orEmpty(),
                                     workOrderNumber = form.editingNumber ?: "nova",
                                     status = status.label,
-                                    totalValue = form.items.sumOf { item -> item.subtotal },
+                                    totalValue = totalValue,
+                                    discountValue = discountValue,
+                                    minAcceptanceValue = uiState.quoteMinAcceptanceValue,
                                     paidTotal = viewModel.payments.sumOf { it.valor },
                                     companyName = uiState.companyName,
                                     pixName = uiState.pixName,
@@ -291,6 +297,7 @@ fun WorkOrderScreen(
                 },
                 onQuantityChanged = viewModel::onQuantityChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
+                onDiscountChanged = viewModel::onDiscountChanged,
                 onNotesChanged = viewModel::onNotesChanged,
                 onAddItem = viewModel::addSelectedItem,
                 onRemoveItem = viewModel::removeItem,
@@ -645,6 +652,8 @@ fun WorkOrderScreen(
                                 workOrderNumber = form.editingNumber ?: "nova",
                                 status = form.status.label,
                                 totalValue = totalValue,
+                                discountValue = discountValue,
+                                minAcceptanceValue = uiState.quoteMinAcceptanceValue,
                                 paidTotal = paidTotalForMessage,
                                 companyName = uiState.companyName,
                                 pixName = uiState.pixName,
@@ -1005,6 +1014,7 @@ private fun WorkOrderForm(
     onStatusSelected: (WorkOrderStatus) -> Unit,
     onQuantityChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
+    onDiscountChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onAddItem: () -> Unit,
     onRemoveItem: (Int) -> Unit,
@@ -1013,11 +1023,15 @@ private fun WorkOrderForm(
 ) {
     var quantityField by remember { mutableStateOf(TextFieldValue(form.quantity, TextRange(form.quantity.length))) }
     var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
+    var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
     LaunchedEffect(form.quantity) {
         if (quantityField.text != form.quantity) quantityField = TextFieldValue(form.quantity, TextRange(form.quantity.length))
     }
     LaunchedEffect(form.unitPrice) {
         if (unitPriceField.text != form.unitPrice) unitPriceField = TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))
+    }
+    LaunchedEffect(form.discount) {
+        if (discountField.text != form.discount) discountField = TextFieldValue(form.discount, TextRange(form.discount.length))
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1082,8 +1096,22 @@ private fun WorkOrderForm(
             DraftItemRow(index = index, item = item, onRemoveItem = onRemoveItem)
         }
 
+        OutlinedTextField(
+            value = discountField,
+            onValueChange = {
+                val masked = InputMasks.currency(it.text)
+                discountField = TextFieldValue(masked, TextRange(masked.length))
+                onDiscountChanged(masked)
+            },
+            label = { Text("Desconto") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val subtotal = form.items.sumOf { it.subtotal }
+        val discount = WorkOrderFormValidator.parseDecimal(form.discount)?.coerceIn(0.0, subtotal) ?: 0.0
         Text(
-            text = "Total: ${formatCurrency(form.items.sumOf { it.subtotal })}",
+            text = "Subtotal: ${formatCurrency(subtotal)} | Desconto: ${formatCurrency(discount)} | Total: ${formatCurrency((subtotal - discount).coerceAtLeast(0.0))}",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -1507,6 +1535,8 @@ private fun renderWorkOrderMessage(
     workOrderNumber: String,
     status: String,
     totalValue: Double,
+    discountValue: Double,
+    minAcceptanceValue: String,
     paidTotal: Double,
     companyName: String,
     pixName: String,
@@ -1515,6 +1545,7 @@ private fun renderWorkOrderMessage(
     items: List<WorkOrderDraftItem> = emptyList(),
 ): String {
     val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
+    val subtotalValue = totalValue + discountValue
     val paymentStatus = when {
         totalValue <= 0.0 || paidTotal <= 0.0 -> "Pendente"
         paidTotal + 0.009 >= totalValue -> "Pago"
@@ -1530,6 +1561,9 @@ private fun renderWorkOrderMessage(
             "orcamento" to "",
             "status" to status,
             "valor" to formatCurrency(totalValue),
+            "subtotal" to formatCurrency(subtotalValue),
+            "desconto" to formatCurrency(discountValue),
+            "valor_minimo_aceite" to minAcceptanceValue,
             "valor_pago" to formatCurrency(paidTotal),
             "saldo" to formatCurrency(balance),
             "status_pagamento" to paymentStatus,

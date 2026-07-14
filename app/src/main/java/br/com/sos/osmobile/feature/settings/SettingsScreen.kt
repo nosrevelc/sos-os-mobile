@@ -38,6 +38,7 @@ import br.com.sos.osmobile.data.print.BluetoothPrinterDevice
 import br.com.sos.osmobile.data.print.BluetoothThermalPrinter
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalPrintStyle
+import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.launch
 
 @Composable
@@ -46,6 +47,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var companyName by remember { mutableStateOf(settings.companyName) }
+    var quoteMinAcceptanceValue by remember { mutableStateOf(settings.quoteMinAcceptanceValue) }
     var pixName by remember { mutableStateOf(settings.pixName) }
     var pixKey by remember { mutableStateOf(settings.pixKey) }
     var fiscalEnvironment by remember { mutableStateOf(settings.fiscalEnvironment) }
@@ -143,6 +145,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     }
     LaunchedEffect(settings) {
         companyName = settings.companyName
+        quoteMinAcceptanceValue = settings.quoteMinAcceptanceValue
         pixName = settings.pixName
         pixKey = settings.pixKey
         fiscalEnvironment = settings.fiscalEnvironment
@@ -416,6 +419,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
+            value = quoteMinAcceptanceValue,
+            onValueChange = { quoteMinAcceptanceValue = InputMasks.currency(it) },
+            label = { Text("Valor minimo para aceite de orcamento") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
             value = pixName,
             onValueChange = { pixName = it },
             label = { Text("Nome Pix") },
@@ -486,7 +496,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {empresa}, {data}, {dias}, {PIX}, {PIX_QR}.",
+            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {valor_minimo_aceite}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {empresa}, {data}, {dias}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_QR}.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -494,6 +504,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             OutlinedButton(
                 onClick = {
                     viewModel.setCompanyName(companyName)
+                    viewModel.setQuoteMinAcceptanceValue(quoteMinAcceptanceValue)
                     viewModel.setPixData(pixName, pixKey)
                     viewModel.setFiscalSettings(
                         fiscalEnvironment,

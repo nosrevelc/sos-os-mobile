@@ -51,6 +51,7 @@ class WorkOrderRepository(
         status: String,
         notes: String?,
         items: List<WorkOrderItemInput>,
+        discountValue: Double,
     ): Long {
         val now = Clock.nowMillis()
         val number = generateWorkOrderNumber(now)
@@ -63,6 +64,8 @@ class WorkOrderRepository(
                 subtotal = it.quantity * it.practicedUnitPrice,
             )
         }
+        val subtotal = workOrderItems.sumOf { it.subtotal }
+        val discount = discountValue.coerceIn(0.0, subtotal)
         val id = workOrderDao.insertWithItems(
             workOrder = WorkOrderEntity(
                 numero = number,
@@ -70,7 +73,8 @@ class WorkOrderRepository(
                 openedAt = now,
                 status = status,
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
-                totalValue = workOrderItems.sumOf { it.subtotal },
+                totalValue = (subtotal - discount).coerceAtLeast(0.0),
+                discountValue = discount,
                 concludedAt = if (status == "Concluida") now else null,
                 updatedAt = now,
             ),
@@ -105,6 +109,7 @@ class WorkOrderRepository(
         status: WorkOrderStatus,
         notes: String?,
         items: List<WorkOrderItemInput>,
+        discountValue: Double,
     ): Boolean {
         val current = workOrderDao.findById(id) ?: return false
         val now = Clock.nowMillis()
@@ -117,12 +122,15 @@ class WorkOrderRepository(
                 subtotal = it.quantity * it.practicedUnitPrice,
             )
         }
+        val subtotal = workOrderItems.sumOf { it.subtotal }
+        val discount = discountValue.coerceIn(0.0, subtotal)
         workOrderDao.updateWithItems(
             workOrder = current.copy(
                 customerId = customerId,
                 status = status.label,
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
-                totalValue = workOrderItems.sumOf { it.subtotal },
+                totalValue = (subtotal - discount).coerceAtLeast(0.0),
+                discountValue = discount,
                 concludedAt = if (status == WorkOrderStatus.Completed) now else current.concludedAt,
                 updatedAt = now,
             ),
@@ -146,6 +154,7 @@ class WorkOrderRepository(
             customerName = summary.customerName,
             status = workOrder.status,
             totalValue = workOrder.totalValue,
+            discountValue = workOrder.discountValue,
             notes = workOrder.observacoes,
             items = workOrderDao.findDocumentItems(id),
         )
@@ -176,6 +185,7 @@ class WorkOrderRepository(
                 customerName = summary.customerName,
                 status = workOrder.status,
                 totalValue = workOrder.totalValue,
+                discountValue = workOrder.discountValue,
                 notes = workOrder.observacoes,
                 items = workOrderDao.findDocumentItems(id),
             ),

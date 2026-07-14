@@ -37,6 +37,8 @@ data class QuoteEntity(
     val observacoes: String? = null,
     @ColumnInfo(name = "valor_total")
     val totalValue: Double = 0.0,
+    @ColumnInfo(name = "valor_desconto")
+    val discountValue: Double = 0.0,
     @ColumnInfo(name = "data_atualizacao")
     val updatedAt: Long,
 )

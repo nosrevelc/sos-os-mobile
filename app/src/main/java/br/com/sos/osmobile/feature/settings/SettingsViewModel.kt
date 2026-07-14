@@ -28,6 +28,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WO
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_BOLD_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_ACCEPTANCE_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_REVIEW_REQUEST_KEY
@@ -55,6 +56,7 @@ data class SettingsUiState(
     val cpfCnpjPolicy: CpfCnpjPolicy = CpfCnpjPolicy.Optional,
     val contactsGoogleAccount: String = "",
     val companyName: String = "",
+    val quoteMinAcceptanceValue: String = "",
     val pixName: String = "",
     val pixKey: String = "",
     val fiscalEnvironment: String = "Homologacao",
@@ -116,6 +118,7 @@ class SettingsViewModel(
                 ),
                 contactsGoogleAccount = rawValues[CONTACTS_GOOGLE_ACCOUNT_KEY].orEmpty(),
                 companyName = rawValues[COMPANY_NAME_KEY].orEmpty(),
+                quoteMinAcceptanceValue = rawValues[QUOTE_MIN_ACCEPTANCE_VALUE_KEY].orEmpty(),
                 pixName = rawValues[PIX_NAME_KEY].orEmpty(),
                 pixKey = rawValues[PIX_KEY_KEY].orEmpty(),
                 fiscalEnvironment = rawValues[FISCAL_ENVIRONMENT_KEY] ?: "Homologacao",
@@ -169,6 +172,12 @@ class SettingsViewModel(
     fun setCompanyName(value: String) {
         viewModelScope.launch {
             settingsRepository.set(COMPANY_NAME_KEY, value.trim())
+        }
+    }
+
+    fun setQuoteMinAcceptanceValue(value: String) {
+        viewModelScope.launch {
+            settingsRepository.set(QUOTE_MIN_ACCEPTANCE_VALUE_KEY, value.trim())
         }
     }
 
