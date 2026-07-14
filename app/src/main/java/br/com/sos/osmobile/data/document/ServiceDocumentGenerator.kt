@@ -12,6 +12,7 @@ object ServiceDocumentGenerator {
         status: String,
         totalValue: Double,
         discountValue: Double = 0.0,
+        minimumDepositValue: Double = 0.0,
         notes: String?,
         items: List<DocumentItem>,
     ): String = buildString {
@@ -29,6 +30,9 @@ object ServiceDocumentGenerator {
         if (discountValue > 0.0) {
             appendLine("Subtotal: ${money(totalValue + discountValue)}")
             appendLine("Desconto: ${money(discountValue)}")
+        }
+        if (minimumDepositValue > 0.0) {
+            appendLine("Sinal minimo: ${money(minimumDepositValue)}")
         }
         appendLine("Total: ${money(totalValue)}")
         notes?.takeIf { it.isNotBlank() }?.let {

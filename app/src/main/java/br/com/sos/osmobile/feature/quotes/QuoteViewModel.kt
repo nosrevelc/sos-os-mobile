@@ -32,6 +32,7 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WO
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_HEADER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_WORK_ORDER_TEXT_SIZE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_ACCEPTANCE_VALUE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_DEPOSIT_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_QUOTE_KEY
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalPrintStyle
@@ -60,6 +61,7 @@ data class QuoteFormState(
     val quantity: String = "1",
     val unitPrice: String = "",
     val discount: String = "",
+    val minimumDeposit: String = "",
     val notes: String = "",
     val items: List<QuoteDraftItem> = emptyList(),
     val message: String? = null,
@@ -73,6 +75,7 @@ data class QuoteUiState(
     val pixName: String = "",
     val pixKey: String = "",
     val quoteMinAcceptanceValue: String = "",
+    val quoteMinDepositValue: String = "",
     val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
     val printBluetoothAddress: String = "",
     val printCopies: Int = 0,
@@ -104,6 +107,7 @@ class QuoteViewModel(
             pixName = values[PIX_NAME_KEY].orEmpty(),
             pixKey = values[PIX_KEY_KEY].orEmpty(),
             quoteMinAcceptanceValue = values[QUOTE_MIN_ACCEPTANCE_VALUE_KEY].orEmpty(),
+            quoteMinDepositValue = values[QUOTE_MIN_DEPOSIT_VALUE_KEY].orEmpty(),
             quoteTemplate = values[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
             printBluetoothAddress = values[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
             printCopies = (values[PRINT_WORK_ORDER_COPIES_KEY]?.toIntOrNull() ?: 0).coerceIn(0, 9),
@@ -164,6 +168,10 @@ class QuoteViewModel(
         formState = formState.copy(discount = InputMasks.currency(value), message = null)
     }
 
+    fun onMinimumDepositChanged(value: String) {
+        formState = formState.copy(minimumDeposit = InputMasks.currency(value), message = null)
+    }
+
     fun onNotesChanged(value: String) {
         formState = formState.copy(notes = value, message = null)
     }
@@ -218,6 +226,7 @@ class QuoteViewModel(
                 )
             }
             val discount = QuoteFormValidator.parseDecimal(formState.discount) ?: 0.0
+            val minimumDeposit = effectiveMinimumDeposit()
             val editingId = formState.editingId
             if (editingId == null) {
                 quoteRepository.create(
@@ -226,6 +235,7 @@ class QuoteViewModel(
                     notes = formState.notes,
                     items = items,
                     discountValue = discount,
+                    minimumDepositValue = minimumDeposit,
                 )
                 formState = QuoteFormState(message = "Orcamento criado.")
             } else {
@@ -236,6 +246,7 @@ class QuoteViewModel(
                     notes = formState.notes,
                     items = items,
                     discountValue = discount,
+                    minimumDepositValue = minimumDeposit,
                 )
                 formState = QuoteFormState(
                     message = if (updated) "Orcamento atualizado." else "Orcamento convertido nao pode ser editado.",
@@ -260,6 +271,7 @@ class QuoteViewModel(
                 status = statusFromLabel(quote.status),
                 notes = quote.observacoes.orEmpty(),
                 discount = InputMasks.currencyFromDouble(quote.discountValue),
+                minimumDeposit = InputMasks.currencyFromDouble(quote.minimumDepositValue),
                 items = items.map { item ->
                     val service = services.firstOrNull { it.id == item.serviceProductId }
                     QuoteDraftItem(
@@ -320,6 +332,7 @@ class QuoteViewModel(
         viewModelScope.launch {
             val entity = quoteRepository.findById(quote.id)
             val discount = entity?.discountValue ?: 0.0
+            val minimumDeposit = entity?.minimumDepositValue ?: 0.0
             messagePhone = quote.customerPhone
             messageText = MessageTemplateRenderer.render(
                 template = uiState.value.quoteTemplate,
@@ -335,6 +348,8 @@ class QuoteViewModel(
                     "desconto" to InputMasks.currencyFromDouble(discount),
                     "linha_desconto" to if (discount > 0.0) "Desconto: ${InputMasks.currencyFromDouble(discount)}" else "",
                     "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
+                    "sinal_minimo" to InputMasks.currencyFromDouble(minimumDeposit),
+                    "linha_sinal_minimo" to if (minimumDeposit > 0.0) "Sinal minimo: ${InputMasks.currencyFromDouble(minimumDeposit)}" else "",
                     "empresa" to uiState.value.companyName,
                     "data" to "",
                     "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, quote.totalValue),
@@ -380,5 +395,11 @@ class QuoteViewModel(
                     ) as T
                 }
             }
+    }
+
+    private fun effectiveMinimumDeposit(): Double {
+        val typed = QuoteFormValidator.parseDecimal(formState.minimumDeposit)
+        if (typed != null && typed > 0.0) return typed
+        return QuoteFormValidator.parseDecimal(uiState.value.quoteMinDepositValue) ?: 0.0
     }
 }

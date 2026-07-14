@@ -48,6 +48,7 @@ class QuoteRepository(
         notes: String?,
         items: List<QuoteItemInput>,
         discountValue: Double,
+        minimumDepositValue: Double,
     ): Long {
         val now = Clock.nowMillis()
         val number = generateQuoteNumber(now)
@@ -62,6 +63,8 @@ class QuoteRepository(
         }
         val subtotal = quoteItems.sumOf { it.subtotal }
         val discount = discountValue.coerceIn(0.0, subtotal)
+        val total = (subtotal - discount).coerceAtLeast(0.0)
+        val minimumDeposit = minimumDepositValue.coerceIn(0.0, total)
         val id = quoteDao.insertWithItems(
             quote = QuoteEntity(
                 numero = number,
@@ -69,8 +72,9 @@ class QuoteRepository(
                 createdAt = now,
                 status = status,
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
-                totalValue = (subtotal - discount).coerceAtLeast(0.0),
+                totalValue = total,
                 discountValue = discount,
+                minimumDepositValue = minimumDeposit,
                 updatedAt = now,
             ),
             items = quoteItems,
@@ -92,6 +96,7 @@ class QuoteRepository(
         notes: String?,
         items: List<QuoteItemInput>,
         discountValue: Double,
+        minimumDepositValue: Double,
     ): Boolean {
         val current = quoteDao.findById(id) ?: return false
         if (current.status == QuoteStatus.Converted.label) {
@@ -108,13 +113,16 @@ class QuoteRepository(
         }
         val subtotal = quoteItems.sumOf { it.subtotal }
         val discount = discountValue.coerceIn(0.0, subtotal)
+        val total = (subtotal - discount).coerceAtLeast(0.0)
+        val minimumDeposit = minimumDepositValue.coerceIn(0.0, total)
         quoteDao.updateWithItems(
             quote = current.copy(
                 customerId = customerId,
                 status = status.label,
                 observacoes = notes?.trim()?.takeIf { it.isNotBlank() },
-                totalValue = (subtotal - discount).coerceAtLeast(0.0),
+                totalValue = total,
                 discountValue = discount,
+                minimumDepositValue = minimumDeposit,
                 updatedAt = Clock.nowMillis(),
             ),
             items = quoteItems,
@@ -134,6 +142,7 @@ class QuoteRepository(
             status = quote.status,
             totalValue = quote.totalValue,
             discountValue = quote.discountValue,
+            minimumDepositValue = quote.minimumDepositValue,
             notes = quote.observacoes,
             items = items,
         )
@@ -155,6 +164,8 @@ class QuoteRepository(
             "nome" to summary.customerName,
             "telefone" to summary.customerPhone,
             "valor" to money(quote.totalValue),
+            "sinal_minimo" to money(quote.minimumDepositValue),
+            "linha_sinal_minimo" to if (quote.minimumDepositValue > 0.0) "Sinal minimo: ${money(quote.minimumDepositValue)}" else "",
             "status" to quote.status,
         )
         return ThermalPrintContent(
@@ -166,6 +177,7 @@ class QuoteRepository(
                 status = quote.status,
                 totalValue = quote.totalValue,
                 discountValue = quote.discountValue,
+                minimumDepositValue = quote.minimumDepositValue,
                 notes = quote.observacoes,
                 items = quoteDao.findDocumentItems(id),
             ),

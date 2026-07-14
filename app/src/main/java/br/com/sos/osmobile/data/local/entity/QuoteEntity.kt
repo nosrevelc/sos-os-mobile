@@ -39,6 +39,8 @@ data class QuoteEntity(
     val totalValue: Double = 0.0,
     @ColumnInfo(name = "valor_desconto")
     val discountValue: Double = 0.0,
+    @ColumnInfo(name = "valor_sinal_minimo")
+    val minimumDepositValue: Double = 0.0,
     @ColumnInfo(name = "data_atualizacao")
     val updatedAt: Long,
 )

@@ -48,6 +48,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val coroutineScope = rememberCoroutineScope()
     var companyName by remember { mutableStateOf(settings.companyName) }
     var quoteMinAcceptanceValue by remember { mutableStateOf(settings.quoteMinAcceptanceValue) }
+    var quoteMinDepositValue by remember { mutableStateOf(settings.quoteMinDepositValue) }
     var pixName by remember { mutableStateOf(settings.pixName) }
     var pixKey by remember { mutableStateOf(settings.pixKey) }
     var fiscalEnvironment by remember { mutableStateOf(settings.fiscalEnvironment) }
@@ -146,6 +147,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     LaunchedEffect(settings) {
         companyName = settings.companyName
         quoteMinAcceptanceValue = settings.quoteMinAcceptanceValue
+        quoteMinDepositValue = settings.quoteMinDepositValue
         pixName = settings.pixName
         pixKey = settings.pixKey
         fiscalEnvironment = settings.fiscalEnvironment
@@ -426,6 +428,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
+            value = quoteMinDepositValue,
+            onValueChange = { quoteMinDepositValue = InputMasks.currency(it) },
+            label = { Text("Sinal minimo padrao do orcamento") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
             value = pixName,
             onValueChange = { pixName = it },
             label = { Text("Nome Pix") },
@@ -496,7 +505,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {linha_desconto}, {valor_minimo_aceite}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {empresa}, {data}, {dias}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_QR}.",
+            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {linha_desconto}, {valor_minimo_aceite}, {sinal_minimo}, {linha_sinal_minimo}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {empresa}, {data}, {dias}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_QR}.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -505,6 +514,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 onClick = {
                     viewModel.setCompanyName(companyName)
                     viewModel.setQuoteMinAcceptanceValue(quoteMinAcceptanceValue)
+                    viewModel.setQuoteMinDepositValue(quoteMinDepositValue)
                     viewModel.setPixData(pixName, pixKey)
                     viewModel.setFiscalSettings(
                         fiscalEnvironment,

@@ -79,6 +79,11 @@ fun QuoteScreen(
     val subtotalValue = form.items.sumOf { item -> item.subtotal }
     val discountValue = QuoteFormValidator.parseDecimal(form.discount)?.coerceIn(0.0, subtotalValue) ?: 0.0
     val totalValue = (subtotalValue - discountValue).coerceAtLeast(0.0)
+    val minimumDepositValue = (
+        QuoteFormValidator.parseDecimal(form.minimumDeposit)
+            ?: QuoteFormValidator.parseDecimal(uiState.quoteMinDepositValue)
+            ?: 0.0
+        ).coerceIn(0.0, totalValue)
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
     LaunchedEffect(initialEditId) {
         initialEditId?.let(viewModel::editQuote)
@@ -125,6 +130,7 @@ fun QuoteScreen(
             status = form.status.label,
             totalValue = totalValue,
             discountValue = discountValue,
+            minimumDepositValue = minimumDepositValue,
             minAcceptanceValue = uiState.quoteMinAcceptanceValue,
             companyName = uiState.companyName,
             pixName = uiState.pixName,
@@ -151,6 +157,7 @@ fun QuoteScreen(
                 onQuantityChanged = viewModel::onQuantityChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
                 onDiscountChanged = viewModel::onDiscountChanged,
+                onMinimumDepositChanged = viewModel::onMinimumDepositChanged,
                 onNotesChanged = viewModel::onNotesChanged,
                 onAddItem = viewModel::addSelectedItem,
                 onRemoveItem = viewModel::removeItem,
@@ -322,6 +329,7 @@ private fun QuoteForm(
     onQuantityChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
     onDiscountChanged: (String) -> Unit,
+    onMinimumDepositChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onAddItem: () -> Unit,
     onRemoveItem: (Int) -> Unit,
@@ -331,6 +339,7 @@ private fun QuoteForm(
     var quantityField by remember { mutableStateOf(TextFieldValue(form.quantity, TextRange(form.quantity.length))) }
     var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
     var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
+    var minimumDepositField by remember { mutableStateOf(TextFieldValue(form.minimumDeposit, TextRange(form.minimumDeposit.length))) }
 
     LaunchedEffect(form.quantity) {
         if (quantityField.text != form.quantity) {
@@ -345,6 +354,11 @@ private fun QuoteForm(
     LaunchedEffect(form.discount) {
         if (discountField.text != form.discount) {
             discountField = TextFieldValue(form.discount, TextRange(form.discount.length))
+        }
+    }
+    LaunchedEffect(form.minimumDeposit) {
+        if (minimumDepositField.text != form.minimumDeposit) {
+            minimumDepositField = TextFieldValue(form.minimumDeposit, TextRange(form.minimumDeposit.length))
         }
     }
 
@@ -430,10 +444,23 @@ private fun QuoteForm(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )
+        OutlinedTextField(
+            value = minimumDepositField,
+            onValueChange = {
+                val masked = InputMasks.currency(it.text)
+                minimumDepositField = TextFieldValue(masked, TextRange(masked.length))
+                onMinimumDepositChanged(masked)
+            },
+            label = { Text("Sinal minimo") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+        )
         val subtotal = form.items.sumOf { it.subtotal }
         val discount = QuoteFormValidator.parseDecimal(form.discount) ?: 0.0
+        val minimumDeposit = QuoteFormValidator.parseDecimal(form.minimumDeposit) ?: 0.0
         Text(
-            text = "Subtotal: ${formatCurrency(subtotal)} | Desconto: ${formatCurrency(discount)} | Total: ${formatCurrency((subtotal - discount).coerceAtLeast(0.0))}",
+            text = "Subtotal: ${formatCurrency(subtotal)} | Desconto: ${formatCurrency(discount)} | Sinal: ${formatCurrency(minimumDeposit)} | Total: ${formatCurrency((subtotal - discount).coerceAtLeast(0.0))}",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -604,6 +631,7 @@ private fun renderQuoteMessage(
     status: String,
     totalValue: Double,
     discountValue: Double,
+    minimumDepositValue: Double,
     minAcceptanceValue: String,
     companyName: String,
     pixName: String,
@@ -626,6 +654,8 @@ private fun renderQuoteMessage(
             "desconto" to formatCurrency(discountValue),
             "linha_desconto" to if (discountValue > 0.0) "Desconto: ${formatCurrency(discountValue)}" else "",
             "valor_minimo_aceite" to minAcceptanceValue,
+            "sinal_minimo" to formatCurrency(minimumDepositValue),
+            "linha_sinal_minimo" to if (minimumDepositValue > 0.0) "Sinal minimo: ${formatCurrency(minimumDepositValue)}" else "",
             "empresa" to companyName,
             "data" to formatDate(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),

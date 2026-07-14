@@ -204,6 +204,12 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration11To12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE orcamentos ADD COLUMN valor_sinal_minimo REAL NOT NULL DEFAULT 0.0")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -220,6 +226,7 @@ class AppContainer(context: Context) {
             migration8To9,
             migration9To10,
             migration10To11,
+            migration11To12,
         )
         .build()
 

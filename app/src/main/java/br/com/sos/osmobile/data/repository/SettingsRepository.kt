@@ -39,6 +39,7 @@ class SettingsRepository(
         const val CONTACTS_GOOGLE_ACCOUNT_KEY = "contacts_google_account"
         const val COMPANY_NAME_KEY = "company_name"
         const val QUOTE_MIN_ACCEPTANCE_VALUE_KEY = "quote_min_acceptance_value"
+        const val QUOTE_MIN_DEPOSIT_VALUE_KEY = "quote_min_deposit_value"
         const val PIX_NAME_KEY = "pix_name"
         const val PIX_KEY_KEY = "pix_key"
         const val FISCAL_ENVIRONMENT_KEY = "fiscal_environment"
