@@ -1,6 +1,6 @@
 # Teste rapido no celular
 
-Atualizado em: 13/07/2026
+Atualizado em: 14/07/2026
 
 APK:
 
@@ -43,6 +43,15 @@ Fluxo minimo:
 31. Registrar pagamento em Financeiro, confirmar total pago/saldo e remover pagamento.
 32. Gerar backup completo e confirmar que fotos/assinaturas entram no JSON.
 33. Restaurar backup completo e conferir dados, fotos, assinatura, checklist, garantia e pagamentos.
+34. Em `Servicos`, cadastrar `Produto` e `Insumo`, informar estoque minimo e campos fiscais.
+35. Registrar entrada, saida e ajuste de estoque e conferir saldo.
+36. Criar OS com Produto/Insumo e confirmar baixa de estoque.
+37. Editar/remover item da OS e confirmar correcao de estoque.
+38. Em `Configuracoes`, preencher dados fiscais e confirmar ambiente `Homologacao`.
+39. Abrir `Vendas`, registrar venda direta e confirmar baixa de estoque.
+40. Abrir `Financeiro` e conferir recebido, pendente, filtros Hoje/Mes.
+41. Abrir `Relatorios` e conferir estoque baixo, top servicos/produtos, clientes e financeiro.
+42. Gerar/restaurar backup e conferir estoque, vendas e configuracoes fiscais.
 
 Pontos a observar:
 
@@ -65,3 +74,7 @@ Pontos a observar:
 - Se o backup restaurado recupera arquivos de fotos e assinaturas.
 - Se as impressoes Bluetooth saem direto na impressora selecionada, sem tela de PDF.
 - Se o financeiro calcula pago e saldo corretamente.
+- Se Produto/Insumo controla estoque e Servico nao baixa estoque.
+- Se OS e Venda baixam estoque corretamente.
+- Se backup/restauro preserva movimentacoes de estoque, vendas e configuracoes fiscais.
+- Se Relatorios mostram dados coerentes.
