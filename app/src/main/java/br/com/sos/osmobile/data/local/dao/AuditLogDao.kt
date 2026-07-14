@@ -32,4 +32,7 @@ interface AuditLogDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(log: AuditLogEntity): Long
+
+    @Query("DELETE FROM historico_sistema")
+    suspend fun deleteAll()
 }

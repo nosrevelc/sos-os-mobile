@@ -76,6 +76,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     var reviewRequestTemplate by remember { mutableStateOf(settings.reviewRequestTemplate) }
     var pickupReminderTemplate by remember { mutableStateOf(settings.pickupReminderTemplate) }
     var quoteTemplate by remember { mutableStateOf(settings.quoteTemplate) }
+    var resetConfirmation by remember { mutableStateOf("") }
     var bluetoothPrinters by remember { mutableStateOf(emptyList<BluetoothPrinterDevice>()) }
     var bluetoothMessage by remember { mutableStateOf<String?>(null) }
     fun loadBluetoothPrinters() {
@@ -543,6 +544,33 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             OutlinedButton(onClick = viewModel::resetTemplates) {
                 Text("Padrao")
             }
+        }
+
+        Text("Area perigosa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = "Use apenas para sair da fase de testes. Apaga clientes, servicos/produtos, OS, orcamentos, pagamentos, fotos, assinaturas, checklist, garantias, estoque, vendas e historico. Mantem configuracoes, templates, Pix e impressao.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        OutlinedTextField(
+            value = resetConfirmation,
+            onValueChange = { resetConfirmation = it.uppercase().take(5) },
+            label = { Text("Digite ZERAR para confirmar") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedButton(
+            onClick = {
+                viewModel.resetOperationalData(resetConfirmation)
+                resetConfirmation = ""
+            },
+            enabled = resetConfirmation == "ZERAR",
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Zerar dados de teste")
+        }
+        viewModel.resetMessage?.let {
+            Text(text = it, color = MaterialTheme.colorScheme.secondary)
         }
     }
 }

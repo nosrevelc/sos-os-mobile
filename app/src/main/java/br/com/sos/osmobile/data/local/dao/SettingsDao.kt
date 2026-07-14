@@ -23,4 +23,7 @@ interface SettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(settings: List<AppSettingEntity>)
+
+    @Query("DELETE FROM configuracoes WHERE chave LIKE 'contact_raw_id_customer_%'")
+    suspend fun deleteContactLinks()
 }

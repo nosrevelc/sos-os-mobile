@@ -1,9 +1,13 @@
 package br.com.sos.osmobile.feature.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
+import br.com.sos.osmobile.data.backup.BackupRepository
 import br.com.sos.osmobile.data.repository.ContactAccount
 import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
@@ -92,9 +96,13 @@ data class SettingsUiState(
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val contactsRepository: ContactsRepository,
+    private val backupRepository: BackupRepository,
 ) : ViewModel() {
     private val contactAccounts = MutableStateFlow<List<ContactAccount>>(emptyList())
     private val contactsMessage = MutableStateFlow<String?>(null)
+
+    var resetMessage by mutableStateOf<String?>(null)
+        private set
 
     val settings = combine(
         settingsRepository.observeAll(),
@@ -287,6 +295,25 @@ class SettingsViewModel(
         }
     }
 
+    fun resetOperationalData(confirmation: String) {
+        if (confirmation != "ZERAR") {
+            resetMessage = "Digite ZERAR para confirmar."
+            return
+        }
+        viewModelScope.launch {
+            resetMessage = runCatching {
+                backupRepository.resetOperationalData()
+            }.fold(
+                onSuccess = {
+                    "Dados zerados: ${it.customers} cliente(s), ${it.services} servico(s), ${it.quotes} orcamento(s), ${it.workOrders} OS. Configuracoes mantidas."
+                },
+                onFailure = {
+                    "Nao foi possivel zerar os dados: ${it.message ?: "erro desconhecido"}"
+                },
+            )
+        }
+    }
+
     fun loadContactAccounts() {
         viewModelScope.launch {
             runCatching {
@@ -311,11 +338,12 @@ class SettingsViewModel(
         fun factory(
             repository: SettingsRepository,
             contactsRepository: ContactsRepository,
+            backupRepository: BackupRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(repository, contactsRepository) as T
+                    return SettingsViewModel(repository, contactsRepository, backupRepository) as T
                 }
             }
     }

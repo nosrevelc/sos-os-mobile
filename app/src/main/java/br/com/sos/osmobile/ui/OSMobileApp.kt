@@ -371,6 +371,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                         factory = SettingsViewModel.factory(
                             repository = appContainer.settingsRepository,
                             contactsRepository = appContainer.contactsRepository,
+                            backupRepository = appContainer.backupRepository,
                         ),
                     )
                     SettingsScreen(viewModel = settingsViewModel)

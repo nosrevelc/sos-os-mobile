@@ -200,6 +200,11 @@ Segundo os documentos de escopo, ficam para fases futuras:
   - entrada, saida e ajuste de estoque;
   - baixa por OS/venda;
   - saldo atual, estoque minimo e historico de movimentacoes.
+- Importacao CSV de servicos/produtos:
+  - botao para baixar modelo CSV;
+  - colunas padrao: codigo, nome, tipo, categoria, descricao, valor, estoque_minimo, ncm, cfop, unidade, cst_csosn;
+  - validacao antes de importar;
+  - relatorio de linhas importadas e linhas com erro.
 - Modulo fiscal / nota eletronica:
   - status fiscal na OS/venda;
   - configuracao fiscal da empresa;

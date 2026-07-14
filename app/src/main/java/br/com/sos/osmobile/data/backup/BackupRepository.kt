@@ -34,6 +34,13 @@ data class SettingsBackupImportResult(
     val settings: Int,
 )
 
+data class OperationalResetResult(
+    val customers: Int,
+    val services: Int,
+    val quotes: Int,
+    val workOrders: Int,
+)
+
 class BackupRepository(
     private val database: AppDatabase,
     private val context: Context,
@@ -320,6 +327,41 @@ class BackupRepository(
         database.settingsDao().upsertAll(settings)
 
         return SettingsBackupImportResult(settings = settings.size)
+    }
+
+    suspend fun resetOperationalData(): OperationalResetResult {
+        val customersCount = database.customerDao().listAll().size
+        val servicesCount = database.serviceProductDao().listAll().size
+        val quotesCount = database.quoteDao().listAll().size
+        val workOrdersCount = database.workOrderDao().listAll().size
+
+        database.withTransaction {
+            database.saleDao().deleteAllItems()
+            database.saleDao().deleteAll()
+            database.stockMovementDao().deleteAll()
+            database.workOrderPhotoDao().deleteAll()
+            database.workOrderSignatureDao().deleteAll()
+            database.workOrderChecklistDao().deleteAll()
+            database.workOrderWarrantyDao().deleteAll()
+            database.workOrderPaymentDao().deleteAll()
+            database.quoteDao().deleteAllItems()
+            database.workOrderDao().deleteAllItems()
+            database.quoteDao().deleteAll()
+            database.workOrderDao().deleteAll()
+            database.serviceProductDao().deleteAll()
+            database.customerDao().deleteAll()
+            database.auditLogDao().deleteAll()
+            database.settingsDao().deleteContactLinks()
+        }
+        deleteFilesDir("work_order_photos")
+        deleteFilesDir("work_order_signatures")
+
+        return OperationalResetResult(
+            customers = customersCount,
+            services = servicesCount,
+            quotes = quotesCount,
+            workOrders = workOrdersCount,
+        )
     }
 
     private fun esc(value: String): String =
