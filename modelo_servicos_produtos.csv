@@ -1,0 +1,3 @@
+codigo,nome,tipo,categoria,descricao,valor,estoque_minimo,ncm,cfop,unidade,cst_csosn
+SERV001,Barra de Calca,Servico,Costura,Ajuste de barra,"25,00",0,,,,UN,
+PROD001,Linha branca,Produto,Aviamentos,Linha para costura,"8,50",5,,,,UN,

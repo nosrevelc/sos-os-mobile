@@ -57,7 +57,7 @@ fun BackupScreen(viewModel: BackupViewModel) {
         OutlinedTextField(
             value = viewModel.importText,
             onValueChange = viewModel::onImportTextChanged,
-            label = { Text("Cole aqui o JSON do backup") },
+            label = { Text("Cole aqui JSON ou CSV com cabecalho") },
             minLines = 4,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -79,6 +79,42 @@ fun BackupScreen(viewModel: BackupViewModel) {
             Text(it, color = MaterialTheme.colorScheme.secondary)
         }
         viewModel.settingsImportMessage?.let {
+            Text(it, color = MaterialTheme.colorScheme.secondary)
+        }
+        Text("Importar CSV", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Use o mesmo campo acima. CSV aceito para clientes, servicos/produtos, configuracoes e templates.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(
+            onClick = viewModel::importCustomersCsv,
+            enabled = viewModel.importText.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Importar clientes CSV")
+        }
+        Button(
+            onClick = viewModel::importServiceProductsCsv,
+            enabled = viewModel.importText.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Importar servicos/produtos CSV")
+        }
+        Button(
+            onClick = viewModel::importSettingsCsv,
+            enabled = viewModel.importText.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Importar configuracoes CSV")
+        }
+        Button(
+            onClick = viewModel::importMessageTemplatesCsv,
+            enabled = viewModel.importText.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Importar templates de mensagens CSV")
+        }
+        viewModel.csvImportMessage?.let {
             Text(it, color = MaterialTheme.colorScheme.secondary)
         }
     }

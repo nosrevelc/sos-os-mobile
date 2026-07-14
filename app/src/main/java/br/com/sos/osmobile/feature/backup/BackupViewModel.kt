@@ -27,6 +27,9 @@ class BackupViewModel(
     var settingsImportMessage by mutableStateOf<String?>(null)
         private set
 
+    var csvImportMessage by mutableStateOf<String?>(null)
+        private set
+
     fun exportJson() {
         viewModelScope.launch {
             exportText = backupRepository.exportJson()
@@ -43,6 +46,7 @@ class BackupViewModel(
         importText = value
         importMessage = null
         settingsImportMessage = null
+        csvImportMessage = null
     }
 
     fun importJson() {
@@ -70,6 +74,38 @@ class BackupViewModel(
                 },
                 onFailure = {
                     "Nao foi possivel restaurar as configuracoes: ${it.message ?: "JSON invalido"}"
+                },
+            )
+        }
+    }
+
+    fun importCustomersCsv() {
+        importCsv("clientes") { backupRepository.importCustomersCsv(importText) }
+    }
+
+    fun importServiceProductsCsv() {
+        importCsv("servicos/produtos") { backupRepository.importServiceProductsCsv(importText) }
+    }
+
+    fun importSettingsCsv() {
+        importCsv("configuracoes") { backupRepository.importSettingsCsv(importText) }
+    }
+
+    fun importMessageTemplatesCsv() {
+        importCsv("templates de mensagens") { backupRepository.importMessageTemplatesCsv(importText) }
+    }
+
+    private fun importCsv(
+        label: String,
+        action: suspend () -> br.com.sos.osmobile.data.backup.CsvImportResult,
+    ) {
+        viewModelScope.launch {
+            csvImportMessage = runCatching { action() }.fold(
+                onSuccess = {
+                    "CSV de $label importado: ${it.imported} registro(s), ${it.ignored} ignorado(s)."
+                },
+                onFailure = {
+                    "Falha ao importar CSV de $label: ${it.message ?: "CSV invalido"}"
                 },
             )
         }
