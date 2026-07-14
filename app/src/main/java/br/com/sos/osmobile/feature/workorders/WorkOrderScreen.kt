@@ -153,6 +153,7 @@ fun WorkOrderScreen(
             pixName = uiState.pixName,
             pixKey = uiState.pixKey,
             template = uiState.workOrderStatusTemplates[form.status.label] ?: uiState.workOrderTemplate,
+            items = form.items,
         )
     }
 
@@ -279,6 +280,7 @@ fun WorkOrderScreen(
                                     pixName = uiState.pixName,
                                     pixKey = uiState.pixKey,
                                     template = uiState.workOrderStatusTemplates[status.label] ?: uiState.workOrderTemplate,
+                                    items = form.items,
                                 ),
                             )
                             viewModel.saveWorkOrderThen {
@@ -648,6 +650,7 @@ fun WorkOrderScreen(
                                 pixName = uiState.pixName,
                                 pixKey = uiState.pixKey,
                                 template = uiState.reviewRequestTemplate,
+                                items = form.items,
                             ),
                         )
                     },
@@ -1509,6 +1512,7 @@ private fun renderWorkOrderMessage(
     pixName: String,
     pixKey: String,
     template: String,
+    items: List<WorkOrderDraftItem> = emptyList(),
 ): String {
     val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
     val paymentStatus = when {
@@ -1533,6 +1537,22 @@ private fun renderWorkOrderMessage(
             "data" to formatDate(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, balance.takeIf { it > 0.0 } ?: totalValue),
             "PIX_QR" to "",
-        ),
+        ) + draftItemTokens(items),
     )
 }
+
+private fun draftItemTokens(items: List<WorkOrderDraftItem>): Map<String, String> {
+    val formatted = items.joinToString("\n") {
+        "- ${it.name}: ${formatQuantity(it.quantity)} x ${formatCurrency(it.unitPrice)} = ${formatCurrency(it.subtotal)}"
+    }
+    return mapOf(
+        "itens" to formatted,
+        "servicos" to formatted,
+        "produtos" to formatted,
+        "qtd_itens" to formatQuantity(items.sumOf { it.quantity }),
+        "total_itens" to formatCurrency(items.sumOf { it.subtotal }),
+    )
+}
+
+private fun formatQuantity(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(Locale("pt", "BR"), value)

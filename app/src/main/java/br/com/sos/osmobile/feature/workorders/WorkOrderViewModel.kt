@@ -466,6 +466,7 @@ class WorkOrderViewModel(
     fun showMessage(workOrder: WorkOrderSummary) {
         viewModelScope.launch {
             val paidTotal = paymentRepository.listByWorkOrder(workOrder.id).sumOf { it.valor }
+            val itemTokens = MessageTemplateRenderer.itemTokens(workOrderRepository.listDocumentItems(workOrder.id))
             messagePhone = workOrder.customerPhone
             messageText = MessageTemplateRenderer.render(
                 template = uiState.value.workOrderStatusTemplates[workOrder.status] ?: uiState.value.workOrderTemplate,
@@ -476,7 +477,7 @@ class WorkOrderViewModel(
                     status = workOrder.status,
                     totalValue = workOrder.totalValue,
                     paidTotal = paidTotal,
-                ),
+                ) + itemTokens,
             )
         }
     }

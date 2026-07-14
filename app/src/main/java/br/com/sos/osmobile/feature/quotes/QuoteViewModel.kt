@@ -305,23 +305,25 @@ class QuoteViewModel(
     }
 
     fun showMessage(quote: QuoteSummary) {
-        messagePhone = quote.customerPhone
-        messageText = MessageTemplateRenderer.render(
-            template = uiState.value.quoteTemplate,
-            tokens = mapOf(
-                "nome" to quote.customerName,
-                "telefone" to quote.customerPhone,
-                "cpf" to "",
-                "os" to "",
-                "orcamento" to quote.number,
-                "status" to quote.status,
-                "valor" to quote.totalValue.toString(),
-                "empresa" to uiState.value.companyName,
-                "data" to "",
-                "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, quote.totalValue),
-                "PIX_QR" to "",
-            ),
-        )
+        viewModelScope.launch {
+            messagePhone = quote.customerPhone
+            messageText = MessageTemplateRenderer.render(
+                template = uiState.value.quoteTemplate,
+                tokens = mapOf(
+                    "nome" to quote.customerName,
+                    "telefone" to quote.customerPhone,
+                    "cpf" to "",
+                    "os" to "",
+                    "orcamento" to quote.number,
+                    "status" to quote.status,
+                    "valor" to quote.totalValue.toString(),
+                    "empresa" to uiState.value.companyName,
+                    "data" to "",
+                    "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, quote.totalValue),
+                    "PIX_QR" to "",
+                ) + MessageTemplateRenderer.itemTokens(quoteRepository.listDocumentItems(quote.id)),
+            )
+        }
     }
 
     fun showHistory(quoteId: Long) {

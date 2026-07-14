@@ -126,6 +126,7 @@ fun QuoteScreen(
             pixName = uiState.pixName,
             pixKey = uiState.pixKey,
             template = uiState.quoteTemplate,
+            items = form.items,
         )
     }
 
@@ -563,6 +564,9 @@ private fun QuoteRow(
 private fun formatCurrency(value: Double): String =
     NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 
+private fun formatQuantity(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(Locale("pt", "BR"), value)
+
 private fun formatDate(timestamp: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))
 
@@ -577,6 +581,7 @@ private fun renderQuoteMessage(
     pixName: String,
     pixKey: String,
     template: String,
+    items: List<QuoteDraftItem> = emptyList(),
 ): String =
     MessageTemplateRenderer.render(
         template = template,
@@ -592,5 +597,18 @@ private fun renderQuoteMessage(
             "data" to formatDate(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),
             "PIX_QR" to "",
-        ),
+        ) + quoteItemTokens(items),
     )
+
+private fun quoteItemTokens(items: List<QuoteDraftItem>): Map<String, String> {
+    val formatted = items.joinToString("\n") {
+        "- ${it.name}: ${formatQuantity(it.quantity)} x ${formatCurrency(it.unitPrice)} = ${formatCurrency(it.subtotal)}"
+    }
+    return mapOf(
+        "itens" to formatted,
+        "servicos" to formatted,
+        "produtos" to formatted,
+        "qtd_itens" to formatQuantity(items.sumOf { it.quantity }),
+        "total_itens" to formatCurrency(items.sumOf { it.subtotal }),
+    )
+}
