@@ -34,7 +34,11 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pix
 import androidx.compose.material.icons.filled.OpenInFull
@@ -1439,16 +1443,20 @@ private fun WorkOrderRow(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 if (workOrder.status != WorkOrderStatus.Completed.label && workOrder.status != WorkOrderStatus.Canceled.label) {
                     TextButton(onClick = onEdit) {
+                        Icon(Icons.Filled.Edit, contentDescription = null)
                         Text("Editar")
                     }
                 }
                 TextButton(onClick = onShowDocument) {
+                    Icon(Icons.Filled.Description, contentDescription = null)
                     Text("Documento")
                 }
                 TextButton(onClick = onShowMessage) {
+                    Icon(Icons.Filled.Message, contentDescription = null)
                     Text("Mensagem")
                 }
                 TextButton(onClick = onShowHistory) {
+                    Icon(Icons.Filled.History, contentDescription = null)
                     Text("Historico")
                 }
                 WorkOrderStatus.entries.forEach { status ->

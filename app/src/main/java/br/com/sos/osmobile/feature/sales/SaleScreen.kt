@@ -8,9 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -69,13 +74,28 @@ fun SaleScreen(viewModel: SaleViewModel) {
                     )
                 }
                 Button(onClick = viewModel::addSelectedItem, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
                     Text("Adicionar item")
                 }
                 form.items.forEachIndexed { index, item ->
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text("${item.name} ${item.quantity} x ${money(item.unitPrice)}")
-                        TextButton(onClick = { viewModel.removeItem(index) }) {
-                            Text("Remover")
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.name, fontWeight = FontWeight.SemiBold)
+                                Text("${item.quantity} x ${money(item.unitPrice)} = ${money(item.subtotal)}")
+                            }
+                            TextButton(onClick = { viewModel.removeItem(index) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = null)
+                                Text("Remover")
+                            }
                         }
                     }
                 }
@@ -97,6 +117,7 @@ fun SaleScreen(viewModel: SaleViewModel) {
                 }
                 form.message?.let { Text(it, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold) }
                 Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Save, contentDescription = null)
                     Text("Registrar venda")
                 }
             }

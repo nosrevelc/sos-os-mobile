@@ -16,7 +16,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material.icons.filled.Unpublished
 import androidx.compose.material3.Button
@@ -480,23 +486,27 @@ private fun QuoteForm(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        form.message?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = form.message.orEmpty(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.weight(1f),
-            )
             if (form.editingId != null) {
                 OutlinedButton(onClick = onCancelEdit) {
                     Text("Cancelar")
                 }
             }
             Button(onClick = onSave) {
+                Icon(Icons.Filled.Save, contentDescription = null)
                 Text(if (form.editingId == null) "Salvar orcamento" else "Atualizar orcamento")
             }
         }
@@ -595,21 +605,26 @@ private fun QuoteRow(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 if (quote.status != QuoteStatus.Converted.label) {
                     TextButton(onClick = onEdit) {
+                        Icon(Icons.Filled.Edit, contentDescription = null)
                         Text("Editar")
                     }
                 }
                 TextButton(onClick = onShowDocument) {
+                    Icon(Icons.Filled.Description, contentDescription = null)
                     Text("Documento")
                 }
                 if (showPrint) {
                     TextButton(onClick = onPrintThermal) {
+                        Icon(Icons.Filled.Print, contentDescription = null)
                         Text("Imprimir")
                     }
                 }
                 TextButton(onClick = onShowMessage) {
+                    Icon(Icons.Filled.Message, contentDescription = null)
                     Text("Mensagem")
                 }
                 TextButton(onClick = onShowHistory) {
+                    Icon(Icons.Filled.History, contentDescription = null)
                     Text("Historico")
                 }
                 QuoteStatus.entries
@@ -623,6 +638,7 @@ private fun QuoteRow(
             if (quote.status == QuoteStatus.Approved.label) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onConvert) {
+                        Icon(Icons.Filled.SyncAlt, contentDescription = null)
                         Text("Converter em OS")
                     }
                 }
