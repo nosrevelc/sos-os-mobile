@@ -48,6 +48,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     var companyName by remember { mutableStateOf(settings.companyName) }
     var pixName by remember { mutableStateOf(settings.pixName) }
     var pixKey by remember { mutableStateOf(settings.pixKey) }
+    var fiscalEnvironment by remember { mutableStateOf(settings.fiscalEnvironment) }
+    var fiscalProvider by remember { mutableStateOf(settings.fiscalProvider) }
+    var fiscalApiToken by remember { mutableStateOf(settings.fiscalApiToken) }
+    var fiscalCnpj by remember { mutableStateOf(settings.fiscalCnpj) }
+    var fiscalIe by remember { mutableStateOf(settings.fiscalIe) }
+    var fiscalIm by remember { mutableStateOf(settings.fiscalIm) }
+    var fiscalRegime by remember { mutableStateOf(settings.fiscalRegime) }
     var printBluetoothAddress by remember { mutableStateOf(settings.printBluetoothAddress) }
     var printWorkOrderAuto by remember { mutableStateOf(settings.printWorkOrderAuto) }
     var printWorkOrderCopies by remember { mutableStateOf(settings.printWorkOrderCopies) }
@@ -138,6 +145,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         companyName = settings.companyName
         pixName = settings.pixName
         pixKey = settings.pixKey
+        fiscalEnvironment = settings.fiscalEnvironment
+        fiscalProvider = settings.fiscalProvider
+        fiscalApiToken = settings.fiscalApiToken
+        fiscalCnpj = settings.fiscalCnpj
+        fiscalIe = settings.fiscalIe
+        fiscalIm = settings.fiscalIm
+        fiscalRegime = settings.fiscalRegime
         printBluetoothAddress = settings.printBluetoothAddress
         printWorkOrderAuto = settings.printWorkOrderAuto
         printWorkOrderCopies = settings.printWorkOrderCopies
@@ -171,6 +185,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingSwitch("Checklist", checked = settings.checklist, onCheckedChange = { viewModel.setModule("modulo_checklist", it) })
         SettingSwitch("Garantia", checked = settings.garantia, onCheckedChange = { viewModel.setModule("modulo_garantia", it) })
         SettingSwitch("Financeiro", checked = settings.financeiro, onCheckedChange = { viewModel.setModule("modulo_financeiro", it) })
+        SettingSwitch("Fiscal", checked = settings.fiscal, onCheckedChange = { viewModel.setModule("modulo_fiscal", it) })
 
         Text("CPF/CNPJ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Row(
@@ -332,6 +347,61 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
         }
 
+        Text("Fiscal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        FiscalEnvironmentSelector(
+            selected = fiscalEnvironment,
+            onSelected = { fiscalEnvironment = it },
+        )
+        OutlinedTextField(
+            value = fiscalProvider,
+            onValueChange = { fiscalProvider = it },
+            label = { Text("API fiscal/provedor") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = fiscalApiToken,
+            onValueChange = { fiscalApiToken = it },
+            label = { Text("Token da API fiscal") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = fiscalCnpj,
+            onValueChange = { fiscalCnpj = it.filter(Char::isDigit).take(14) },
+            label = { Text("CNPJ") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = fiscalIe,
+                onValueChange = { fiscalIe = it },
+                label = { Text("IE") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = fiscalIm,
+                onValueChange = { fiscalIm = it },
+                label = { Text("IM") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        OutlinedTextField(
+            value = fiscalRegime,
+            onValueChange = { fiscalRegime = it },
+            label = { Text("Regime tributario") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            "Emissao fiscal deve iniciar em homologacao via API fiscal externa.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
         Text("Mensagens", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         OutlinedTextField(
             value = companyName,
@@ -420,6 +490,15 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 onClick = {
                     viewModel.setCompanyName(companyName)
                     viewModel.setPixData(pixName, pixKey)
+                    viewModel.setFiscalSettings(
+                        fiscalEnvironment,
+                        fiscalProvider,
+                        fiscalApiToken,
+                        fiscalCnpj,
+                        fiscalIe,
+                        fiscalIm,
+                        fiscalRegime,
+                    )
                     viewModel.setWorkOrderTemplate(workOrderTemplate)
                     viewModel.setWorkOrderStatusTemplates(
                         workOrderOpenTemplate,
@@ -501,6 +580,29 @@ private fun BluetoothPrinterSelector(
                 text = { Text(if (printer.address == selectedAddress) "${printer.label} *" else printer.label) },
                 onClick = {
                     onSelected(printer.address)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FiscalEnvironmentSelector(
+    selected: String,
+    onSelected: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf("Homologacao", "Producao")
+    OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+        Text("Ambiente: $selected")
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        options.forEach { option ->
+            DropdownMenuItem(
+                text = { Text(if (option == selected) "$option *" else option) },
+                onClick = {
+                    onSelected(option)
                     expanded = false
                 },
             )

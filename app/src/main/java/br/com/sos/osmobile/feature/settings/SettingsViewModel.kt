@@ -10,6 +10,13 @@ import br.com.sos.osmobile.data.repository.SettingsRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CONTACTS_GOOGLE_ACCOUNT_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CPF_CNPJ_POLICY_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_API_TOKEN_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_CNPJ_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_ENVIRONMENT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_IE_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_IM_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_PROVIDER_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_REGIME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_BLUETOOTH_ADDRESS_KEY
@@ -44,11 +51,19 @@ data class SettingsUiState(
     val checklist: Boolean = false,
     val garantia: Boolean = false,
     val financeiro: Boolean = false,
+    val fiscal: Boolean = false,
     val cpfCnpjPolicy: CpfCnpjPolicy = CpfCnpjPolicy.Optional,
     val contactsGoogleAccount: String = "",
     val companyName: String = "",
     val pixName: String = "",
     val pixKey: String = "",
+    val fiscalEnvironment: String = "Homologacao",
+    val fiscalProvider: String = "",
+    val fiscalApiToken: String = "",
+    val fiscalCnpj: String = "",
+    val fiscalIe: String = "",
+    val fiscalIm: String = "",
+    val fiscalRegime: String = "",
     val printBluetoothAddress: String = "",
     val printWorkOrderAuto: Boolean = false,
     val printWorkOrderCopies: String = "0",
@@ -95,6 +110,7 @@ class SettingsViewModel(
                 checklist = values["modulo_checklist"] ?: false,
                 garantia = values["modulo_garantia"] ?: false,
                 financeiro = values["modulo_financeiro"] ?: false,
+                fiscal = values["modulo_fiscal"] ?: false,
                 cpfCnpjPolicy = CpfCnpjPolicy.fromStorage(
                     settingsEntities.firstOrNull { it.chave == CPF_CNPJ_POLICY_KEY }?.valor,
                 ),
@@ -102,6 +118,13 @@ class SettingsViewModel(
                 companyName = rawValues[COMPANY_NAME_KEY].orEmpty(),
                 pixName = rawValues[PIX_NAME_KEY].orEmpty(),
                 pixKey = rawValues[PIX_KEY_KEY].orEmpty(),
+                fiscalEnvironment = rawValues[FISCAL_ENVIRONMENT_KEY] ?: "Homologacao",
+                fiscalProvider = rawValues[FISCAL_PROVIDER_KEY].orEmpty(),
+                fiscalApiToken = rawValues[FISCAL_API_TOKEN_KEY].orEmpty(),
+                fiscalCnpj = rawValues[FISCAL_CNPJ_KEY].orEmpty(),
+                fiscalIe = rawValues[FISCAL_IE_KEY].orEmpty(),
+                fiscalIm = rawValues[FISCAL_IM_KEY].orEmpty(),
+                fiscalRegime = rawValues[FISCAL_REGIME_KEY].orEmpty(),
                 printBluetoothAddress = rawValues[PRINT_BLUETOOTH_ADDRESS_KEY].orEmpty(),
                 printWorkOrderAuto = values[PRINT_WORK_ORDER_AUTO_KEY] ?: false,
                 printWorkOrderCopies = rawValues[PRINT_WORK_ORDER_COPIES_KEY]?.takeIf { it.isNotBlank() } ?: "0",
@@ -153,6 +176,26 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.set(PIX_NAME_KEY, name.trim())
             settingsRepository.set(PIX_KEY_KEY, key.trim())
+        }
+    }
+
+    fun setFiscalSettings(
+        environment: String,
+        provider: String,
+        apiToken: String,
+        cnpj: String,
+        ie: String,
+        im: String,
+        regime: String,
+    ) {
+        viewModelScope.launch {
+            settingsRepository.set(FISCAL_ENVIRONMENT_KEY, environment)
+            settingsRepository.set(FISCAL_PROVIDER_KEY, provider.trim())
+            settingsRepository.set(FISCAL_API_TOKEN_KEY, apiToken.trim())
+            settingsRepository.set(FISCAL_CNPJ_KEY, cnpj.trim())
+            settingsRepository.set(FISCAL_IE_KEY, ie.trim())
+            settingsRepository.set(FISCAL_IM_KEY, im.trim())
+            settingsRepository.set(FISCAL_REGIME_KEY, regime.trim())
         }
     }
 

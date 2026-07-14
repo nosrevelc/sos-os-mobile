@@ -63,6 +63,10 @@ fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
                 onDescriptionChanged = viewModel::onDescriptionChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
                 onMinimumStockChanged = viewModel::onMinimumStockChanged,
+                onNcmChanged = viewModel::onNcmChanged,
+                onCfopChanged = viewModel::onCfopChanged,
+                onUnitChanged = viewModel::onUnitChanged,
+                onCstCsosnChanged = viewModel::onCstCsosnChanged,
                 onSubmit = viewModel::save,
                 onCancel = viewModel::cancelEditing,
             )
@@ -128,6 +132,10 @@ private fun ServiceProductForm(
     onDescriptionChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
     onMinimumStockChanged: (String) -> Unit,
+    onNcmChanged: (String) -> Unit,
+    onCfopChanged: (String) -> Unit,
+    onUnitChanged: (String) -> Unit,
+    onCstCsosnChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -199,6 +207,39 @@ private fun ServiceProductForm(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )
+            Text("Fiscal", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = form.ncm,
+                    onValueChange = onNcmChanged,
+                    label = { Text("NCM") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = form.cfop,
+                    onValueChange = onCfopChanged,
+                    label = { Text("CFOP") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = form.unit,
+                    onValueChange = onUnitChanged,
+                    label = { Text("Unidade") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = form.cstCsosn,
+                    onValueChange = onCstCsosnChanged,
+                    label = { Text("CST/CSOSN") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
         form.message?.let {
             Text(
@@ -252,6 +293,11 @@ private fun ServiceProductRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (lowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (lowStock) FontWeight.SemiBold else FontWeight.Normal,
+                )
+                Text(
+                    "Fiscal: NCM ${service.ncm ?: "-"} | CFOP ${service.cfop ?: "-"} | ${service.unidade ?: "UN"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             service.categoria?.let {

@@ -20,6 +20,10 @@ class ServiceProductRepository(
         description: String?,
         unitPrice: Double,
         minimumStock: Double,
+        ncm: String?,
+        cfop: String?,
+        unit: String?,
+        cstCsosn: String?,
     ): Long {
         val now = Clock.nowMillis()
         val id = serviceProductDao.insert(
@@ -31,6 +35,10 @@ class ServiceProductRepository(
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
                 unitPrice = unitPrice,
                 minimumStock = minimumStock,
+                ncm = ncm?.trim()?.takeIf { it.isNotBlank() },
+                cfop = cfop?.trim()?.takeIf { it.isNotBlank() },
+                unidade = unit?.trim()?.takeIf { it.isNotBlank() },
+                cstCsosn = cstCsosn?.trim()?.takeIf { it.isNotBlank() },
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -51,6 +59,10 @@ class ServiceProductRepository(
         description: String?,
         unitPrice: Double,
         minimumStock: Double,
+        ncm: String?,
+        cfop: String?,
+        unit: String?,
+        cstCsosn: String?,
     ) {
         val current = serviceProductDao.findById(id) ?: return
         serviceProductDao.update(
@@ -62,6 +74,10 @@ class ServiceProductRepository(
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
                 unitPrice = unitPrice,
                 minimumStock = minimumStock,
+                ncm = ncm?.trim()?.takeIf { it.isNotBlank() },
+                cfop = cfop?.trim()?.takeIf { it.isNotBlank() },
+                unidade = unit?.trim()?.takeIf { it.isNotBlank() },
+                cstCsosn = cstCsosn?.trim()?.takeIf { it.isNotBlank() },
                 updatedAt = Clock.nowMillis(),
             ),
         )

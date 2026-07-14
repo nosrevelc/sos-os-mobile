@@ -145,6 +145,18 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration8To9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE servicos_produtos ADD COLUMN ncm TEXT")
+            db.execSQL("ALTER TABLE servicos_produtos ADD COLUMN cfop TEXT")
+            db.execSQL("ALTER TABLE servicos_produtos ADD COLUMN unidade TEXT")
+            db.execSQL("ALTER TABLE servicos_produtos ADD COLUMN cst_csosn TEXT")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN status_fiscal TEXT NOT NULL DEFAULT 'Nao emitida'")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN chave_fiscal TEXT")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN protocolo_fiscal TEXT")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -158,6 +170,7 @@ class AppContainer(context: Context) {
             migration5To6,
             migration6To7,
             migration7To8,
+            migration8To9,
         )
         .build()
 

@@ -39,6 +39,20 @@ data class WorkOrderEntity(
     val totalValue: Double = 0.0,
     @ColumnInfo(name = "data_conclusao")
     val concludedAt: Long? = null,
+    @ColumnInfo(name = "status_fiscal")
+    val fiscalStatus: String = FiscalStatus.NOT_ISSUED,
+    @ColumnInfo(name = "chave_fiscal")
+    val fiscalKey: String? = null,
+    @ColumnInfo(name = "protocolo_fiscal")
+    val fiscalProtocol: String? = null,
     @ColumnInfo(name = "data_atualizacao")
     val updatedAt: Long,
 )
+
+object FiscalStatus {
+    const val NOT_ISSUED = "Nao emitida"
+    const val PENDING = "Em emissao"
+    const val AUTHORIZED = "Autorizada"
+    const val REJECTED = "Rejeitada"
+    const val CANCELED = "Cancelada"
+}

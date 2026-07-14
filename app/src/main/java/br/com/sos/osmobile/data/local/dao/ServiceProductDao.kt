@@ -26,6 +26,9 @@ interface ServiceProductDao {
             OR codigo LIKE '%' || :query || '%'
             OR categoria LIKE '%' || :query || '%'
             OR tipo LIKE '%' || :query || '%'
+            OR ncm LIKE '%' || :query || '%'
+            OR cfop LIKE '%' || :query || '%'
+            OR cst_csosn LIKE '%' || :query || '%'
           )
         ORDER BY nome
         """,

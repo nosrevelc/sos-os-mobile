@@ -26,6 +26,11 @@ data class ServiceProductEntity(
     val unitPrice: Double,
     @ColumnInfo(name = "estoque_minimo")
     val minimumStock: Double = 0.0,
+    val ncm: String? = null,
+    val cfop: String? = null,
+    val unidade: String? = null,
+    @ColumnInfo(name = "cst_csosn")
+    val cstCsosn: String? = null,
     val ativo: Boolean = true,
     @ColumnInfo(name = "data_cadastro")
     val createdAt: Long,

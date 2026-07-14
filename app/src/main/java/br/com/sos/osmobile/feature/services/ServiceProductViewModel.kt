@@ -32,6 +32,10 @@ data class ServiceProductFormState(
     val description: String = "",
     val unitPrice: String = "",
     val minimumStock: String = "0",
+    val ncm: String = "",
+    val cfop: String = "",
+    val unit: String = "UN",
+    val cstCsosn: String = "",
     val message: String? = null,
 )
 
@@ -116,6 +120,22 @@ class ServiceProductViewModel(
         formState = formState.copy(minimumStock = value, message = null)
     }
 
+    fun onNcmChanged(value: String) {
+        formState = formState.copy(ncm = value.filter(Char::isDigit).take(8), message = null)
+    }
+
+    fun onCfopChanged(value: String) {
+        formState = formState.copy(cfop = value.filter(Char::isDigit).take(4), message = null)
+    }
+
+    fun onUnitChanged(value: String) {
+        formState = formState.copy(unit = value.uppercase().take(6), message = null)
+    }
+
+    fun onCstCsosnChanged(value: String) {
+        formState = formState.copy(cstCsosn = value.filter(Char::isDigit).take(4), message = null)
+    }
+
     fun startEditing(item: ServiceProductEntity) {
         formState = ServiceProductFormState(
             editingId = item.id,
@@ -126,6 +146,10 @@ class ServiceProductViewModel(
             description = item.descricao.orEmpty(),
             unitPrice = InputMasks.currencyFromDouble(item.unitPrice),
             minimumStock = formatNumber(item.minimumStock),
+            ncm = item.ncm.orEmpty(),
+            cfop = item.cfop.orEmpty(),
+            unit = item.unidade ?: "UN",
+            cstCsosn = item.cstCsosn.orEmpty(),
         )
     }
 
@@ -153,6 +177,10 @@ class ServiceProductViewModel(
                         description = formState.description,
                         unitPrice = price,
                         minimumStock = minimumStock,
+                        ncm = formState.ncm,
+                        cfop = formState.cfop,
+                        unit = formState.unit,
+                        cstCsosn = formState.cstCsosn,
                     )
                     formState = ServiceProductFormState(message = "Servico/produto cadastrado com sucesso.")
                 } else {
@@ -165,6 +193,10 @@ class ServiceProductViewModel(
                         description = formState.description,
                         unitPrice = price,
                         minimumStock = minimumStock,
+                        ncm = formState.ncm,
+                        cfop = formState.cfop,
+                        unit = formState.unit,
+                        cstCsosn = formState.cstCsosn,
                     )
                     formState = ServiceProductFormState(message = "Servico/produto atualizado com sucesso.")
                 }
