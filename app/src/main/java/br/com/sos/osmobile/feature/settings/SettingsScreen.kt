@@ -187,7 +187,6 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingSwitch("Financeiro", checked = settings.financeiro, onCheckedChange = { viewModel.setModule("modulo_financeiro", it) })
         SettingSwitch("Fiscal", checked = settings.fiscal, onCheckedChange = { viewModel.setModule("modulo_fiscal", it) })
 
-        Text("CPF/CNPJ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         SettingSwitch(
             label = "Usar CPF/CNPJ",
             checked = settings.cpfCnpjPolicy != CpfCnpjPolicy.NotUsed,
