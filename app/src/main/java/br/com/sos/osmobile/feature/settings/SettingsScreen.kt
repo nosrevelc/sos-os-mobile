@@ -188,18 +188,24 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingSwitch("Fiscal", checked = settings.fiscal, onCheckedChange = { viewModel.setModule("modulo_fiscal", it) })
 
         Text("CPF/CNPJ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            PolicyButton("Nao usar", settings.cpfCnpjPolicy == CpfCnpjPolicy.NotUsed, modifier = Modifier.weight(1f)) {
-                viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.NotUsed)
-            }
-            PolicyButton("Opcional", settings.cpfCnpjPolicy == CpfCnpjPolicy.Optional, modifier = Modifier.weight(1f)) {
-                viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Optional)
-            }
-            PolicyButton("Obrigatorio", settings.cpfCnpjPolicy == CpfCnpjPolicy.Required, modifier = Modifier.weight(1f)) {
-                viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Required)
+        SettingSwitch(
+            label = "Usar CPF/CNPJ",
+            checked = settings.cpfCnpjPolicy != CpfCnpjPolicy.NotUsed,
+            onCheckedChange = {
+                viewModel.setCpfCnpjPolicy(if (it) CpfCnpjPolicy.Optional else CpfCnpjPolicy.NotUsed)
+            },
+        )
+        if (settings.cpfCnpjPolicy != CpfCnpjPolicy.NotUsed) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PolicyButton("Opcional", settings.cpfCnpjPolicy == CpfCnpjPolicy.Optional, modifier = Modifier.weight(1f)) {
+                    viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Optional)
+                }
+                PolicyButton("Obrigatorio", settings.cpfCnpjPolicy == CpfCnpjPolicy.Required, modifier = Modifier.weight(1f)) {
+                    viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Required)
+                }
             }
         }
 
