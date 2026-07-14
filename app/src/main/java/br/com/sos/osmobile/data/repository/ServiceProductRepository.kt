@@ -19,6 +19,7 @@ class ServiceProductRepository(
         category: String?,
         description: String?,
         unitPrice: Double,
+        minimumStock: Double,
     ): Long {
         val now = Clock.nowMillis()
         val id = serviceProductDao.insert(
@@ -29,6 +30,7 @@ class ServiceProductRepository(
                 categoria = category?.trim()?.takeIf { it.isNotBlank() },
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
                 unitPrice = unitPrice,
+                minimumStock = minimumStock,
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -48,6 +50,7 @@ class ServiceProductRepository(
         category: String?,
         description: String?,
         unitPrice: Double,
+        minimumStock: Double,
     ) {
         val current = serviceProductDao.findById(id) ?: return
         serviceProductDao.update(
@@ -58,6 +61,7 @@ class ServiceProductRepository(
                 categoria = category?.trim()?.takeIf { it.isNotBlank() },
                 descricao = description?.trim()?.takeIf { it.isNotBlank() },
                 unitPrice = unitPrice,
+                minimumStock = minimumStock,
                 updatedAt = Clock.nowMillis(),
             ),
         )

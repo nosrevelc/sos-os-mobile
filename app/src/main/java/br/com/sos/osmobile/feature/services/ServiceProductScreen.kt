@@ -35,8 +35,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
-import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductType
+import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.ui.input.InputMasks
 import java.text.NumberFormat
 import java.util.Locale
@@ -45,6 +45,7 @@ import java.util.Locale
 fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val form = viewModel.formState
+    val stockForm = viewModel.stockFormState
 
     LazyColumn(
         modifier = Modifier
@@ -61,9 +62,22 @@ fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
                 onCategoryChanged = viewModel::onCategoryChanged,
                 onDescriptionChanged = viewModel::onDescriptionChanged,
                 onUnitPriceChanged = viewModel::onUnitPriceChanged,
+                onMinimumStockChanged = viewModel::onMinimumStockChanged,
                 onSubmit = viewModel::save,
                 onCancel = viewModel::cancelEditing,
             )
+        }
+
+        if (stockForm.serviceProductId != null || stockForm.message != null) {
+            item {
+                StockMovementForm(
+                    form = stockForm,
+                    onQuantityChanged = viewModel::onStockQuantityChanged,
+                    onReasonChanged = viewModel::onStockReasonChanged,
+                    onSave = viewModel::saveStockMovement,
+                    onCancel = viewModel::cancelStockMovement,
+                )
+            }
         }
 
         item {
@@ -92,11 +106,12 @@ fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
                 )
             }
         } else {
-            items(uiState.items, key = { it.id }) { item ->
+            items(uiState.items, key = { it.item.id }) { item ->
                 ServiceProductRow(
                     item = item,
-                    onEdit = { viewModel.startEditing(item) },
-                    onArchive = { viewModel.archive(item.id) },
+                    onEdit = { viewModel.startEditing(item.item) },
+                    onArchive = { viewModel.archive(item.item.id) },
+                    onStockAction = { type -> viewModel.startStockMovement(item.item, type) },
                 )
             }
         }
@@ -112,6 +127,7 @@ private fun ServiceProductForm(
     onCategoryChanged: (String) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onUnitPriceChanged: (String) -> Unit,
+    onMinimumStockChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -174,6 +190,16 @@ private fun ServiceProductForm(
             minLines = 2,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (form.type != ServiceProductType.SERVICE) {
+            OutlinedTextField(
+                value = form.minimumStock,
+                onValueChange = onMinimumStockChanged,
+                label = { Text("Estoque minimo") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         form.message?.let {
             Text(
                 text = it,
@@ -201,10 +227,12 @@ private fun ServiceProductForm(
 
 @Composable
 private fun ServiceProductRow(
-    item: ServiceProductEntity,
+    item: ServiceProductStockItem,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
+    onStockAction: (String) -> Unit,
 ) {
+    val service = item.item
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -214,14 +242,36 @@ private fun ServiceProductRow(
                 .fillMaxWidth()
                 .padding(12.dp),
         ) {
-            Text(item.nome, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(service.nome, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
-            Text("${item.codigo} - ${item.tipo} - ${formatCurrency(item.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
-            item.categoria?.let {
+            Text("${service.codigo} - ${service.tipo} - ${formatCurrency(service.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
+            if (service.tipo != ServiceProductType.SERVICE) {
+                val lowStock = service.minimumStock > 0.0 && item.stock <= service.minimumStock
+                Text(
+                    "Saldo: ${formatQuantity(item.stock)} | Minimo: ${formatQuantity(service.minimumStock)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (lowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (lowStock) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            }
+            service.categoria?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            item.descricao?.let {
+            service.descricao?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (service.tipo != ServiceProductType.SERVICE) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onStockAction(StockMovementType.IN) }, modifier = Modifier.weight(1f)) {
+                        Text("Entrada")
+                    }
+                    OutlinedButton(onClick = { onStockAction(StockMovementType.OUT) }, modifier = Modifier.weight(1f)) {
+                        Text("Saida")
+                    }
+                    OutlinedButton(onClick = { onStockAction(StockMovementType.ADJUST) }, modifier = Modifier.weight(1f)) {
+                        Text("Ajuste")
+                    }
+                }
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onEdit) {
@@ -229,6 +279,52 @@ private fun ServiceProductRow(
                 }
                 TextButton(onClick = onArchive) {
                     Text("Arquivar")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StockMovementForm(
+    form: StockMovementFormState,
+    onQuantityChanged: (String) -> Unit,
+    onReasonChanged: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("${form.type}: ${form.serviceProductName}", fontWeight = FontWeight.SemiBold)
+            OutlinedTextField(
+                value = form.quantity,
+                onValueChange = onQuantityChanged,
+                label = { Text(if (form.type == StockMovementType.ADJUST) "Quantidade (+ ou -)" else "Quantidade") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = form.reason,
+                onValueChange = onReasonChanged,
+                label = { Text("Motivo/observacao") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            form.message?.let {
+                Text(it, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onCancel) {
+                    Text("Cancelar")
+                }
+                Button(onClick = onSave, enabled = form.serviceProductId != null) {
+                    Text("Registrar")
                 }
             }
         }
@@ -265,3 +361,6 @@ private fun ServiceProductTypeSelector(
 
 private fun formatCurrency(value: Double): String =
     NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
+
+private fun formatQuantity(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else String.format(Locale("pt", "BR"), "%.2f", value)

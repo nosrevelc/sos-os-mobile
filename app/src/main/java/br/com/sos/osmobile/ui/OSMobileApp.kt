@@ -192,7 +192,10 @@ fun OSMobileApp(appContainer: AppContainer) {
                 }
                 composable(AppRoute.Services.route) {
                     val serviceProductViewModel: ServiceProductViewModel = viewModel(
-                        factory = ServiceProductViewModel.factory(appContainer.serviceProductRepository),
+                        factory = ServiceProductViewModel.factory(
+                            appContainer.serviceProductRepository,
+                            appContainer.stockRepository,
+                        ),
                     )
                     ServiceProductScreen(viewModel = serviceProductViewModel)
                 }

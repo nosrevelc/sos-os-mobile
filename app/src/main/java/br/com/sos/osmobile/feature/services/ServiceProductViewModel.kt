@@ -9,12 +9,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductType
+import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
+import br.com.sos.osmobile.data.repository.StockRepository
 import br.com.sos.osmobile.ui.input.InputMasks
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -28,16 +31,32 @@ data class ServiceProductFormState(
     val category: String = "",
     val description: String = "",
     val unitPrice: String = "",
+    val minimumStock: String = "0",
+    val message: String? = null,
+)
+
+data class ServiceProductStockItem(
+    val item: ServiceProductEntity,
+    val stock: Double,
+)
+
+data class StockMovementFormState(
+    val serviceProductId: Long? = null,
+    val serviceProductName: String = "",
+    val type: String = StockMovementType.IN,
+    val quantity: String = "",
+    val reason: String = "",
     val message: String? = null,
 )
 
 data class ServiceProductUiState(
-    val items: List<ServiceProductEntity> = emptyList(),
+    val items: List<ServiceProductStockItem> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServiceProductViewModel(
     private val serviceProductRepository: ServiceProductRepository,
+    private val stockRepository: StockRepository,
 ) : ViewModel() {
     private val searchQuery = MutableStateFlow("")
 
@@ -49,10 +68,16 @@ class ServiceProductViewModel(
                 serviceProductRepository.search(query.trim())
             }
         }
-        .map { ServiceProductUiState(items = it) }
+        .combine(stockRepository.observeSummaries()) { services, summaries ->
+            val stockById = summaries.associate { it.id to it.saldo }
+            ServiceProductUiState(items = services.map { ServiceProductStockItem(it, stockById[it.id] ?: 0.0) })
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ServiceProductUiState())
 
     var formState by mutableStateOf(ServiceProductFormState())
+        private set
+
+    var stockFormState by mutableStateOf(StockMovementFormState())
         private set
 
     var query by mutableStateOf("")
@@ -87,6 +112,10 @@ class ServiceProductViewModel(
         formState = formState.copy(unitPrice = InputMasks.currency(value), message = null)
     }
 
+    fun onMinimumStockChanged(value: String) {
+        formState = formState.copy(minimumStock = value, message = null)
+    }
+
     fun startEditing(item: ServiceProductEntity) {
         formState = ServiceProductFormState(
             editingId = item.id,
@@ -96,6 +125,7 @@ class ServiceProductViewModel(
             category = item.categoria.orEmpty(),
             description = item.descricao.orEmpty(),
             unitPrice = InputMasks.currencyFromDouble(item.unitPrice),
+            minimumStock = formatNumber(item.minimumStock),
         )
     }
 
@@ -111,6 +141,7 @@ class ServiceProductViewModel(
         }
 
         val price = ServiceProductFormValidator.parsePrice(formState.unitPrice) ?: return
+        val minimumStock = parseQuantity(formState.minimumStock) ?: 0.0
         viewModelScope.launch {
             try {
                 val editingId = formState.editingId
@@ -121,6 +152,7 @@ class ServiceProductViewModel(
                         category = formState.category,
                         description = formState.description,
                         unitPrice = price,
+                        minimumStock = minimumStock,
                     )
                     formState = ServiceProductFormState(message = "Servico/produto cadastrado com sucesso.")
                 } else {
@@ -132,6 +164,7 @@ class ServiceProductViewModel(
                         category = formState.category,
                         description = formState.description,
                         unitPrice = price,
+                        minimumStock = minimumStock,
                     )
                     formState = ServiceProductFormState(message = "Servico/produto atualizado com sucesso.")
                 }
@@ -150,13 +183,61 @@ class ServiceProductViewModel(
         }
     }
 
+    fun startStockMovement(item: ServiceProductEntity, type: String) {
+        stockFormState = StockMovementFormState(
+            serviceProductId = item.id,
+            serviceProductName = item.nome,
+            type = type,
+        )
+    }
+
+    fun cancelStockMovement() {
+        stockFormState = StockMovementFormState()
+    }
+
+    fun onStockQuantityChanged(value: String) {
+        stockFormState = stockFormState.copy(quantity = value, message = null)
+    }
+
+    fun onStockReasonChanged(value: String) {
+        stockFormState = stockFormState.copy(reason = value, message = null)
+    }
+
+    fun saveStockMovement() {
+        val serviceProductId = stockFormState.serviceProductId ?: return
+        val quantity = parseQuantity(stockFormState.quantity)
+        if (quantity == null || quantity == 0.0) {
+            stockFormState = stockFormState.copy(message = "Quantidade invalida.")
+            return
+        }
+        if (stockFormState.type != StockMovementType.ADJUST && quantity < 0.0) {
+            stockFormState = stockFormState.copy(message = "Use quantidade positiva.")
+            return
+        }
+        viewModelScope.launch {
+            stockRepository.move(
+                serviceProductId = serviceProductId,
+                type = stockFormState.type,
+                quantity = quantity,
+                reason = stockFormState.reason,
+            )
+            stockFormState = StockMovementFormState(message = "Movimentacao registrada.")
+        }
+    }
+
     companion object {
-        fun factory(repository: ServiceProductRepository): ViewModelProvider.Factory =
+        fun factory(repository: ServiceProductRepository, stockRepository: StockRepository): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return ServiceProductViewModel(repository) as T
+                    return ServiceProductViewModel(repository, stockRepository) as T
                 }
             }
     }
 }
+
+private fun parseQuantity(value: String): Double? =
+    value.trim().replace(",", ".").takeIf { it.isNotBlank() }?.toDoubleOrNull()
+
+private fun formatNumber(value: Double): String =
+    if (value % 1.0 == 0.0) value.toLong().toString() else value.toString().replace(".", ",")

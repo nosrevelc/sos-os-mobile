@@ -13,6 +13,7 @@ import br.com.sos.osmobile.data.repository.QuoteConversionRepository
 import br.com.sos.osmobile.data.repository.QuoteRepository
 import br.com.sos.osmobile.data.repository.ServiceProductRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.StockRepository
 import br.com.sos.osmobile.data.repository.WorkOrderChecklistRepository
 import br.com.sos.osmobile.data.repository.WorkOrderPaymentRepository
 import br.com.sos.osmobile.data.repository.WorkOrderRepository
@@ -122,18 +123,49 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration7To8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE servicos_produtos ADD COLUMN estoque_minimo REAL NOT NULL DEFAULT 0.0")
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
+                    id_movimentacao_estoque INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    id_servico_produto INTEGER NOT NULL,
+                    tipo TEXT NOT NULL,
+                    quantidade REAL NOT NULL,
+                    motivo TEXT,
+                    id_os INTEGER,
+                    data_criacao INTEGER NOT NULL,
+                    FOREIGN KEY(id_servico_produto) REFERENCES servicos_produtos(id_servico_produto) ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_movimentacoes_estoque_id_servico_produto ON movimentacoes_estoque(id_servico_produto)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_movimentacoes_estoque_data_criacao ON movimentacoes_estoque(data_criacao)")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
         "os_mobile.db",
     )
-        .addMigrations(migration1To2, migration2To3, migration3To4, migration4To5, migration5To6, migration6To7)
+        .addMigrations(
+            migration1To2,
+            migration2To3,
+            migration3To4,
+            migration4To5,
+            migration5To6,
+            migration6To7,
+            migration7To8,
+        )
         .build()
 
     val auditRepository = AuditRepository(database.auditLogDao())
     val contactsRepository = ContactsRepository(context.applicationContext)
     val customerRepository = CustomerRepository(database.customerDao(), auditRepository)
     val serviceProductRepository = ServiceProductRepository(database.serviceProductDao(), auditRepository)
+    val stockRepository = StockRepository(database.stockMovementDao(), auditRepository)
     val workOrderRepository = WorkOrderRepository(database.workOrderDao(), auditRepository)
     val quoteRepository = QuoteRepository(database.quoteDao(), auditRepository)
     val quoteConversionRepository = QuoteConversionRepository(database, auditRepository)

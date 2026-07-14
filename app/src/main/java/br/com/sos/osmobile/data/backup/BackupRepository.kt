@@ -9,6 +9,7 @@ import br.com.sos.osmobile.data.local.entity.AppSettingEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
 import br.com.sos.osmobile.data.local.entity.QuoteItemEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
+import br.com.sos.osmobile.data.local.entity.StockMovementEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderChecklistItemEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
@@ -58,11 +59,12 @@ class BackupRepository(
         val checklist = database.workOrderChecklistDao().listAll()
         val warranties = database.workOrderWarrantyDao().listAll()
         val payments = database.workOrderPaymentDao().listAll()
+        val stockMovements = database.stockMovementDao().listAll()
 
         return buildString {
             appendLine("{")
             appendLine("\"clientes\":${customers.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"nome":${str(it.nome)},"cpfCnpj":${str(it.cpfCnpj)},"telefone":${str(it.telefone)},"email":${str(it.email)},"endereco":${str(it.endereco)},"observacoes":${str(it.observacoes)},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
-            appendLine("\"servicos_produtos\":${services.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"codigo":${str(it.codigo)},"nome":${str(it.nome)},"tipo":${str(it.tipo)},"categoria":${str(it.categoria)},"descricao":${str(it.descricao)},"unitPrice":${it.unitPrice},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
+            appendLine("\"servicos_produtos\":${services.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"codigo":${str(it.codigo)},"nome":${str(it.nome)},"tipo":${str(it.tipo)},"categoria":${str(it.categoria)},"descricao":${str(it.descricao)},"unitPrice":${it.unitPrice},"minimumStock":${it.minimumStock},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"orcamentos\":${quotes.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"createdAt":${it.createdAt},"validUntil":${it.validUntil ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"itens_orcamento\":${quoteItems.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"quoteId":${it.quoteId},"serviceProductId":${it.serviceProductId},"quantidade":${it.quantidade},"practicedUnitPrice":${it.practicedUnitPrice},"subtotal":${it.subtotal}}""" }},")
             appendLine("\"ordens_servico\":${workOrders.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"openedAt":${it.openedAt},"expectedConclusionAt":${it.expectedConclusionAt ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"concludedAt":${it.concludedAt ?: "null"},"updatedAt":${it.updatedAt}}""" }},")
@@ -71,7 +73,8 @@ class BackupRepository(
             appendLine("\"assinaturas_os\":${signatures.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"fileName":${str(it.fileName)},"relativePath":${str(it.relativePath)},"signerName":${str(it.signerName)},"createdAt":${it.createdAt},"conteudoBase64":${str(fileBase64(it.relativePath))}}""" }},")
             appendLine("\"checklist_os\":${checklist.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"descricao":${str(it.descricao)},"concluido":${it.concluido},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"garantias_os\":${warranties.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"warrantyDays":${it.warrantyDays},"termos":${str(it.termos)},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
-            appendLine("\"pagamentos_os\":${payments.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"valor":${it.valor},"forma":${str(it.forma)},"observacao":${str(it.observacao)},"paidAt":${it.paidAt}}""" }}")
+            appendLine("\"pagamentos_os\":${payments.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"workOrderId":${it.workOrderId},"valor":${it.valor},"forma":${str(it.forma)},"observacao":${str(it.observacao)},"paidAt":${it.paidAt}}""" }},")
+            appendLine("\"movimentacoes_estoque\":${stockMovements.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"serviceProductId":${it.serviceProductId},"tipo":${str(it.tipo)},"quantidade":${it.quantidade},"motivo":${str(it.motivo)},"workOrderId":${it.workOrderId ?: "null"},"createdAt":${it.createdAt}}""" }}")
             appendLine("}")
         }
     }
@@ -102,6 +105,7 @@ class BackupRepository(
                 categoria = item.nullableString("categoria"),
                 descricao = item.nullableString("descricao"),
                 unitPrice = item.optDouble("unitPrice", item.optDouble("valor", 0.0)),
+                minimumStock = item.optDouble("minimumStock", item.optDouble("estoqueMinimo", 0.0)),
                 ativo = item.optBoolean("ativo", true),
                 createdAt = item.optLong("createdAt", now),
                 updatedAt = item.optLong("updatedAt", now),
@@ -204,8 +208,20 @@ class BackupRepository(
                 paidAt = item.optLong("paidAt", now),
             )
         }
+        val stockMovements = root.optionalArray("movimentacoes_estoque").mapObjects { item ->
+            StockMovementEntity(
+                id = item.optLong("id", 0),
+                serviceProductId = item.optLong("serviceProductId", item.optLong("servico")),
+                tipo = item.getString("tipo"),
+                quantidade = item.optDouble("quantidade", 0.0),
+                motivo = item.nullableString("motivo"),
+                workOrderId = item.nullableLong("workOrderId"),
+                createdAt = item.optLong("createdAt", now),
+            )
+        }
 
         database.withTransaction {
+            database.stockMovementDao().deleteAll()
             database.workOrderPhotoDao().deleteAll()
             database.workOrderSignatureDao().deleteAll()
             database.workOrderChecklistDao().deleteAll()
@@ -228,6 +244,7 @@ class BackupRepository(
             database.workOrderChecklistDao().upsertBackup(checklist)
             database.workOrderWarrantyDao().upsertBackup(warranties)
             database.workOrderPaymentDao().upsertBackup(payments)
+            database.stockMovementDao().upsertBackup(stockMovements)
         }
         deleteFilesDir("work_order_photos")
         deleteFilesDir("work_order_signatures")

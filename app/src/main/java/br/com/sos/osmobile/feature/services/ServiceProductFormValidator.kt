@@ -17,6 +17,9 @@ object ServiceProductFormValidator {
         if (price < 0.0) {
             return "Valor nao pode ser negativo."
         }
+        if (parseQuantity(form.minimumStock) == null) {
+            return "Estoque minimo invalido."
+        }
         return null
     }
 
@@ -32,6 +35,12 @@ object ServiceProductFormValidator {
                 trimmed.replace(",", ".")
             }
         }
+            .takeIf { it.isNotBlank() }
+            ?.toDoubleOrNull()
+
+    fun parseQuantity(value: String): Double? =
+        value.trim()
+            .replace(",", ".")
             .takeIf { it.isNotBlank() }
             ?.toDoubleOrNull()
 }
