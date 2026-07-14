@@ -3,6 +3,7 @@ package br.com.sos.osmobile.feature.quotes
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -583,6 +584,7 @@ private fun QuoteRow(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.clickable(onClick = onEdit),
     ) {
         Column(
             modifier = Modifier
