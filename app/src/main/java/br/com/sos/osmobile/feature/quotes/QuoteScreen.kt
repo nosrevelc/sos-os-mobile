@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.SyncAlt
+import androidx.compose.material.icons.filled.Unpublished
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -22,6 +27,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
@@ -378,13 +385,13 @@ private fun QuoteForm(
         )
 
         Text("Status", style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             QuoteStatus.entries.forEach { status ->
                 SelectionButton(
                     label = status.label,
+                    icon = quoteStatusIcon(status),
                     selected = form.status == status,
                     onClick = { onStatusSelected(status) },
-                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -499,14 +506,24 @@ private fun QuoteForm(
 @Composable
 private fun SelectionButton(
     label: String,
+    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OutlinedButton(onClick = onClick, modifier = modifier.fillMaxWidth()) {
+        Icon(icon, contentDescription = null)
         Text(if (selected) "$label *" else label)
     }
 }
+
+private fun quoteStatusIcon(status: QuoteStatus): ImageVector =
+    when (status) {
+        QuoteStatus.Pending -> Icons.Filled.HourglassEmpty
+        QuoteStatus.Approved -> Icons.Filled.CheckCircle
+        QuoteStatus.Rejected -> Icons.Filled.Unpublished
+        QuoteStatus.Converted -> Icons.Filled.SyncAlt
+    }
 
 @Composable
 private fun DraftItemRow(

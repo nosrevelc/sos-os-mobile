@@ -34,8 +34,10 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Pix
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Save
@@ -621,50 +623,56 @@ fun WorkOrderScreen(
             }
             if (selectedCustomer != null && currentMessage != null) {
                 Text("Enviar mensagem ao cliente", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                MessageActionButtons(
-                    phone = selectedCustomer.telefone,
-                    email = selectedCustomer.email,
-                    subject = "OS ${form.editingNumber ?: "nova"}",
-                    text = currentMessage,
-                )
-                OutlinedButton(
-                    onClick = {
-                        pendingPixMessage = ClientMessage(
-                            phone = selectedCustomer.telefone,
-                            email = selectedCustomer.email,
-                            subject = "Codigo PIX OS ${form.editingNumber ?: "nova"}",
-                            text = pixPayload,
-                        )
-                    },
-                ) {
-                    Text("Enviar Codigo PIX")
-                }
-                OutlinedButton(
-                    onClick = {
-                        pendingReviewMessage = ClientMessage(
-                            phone = selectedCustomer.telefone,
-                            email = selectedCustomer.email,
-                            subject = "Avaliacao OS ${form.editingNumber ?: "nova"}",
-                            text = renderWorkOrderMessage(
-                                customerName = selectedCustomer.nome,
-                                customerPhone = selectedCustomer.telefone,
-                                customerCpfCnpj = selectedCustomer.cpfCnpj.orEmpty(),
-                                workOrderNumber = form.editingNumber ?: "nova",
-                                status = form.status.label,
-                                totalValue = totalValue,
-                                discountValue = discountValue,
-                                minAcceptanceValue = uiState.quoteMinAcceptanceValue,
-                                paidTotal = paidTotalForMessage,
-                                companyName = uiState.companyName,
-                                pixName = uiState.pixName,
-                                pixKey = uiState.pixKey,
-                                template = uiState.reviewRequestTemplate,
-                                items = form.items,
-                            ),
-                        )
-                    },
-                ) {
-                    Text("Solicitar avaliacao")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    MessageActionButtons(
+                        phone = selectedCustomer.telefone,
+                        email = selectedCustomer.email,
+                        subject = "OS ${form.editingNumber ?: "nova"}",
+                        text = currentMessage,
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            pendingPixMessage = ClientMessage(
+                                phone = selectedCustomer.telefone,
+                                email = selectedCustomer.email,
+                                subject = "Codigo PIX OS ${form.editingNumber ?: "nova"}",
+                                text = pixPayload,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Pix, contentDescription = null)
+                        Text("Enviar Codigo PIX")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            pendingReviewMessage = ClientMessage(
+                                phone = selectedCustomer.telefone,
+                                email = selectedCustomer.email,
+                                subject = "Avaliacao OS ${form.editingNumber ?: "nova"}",
+                                text = renderWorkOrderMessage(
+                                    customerName = selectedCustomer.nome,
+                                    customerPhone = selectedCustomer.telefone,
+                                    customerCpfCnpj = selectedCustomer.cpfCnpj.orEmpty(),
+                                    workOrderNumber = form.editingNumber ?: "nova",
+                                    status = form.status.label,
+                                    totalValue = totalValue,
+                                    discountValue = discountValue,
+                                    minAcceptanceValue = uiState.quoteMinAcceptanceValue,
+                                    paidTotal = paidTotalForMessage,
+                                    companyName = uiState.companyName,
+                                    pixName = uiState.pixName,
+                                    pixKey = uiState.pixKey,
+                                    template = uiState.reviewRequestTemplate,
+                                    items = form.items,
+                                ),
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.RateReview, contentDescription = null)
+                        Text("Solicitar avaliacao")
+                    }
                 }
                 if (pixPayload.isNotBlank()) {
                     Text("QR Code PIX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
