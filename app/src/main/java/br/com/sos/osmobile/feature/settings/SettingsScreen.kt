@@ -192,13 +192,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PolicyButton("Nao usar", settings.cpfCnpjPolicy == CpfCnpjPolicy.NotUsed) {
+            PolicyButton("Nao usar", settings.cpfCnpjPolicy == CpfCnpjPolicy.NotUsed, modifier = Modifier.weight(1f)) {
                 viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.NotUsed)
             }
-            PolicyButton("Opcional", settings.cpfCnpjPolicy == CpfCnpjPolicy.Optional) {
+            PolicyButton("Opcional", settings.cpfCnpjPolicy == CpfCnpjPolicy.Optional, modifier = Modifier.weight(1f)) {
                 viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Optional)
             }
-            PolicyButton("Obrigatorio", settings.cpfCnpjPolicy == CpfCnpjPolicy.Required) {
+            PolicyButton("Obrigatorio", settings.cpfCnpjPolicy == CpfCnpjPolicy.Required, modifier = Modifier.weight(1f)) {
                 viewModel.setCpfCnpjPolicy(CpfCnpjPolicy.Required)
             }
         }
@@ -656,9 +656,10 @@ private fun SettingSwitch(
 private fun PolicyButton(
     label: String,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    OutlinedButton(onClick = onClick) {
+    OutlinedButton(onClick = onClick, modifier = modifier) {
         Text(if (selected) "$label *" else label)
     }
 }
