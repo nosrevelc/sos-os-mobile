@@ -419,7 +419,7 @@ class BackupRepository(
             val key = templateKeys[code] ?: return@mapNotNull null
             AppSettingEntity(
                 chave = key,
-                valor = row.value("template", "mensagem", "valor"),
+                valor = row.value("template", "mensagem", "valor").decodeCsvEscapedLines(),
                 updatedAt = now,
             )
         }
@@ -520,6 +520,9 @@ class BackupRepository(
         val normalized = if (clean.contains(",")) clean.replace(".", "").replace(",", ".") else clean
         return normalized.toDoubleOrNull() ?: 0.0
     }
+
+    private fun String.decodeCsvEscapedLines(): String =
+        replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
 
     private fun normalizedServiceType(value: String): String =
         when (value.trim().lowercase()) {
