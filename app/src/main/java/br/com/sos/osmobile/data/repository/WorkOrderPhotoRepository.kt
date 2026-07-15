@@ -22,10 +22,11 @@ class WorkOrderPhotoRepository(
         val extension = when (mimeType) {
             "image/png" -> "png"
             "image/webp" -> "webp"
+            "application/pdf" -> "pdf"
             else -> "jpg"
         }
         val dir = File(context.filesDir, "work_order_photos/$workOrderId").apply { mkdirs() }
-        val fileName = "foto_${now}.$extension"
+        val fileName = if (mimeType == "application/pdf") "comprovante_${now}.$extension" else "foto_${now}.$extension"
         val target = File(dir, fileName)
         context.contentResolver.openInputStream(source)?.use { input ->
             target.outputStream().use { output -> input.copyTo(output) }

@@ -153,6 +153,7 @@ fun WorkOrderScreen(
     val pendingPayment = if (form.editingId == null) WorkOrderFormValidator.parseDecimal(paymentValue) ?: 0.0 else 0.0
     val paidTotalForMessage = viewModel.payments.sumOf { it.valor } + pendingPayment
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
+    val openPixPayload = PixPayloadGenerator.generateOpenAmount(uiState.pixKey, uiState.pixName)
     fun renderCurrentWorkOrderTemplate(template: String): String =
         selectedCustomer?.let {
             renderWorkOrderMessage(
@@ -297,6 +298,11 @@ fun WorkOrderScreen(
         }
     }
     val photoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) viewModel.addPhoto(uri)
+    }
+    val paymentProofLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         if (uri != null) viewModel.addPhoto(uri)
@@ -449,7 +455,7 @@ fun WorkOrderScreen(
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
             if (form.editingId != null) {
-                Text("Fotos da OS", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Fotos e comprovantes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },
                     modifier = Modifier.fillMaxWidth(),
@@ -457,8 +463,15 @@ fun WorkOrderScreen(
                     Icon(Icons.Filled.PhotoCamera, contentDescription = null)
                     Text("Adicionar foto")
                 }
+                OutlinedButton(
+                    onClick = { paymentProofLauncher.launch("*/*") },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.AttachMoney, contentDescription = null)
+                    Text("Anexar comprovante")
+                }
                 if (viewModel.photos.isEmpty()) {
-                    Text("Nenhuma foto adicionada.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Nenhum anexo adicionado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     viewModel.photos.forEach { photo ->
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
@@ -703,6 +716,22 @@ fun WorkOrderScreen(
                     ) {
                         Icon(Icons.Filled.Pix, contentDescription = null)
                         Text("Enviar Codigo PIX")
+                    }
+                    if (openPixPayload.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                pendingPixMessage = ClientMessage(
+                                    phone = selectedCustomer.telefone,
+                                    email = selectedCustomer.email,
+                                    subject = "PIX sem valor OS ${form.editingNumber ?: "nova"}",
+                                    text = openPixPayload,
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(Icons.Filled.Pix, contentDescription = null)
+                            Text("Codigo PIX sem valor")
+                        }
                     }
                     OutlinedButton(
                         onClick = {
@@ -1798,6 +1827,7 @@ private fun renderWorkOrderMessage(
             "empresa" to companyName,
             "data" to formatDate(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, balance.takeIf { it > 0.0 } ?: totalValue),
+            "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(pixKey, pixName),
             "PIX_QR" to "",
         ) + draftItemTokens(items),
     )

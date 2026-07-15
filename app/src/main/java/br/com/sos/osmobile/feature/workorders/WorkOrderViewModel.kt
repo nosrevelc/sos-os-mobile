@@ -815,6 +815,7 @@ class WorkOrderViewModel(
             "empresa" to uiState.value.companyName,
             "data" to "",
             "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, balance.takeIf { it > 0.0 } ?: totalValue),
+            "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(uiState.value.pixKey, uiState.value.pixName),
             "PIX_QR" to "",
         )
     }

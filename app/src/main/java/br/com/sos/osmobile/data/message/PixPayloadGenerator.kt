@@ -6,18 +6,28 @@ import java.util.Locale
 object PixPayloadGenerator {
     fun generate(key: String, name: String, amount: Double): String {
         if (key.isBlank() || name.isBlank() || amount <= 0.0) return ""
+        return buildPayload(key, name, amount)
+    }
+
+    fun generateOpenAmount(key: String, name: String): String {
+        if (key.isBlank() || name.isBlank()) return ""
+        return buildPayload(key, name, null)
+    }
+
+    private fun buildPayload(key: String, name: String, amount: Double?): String {
         val pixKey = normalizeKey(key)
-        val base = listOf(
+        val fields = mutableListOf(
             field("00", "01"),
             field("26", field("00", "br.gov.bcb.pix") + field("01", pixKey)),
             field("52", "0000"),
             field("53", "986"),
-            field("54", String.format(Locale.US, "%.2f", amount)),
-            field("58", "BR"),
-            field("59", clean(name).take(25)),
-            field("60", "CAMBUI"),
-            field("62", field("05", "***")),
-        ).joinToString("")
+        )
+        amount?.let { fields += field("54", String.format(Locale.US, "%.2f", it)) }
+        fields += field("58", "BR")
+        fields += field("59", clean(name).take(25))
+        fields += field("60", "CAMBUI")
+        fields += field("62", field("05", "***"))
+        val base = fields.joinToString("")
         val withCrcId = base + "6304"
         return withCrcId + crc16(withCrcId)
     }

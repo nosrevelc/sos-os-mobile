@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Pix
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SyncAlt
@@ -99,6 +100,8 @@ fun QuoteScreen(
             ?: 0.0
         ).coerceIn(0.0, totalValue)
     val pixPayload = PixPayloadGenerator.generate(uiState.pixKey, uiState.pixName, totalValue)
+    val openPixPayload = PixPayloadGenerator.generateOpenAmount(uiState.pixKey, uiState.pixName)
+    var showOpenPixActions by remember { mutableStateOf(false) }
     LaunchedEffect(initialEditId) {
         initialEditId?.let(viewModel::editQuote)
     }
@@ -237,6 +240,23 @@ fun QuoteScreen(
                     Text("QR Code PIX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     PixQrCode(payload = pixPayload)
                 }
+                if (openPixPayload.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = { showOpenPixActions = !showOpenPixActions },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Pix, contentDescription = null)
+                        Text("Codigo PIX sem valor")
+                    }
+                    if (showOpenPixActions) {
+                        MessageActionButtons(
+                            phone = selectedCustomer.telefone,
+                            email = selectedCustomer.email,
+                            subject = "PIX sem valor",
+                            text = openPixPayload,
+                        )
+                    }
+                }
             }
             viewModel.historyText?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall)
@@ -252,43 +272,6 @@ fun QuoteListScreen(
     onEdit: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    var pendingThermalContent by remember { mutableStateOf<ThermalPrintContent?>(null) }
-    var thermalPrintMessage by remember { mutableStateOf<String?>(null) }
-    fun printThermal(content: ThermalPrintContent) {
-        coroutineScope.launch {
-            thermalPrintMessage = BluetoothThermalPrinter.print58mm(
-                context = context,
-                deviceAddress = uiState.printBluetoothAddress,
-                content = content,
-                copies = uiState.printCopies,
-                style = uiState.printStyle,
-            ).fold(
-                onSuccess = { "Impressao enviada." },
-                onFailure = { "Falha na impressao: ${it.message ?: "verifique a impressora"}" },
-            )
-        }
-    }
-    val bluetoothLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        val content = pendingThermalContent
-        pendingThermalContent = null
-        if (granted && content != null) {
-            printThermal(content)
-        } else {
-            thermalPrintMessage = "Permissao Bluetooth negada."
-        }
-    }
-    fun printThermalWithPermission(content: ThermalPrintContent) {
-        if (BluetoothThermalPrinter.hasBluetoothPermission(context)) {
-            printThermal(content)
-        } else {
-            pendingThermalContent = content
-            bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-    }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -304,9 +287,6 @@ fun QuoteListScreen(
             viewModel.listMessage?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
-            thermalPrintMessage?.let {
-                Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-            }
         }
         if (uiState.quotes.isEmpty()) {
             item {
@@ -316,15 +296,6 @@ fun QuoteListScreen(
             items(uiState.quotes, key = { it.id }) { quote ->
                 QuoteRow(
                     quote = quote,
-                    showPrint = uiState.printCopies > 0,
-                    onConvert = { viewModel.convertToWorkOrder(quote.id) },
-                    onStatusSelected = { viewModel.updateQuoteStatus(quote.id, it) },
-                    onShowDocument = { viewModel.showDocument(quote.id) },
-                    onPrintThermal = {
-                        viewModel.showThermalDocumentThen(quote.id) { printThermalWithPermission(it) }
-                    },
-                    onShowMessage = { viewModel.showMessage(quote) },
-                    onShowHistory = { viewModel.showHistory(quote.id) },
                     onEdit = { onEdit(quote.id) },
                 )
             }
@@ -572,13 +543,6 @@ private fun DraftItemRow(
 @Composable
 private fun QuoteRow(
     quote: QuoteSummary,
-    showPrint: Boolean,
-    onConvert: () -> Unit,
-    onStatusSelected: (QuoteStatus) -> Unit,
-    onShowDocument: () -> Unit,
-    onPrintThermal: () -> Unit,
-    onShowMessage: () -> Unit,
-    onShowHistory: () -> Unit,
     onEdit: () -> Unit,
 ) {
     Card(
@@ -604,47 +568,7 @@ private fun QuoteRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                if (quote.status != QuoteStatus.Converted.label) {
-                    TextButton(onClick = onEdit) {
-                        Icon(Icons.Filled.Edit, contentDescription = null)
-                        Text("Editar")
-                    }
-                }
-                TextButton(onClick = onShowDocument) {
-                    Icon(Icons.Filled.Description, contentDescription = null)
-                    Text("Documento")
-                }
-                if (showPrint) {
-                    TextButton(onClick = onPrintThermal) {
-                        Icon(Icons.Filled.Print, contentDescription = null)
-                        Text("Imprimir")
-                    }
-                }
-                TextButton(onClick = onShowMessage) {
-                    Icon(Icons.Filled.Message, contentDescription = null)
-                    Text("Mensagem")
-                }
-                TextButton(onClick = onShowHistory) {
-                    Icon(Icons.Filled.History, contentDescription = null)
-                    Text("Historico")
-                }
-                QuoteStatus.entries
-                    .filter { it != QuoteStatus.Converted }
-                    .forEach { status ->
-                        TextButton(onClick = { onStatusSelected(status) }) {
-                            Text(status.label)
-                        }
-                    }
-            }
-            if (quote.status == QuoteStatus.Approved.label) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onConvert) {
-                        Icon(Icons.Filled.SyncAlt, contentDescription = null)
-                        Text("Converter em OS")
-                    }
-                }
-            }
+            Text("Toque para editar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -694,6 +618,7 @@ private fun renderQuoteMessage(
             "empresa" to companyName,
             "data" to formatDate(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),
+            "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(pixKey, pixName),
             "PIX_QR" to "",
         ) + quoteItemTokens(items),
     )

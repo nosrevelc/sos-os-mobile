@@ -353,6 +353,7 @@ class QuoteViewModel(
                     "empresa" to uiState.value.companyName,
                     "data" to "",
                     "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, quote.totalValue),
+                    "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(uiState.value.pixKey, uiState.value.pixName),
                     "PIX_QR" to "",
                 ) + MessageTemplateRenderer.itemTokens(quoteRepository.listDocumentItems(quote.id)),
             )
