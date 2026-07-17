@@ -41,6 +41,17 @@ interface WorkOrderPhotoDao {
     )
     suspend fun updateDriveSync(id: Long, fileUri: String?, status: String, error: String?)
 
+    @Query(
+        """
+        UPDATE fotos_os
+        SET drive_file_uri = NULL,
+            drive_sync_status = :status,
+            drive_sync_error = NULL
+        WHERE id_os = :workOrderId
+        """,
+    )
+    suspend fun resetDriveSyncByWorkOrder(workOrderId: Long, status: String = DriveSyncStatus.PENDING)
+
     @Query("DELETE FROM fotos_os WHERE id_foto_os = :id")
     suspend fun deleteById(id: Long)
 

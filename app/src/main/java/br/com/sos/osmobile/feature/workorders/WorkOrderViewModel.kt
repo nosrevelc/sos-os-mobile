@@ -626,6 +626,20 @@ class WorkOrderViewModel(
         }
     }
 
+    fun rebuildDriveSyncNow() {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de refazer a sincronizacao.")
+            return
+        }
+        viewModelScope.launch {
+            formState = formState.copy(message = "Refazendo sincronizacao do Drive...")
+            driveSyncRepository.rebuildWorkOrderSync(workOrderId)
+            loadPhotos(workOrderId)
+            refreshDriveStatus(workOrderId)
+            formState = formState.copy(message = "Sincronizacao do Drive refeita.")
+        }
+    }
+
     fun deletePhoto(photoId: Long) {
         val workOrderId = formState.editingId ?: return
         viewModelScope.launch {

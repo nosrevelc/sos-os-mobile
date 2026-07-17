@@ -54,6 +54,7 @@ class DriveSyncRepository(
     suspend fun syncAllPending(): DriveSyncResult {
         if (!isConfigured()) return DriveSyncResult.Skipped("Drive nao configurado.")
         if (!isOnline()) return DriveSyncResult.Skipped("Sem internet. Sync pendente.")
+        revalidateSyncedItems()
         var synced = 0
         workOrderDao.listPendingDriveSync().forEach { workOrder ->
             if (syncWorkOrder(workOrder.id).isSuccess) synced++
@@ -75,6 +76,10 @@ class DriveSyncRepository(
             return Result.failure(IllegalStateException("Sem internet."))
         }
         return runCatching {
+            if (workOrder.driveFolderUri != null && !documentExists(workOrder.driveFolderUri)) {
+                workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
+                photoDao.resetDriveSyncByWorkOrder(workOrder.id)
+            }
             val folder = ensureWorkOrderFolder(workOrder)
             markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, folder.uri.toString())
             photoDao.listPendingDriveSyncByWorkOrder(workOrder.id).forEach { syncPhoto(it) }
@@ -82,6 +87,13 @@ class DriveSyncRepository(
         }.onFailure {
             markWorkOrder(workOrder, DriveSyncStatus.ERROR, it.message ?: "Falha ao sincronizar.")
         }
+    }
+
+    suspend fun rebuildWorkOrderSync(workOrderId: Long): Result<Unit> {
+        val workOrder = workOrderDao.findById(workOrderId) ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
+        workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
+        photoDao.resetDriveSyncByWorkOrder(workOrder.id)
+        return syncWorkOrder(workOrderId)
     }
 
     suspend fun syncPhoto(photoId: Long): Result<Unit> {
@@ -100,6 +112,9 @@ class DriveSyncRepository(
         }
         return runCatching {
             val workOrder = workOrderDao.findById(photo.workOrderId) ?: error("OS nao encontrada.")
+            if (photo.driveFileUri != null && !documentExists(photo.driveFileUri)) {
+                photoDao.updateDriveSync(photo.id, null, DriveSyncStatus.PENDING, null)
+            }
             val workOrderFolder = ensureWorkOrderFolder(workOrder)
             val targetFolderName = if (photo.fileName.startsWith("comprovante_")) "Comprovantes" else "Fotos"
             val targetFolder = workOrderFolder.findOrCreateFolder(targetFolderName)
@@ -116,6 +131,18 @@ class DriveSyncRepository(
         }.onFailure {
             photoDao.updateDriveSync(photo.id, photo.driveFileUri, DriveSyncStatus.ERROR, it.message ?: "Falha ao sincronizar anexo.")
         }
+    }
+
+    private suspend fun revalidateSyncedItems() {
+        workOrderDao.listAll()
+            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFolderUri != null && !documentExists(it.driveFolderUri) }
+            .forEach {
+                workOrderDao.resetDriveSync(it.id, Clock.nowMillis())
+                photoDao.resetDriveSyncByWorkOrder(it.id)
+            }
+        photoDao.listAll()
+            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFileUri != null && !documentExists(it.driveFileUri) }
+            .forEach { photoDao.updateDriveSync(it.id, null, DriveSyncStatus.PENDING, "Arquivo nao encontrado no Drive.") }
     }
 
     private suspend fun ensureWorkOrderFolder(workOrder: WorkOrderEntity): DocumentFile {
@@ -155,6 +182,12 @@ class DriveSyncRepository(
 
     private fun DocumentFile.findOrCreateFolder(name: String): DocumentFile =
         findFile(name)?.takeIf { it.isDirectory } ?: createDirectory(name) ?: error("Nao foi possivel criar pasta $name.")
+
+    private fun documentExists(uri: String): Boolean {
+        val parsed = Uri.parse(uri)
+        return DocumentFile.fromSingleUri(context, parsed)?.exists() == true ||
+            DocumentFile.fromTreeUri(context, parsed)?.exists() == true
+    }
 
     private fun sanitizeName(value: String): String =
         value.replace(Regex("[\\\\/:*?\"<>|]"), "-").trim().take(80).ifBlank { "Sem nome" }

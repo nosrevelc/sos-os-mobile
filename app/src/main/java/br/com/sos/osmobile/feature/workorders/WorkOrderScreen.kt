@@ -464,6 +464,13 @@ fun WorkOrderScreen(
                     Icon(Icons.Filled.CloudUpload, contentDescription = null)
                     Text("Sincronizar Drive")
                 }
+                OutlinedButton(
+                    onClick = viewModel::rebuildDriveSyncNow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.CloudUpload, contentDescription = null)
+                    Text("Refazer sincronizacao Drive")
+                }
                 Text("Fotos e comprovantes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },

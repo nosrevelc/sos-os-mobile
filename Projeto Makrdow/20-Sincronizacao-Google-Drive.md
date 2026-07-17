@@ -37,6 +37,17 @@ Pasta escolhida
 - `Erro`: houve falha ao criar pasta/arquivo.
 - `Sem configuracao`: usuario ainda nao escolheu a pasta do Drive.
 
+## Pasta apagada no Drive
+
+Se uma pasta ou arquivo sincronizado for apagado manualmente no Google Drive, o app deve detectar na proxima verificacao. Na tela da OS existe a acao `Refazer sincronizacao Drive`, que limpa as referencias antigas, marca a OS e anexos como pendentes, recria a estrutura no Drive e reenvia os anexos locais.
+
+Use esta acao quando:
+
+- a pasta do cliente foi apagada no Drive;
+- a pasta da OS foi apagada no Drive;
+- fotos ou comprovantes sumiram do Drive;
+- o status indica sincronizado, mas o arquivo nao aparece mais no Drive.
+
 ## Implementacao atual
 
 A primeira versao usa Storage Access Framework do Android. Isso evita OAuth e API Google direta: o usuario escolhe uma pasta do Drive pelo seletor do sistema, o app grava nela, e o provedor do Google Drive faz a sincronizacao.

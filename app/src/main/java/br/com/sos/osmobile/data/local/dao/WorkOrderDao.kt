@@ -65,6 +65,18 @@ interface WorkOrderDao {
 
     @Query(
         """
+        UPDATE ordens_servico
+        SET drive_folder_uri = NULL,
+            drive_sync_status = :status,
+            drive_sync_error = NULL,
+            data_atualizacao = :updatedAt
+        WHERE id_os = :id
+        """,
+    )
+    suspend fun resetDriveSync(id: Long, updatedAt: Long, status: String = DriveSyncStatus.PENDING)
+
+    @Query(
+        """
         SELECT
             sp.nome AS name,
             i.quantidade AS quantity,
