@@ -38,6 +38,10 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MI
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.QUOTE_MIN_DEPOSIT_VALUE_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_PICKUP_REMINDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_ANNOUNCEMENT_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_APPOINTMENT_CREATED_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_APPOINTMENT_REMINDER_1D_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_APPOINTMENT_REMINDER_2D_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_APPOINTMENT_REMINDER_TODAY_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_DELIVERED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_NOT_DELIVERED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_ORDER_SENT_KEY
@@ -116,6 +120,10 @@ data class SettingsUiState(
     val welcomeTemplate: String = MessageTemplateRenderer.welcomeTemplate,
     val quoteExpiredTemplate: String = MessageTemplateRenderer.quoteExpiredTemplate,
     val quoteReminderTemplate: String = MessageTemplateRenderer.quoteReminderTemplate,
+    val appointmentCreatedTemplate: String = MessageTemplateRenderer.appointmentCreatedTemplate,
+    val appointmentReminder2DaysTemplate: String = MessageTemplateRenderer.appointmentReminder2DaysTemplate,
+    val appointmentReminder1DayTemplate: String = MessageTemplateRenderer.appointmentReminder1DayTemplate,
+    val appointmentReminderTodayTemplate: String = MessageTemplateRenderer.appointmentReminderTodayTemplate,
     val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
     val contactAccounts: List<ContactAccount> = emptyList(),
     val contactsMessage: String? = null,
@@ -201,6 +209,10 @@ class SettingsViewModel(
                 welcomeTemplate = rawValues[TEMPLATE_WELCOME_KEY] ?: MessageTemplateRenderer.welcomeTemplate,
                 quoteExpiredTemplate = rawValues[TEMPLATE_QUOTE_EXPIRED_KEY] ?: MessageTemplateRenderer.quoteExpiredTemplate,
                 quoteReminderTemplate = rawValues[TEMPLATE_QUOTE_REMINDER_KEY] ?: MessageTemplateRenderer.quoteReminderTemplate,
+                appointmentCreatedTemplate = rawValues[TEMPLATE_APPOINTMENT_CREATED_KEY] ?: MessageTemplateRenderer.appointmentCreatedTemplate,
+                appointmentReminder2DaysTemplate = rawValues[TEMPLATE_APPOINTMENT_REMINDER_2D_KEY] ?: MessageTemplateRenderer.appointmentReminder2DaysTemplate,
+                appointmentReminder1DayTemplate = rawValues[TEMPLATE_APPOINTMENT_REMINDER_1D_KEY] ?: MessageTemplateRenderer.appointmentReminder1DayTemplate,
+                appointmentReminderTodayTemplate = rawValues[TEMPLATE_APPOINTMENT_REMINDER_TODAY_KEY] ?: MessageTemplateRenderer.appointmentReminderTodayTemplate,
                 quoteTemplate = rawValues[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
                 contactAccounts = entities.second,
                 contactsMessage = entities.third,
@@ -373,6 +385,15 @@ class SettingsViewModel(
         }
     }
 
+    fun setAppointmentTemplates(created: String, reminder2Days: String, reminder1Day: String, reminderToday: String) {
+        viewModelScope.launch {
+            settingsRepository.set(TEMPLATE_APPOINTMENT_CREATED_KEY, created.trim())
+            settingsRepository.set(TEMPLATE_APPOINTMENT_REMINDER_2D_KEY, reminder2Days.trim())
+            settingsRepository.set(TEMPLATE_APPOINTMENT_REMINDER_1D_KEY, reminder1Day.trim())
+            settingsRepository.set(TEMPLATE_APPOINTMENT_REMINDER_TODAY_KEY, reminderToday.trim())
+        }
+    }
+
     fun setWorkOrderStatusTemplates(open: String, inProgress: String, completed: String, canceled: String) {
         viewModelScope.launch {
             settingsRepository.set(TEMPLATE_WORK_ORDER_OPEN_KEY, open.trim())
@@ -404,6 +425,10 @@ class SettingsViewModel(
             settingsRepository.set(TEMPLATE_QUOTE_EXPIRED_KEY, MessageTemplateRenderer.quoteExpiredTemplate)
             settingsRepository.set(TEMPLATE_QUOTE_REMINDER_KEY, MessageTemplateRenderer.quoteReminderTemplate)
             settingsRepository.set(TEMPLATE_QUOTE_KEY, MessageTemplateRenderer.quoteDefaultTemplate)
+            settingsRepository.set(TEMPLATE_APPOINTMENT_CREATED_KEY, MessageTemplateRenderer.appointmentCreatedTemplate)
+            settingsRepository.set(TEMPLATE_APPOINTMENT_REMINDER_2D_KEY, MessageTemplateRenderer.appointmentReminder2DaysTemplate)
+            settingsRepository.set(TEMPLATE_APPOINTMENT_REMINDER_1D_KEY, MessageTemplateRenderer.appointmentReminder1DayTemplate)
+            settingsRepository.set(TEMPLATE_APPOINTMENT_REMINDER_TODAY_KEY, MessageTemplateRenderer.appointmentReminderTodayTemplate)
         }
     }
 

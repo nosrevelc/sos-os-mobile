@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
@@ -45,6 +46,8 @@ import androidx.navigation.compose.rememberNavController
 import br.com.sos.osmobile.BuildConfig
 import br.com.sos.osmobile.core.di.AppContainer
 import br.com.sos.osmobile.feature.audit.AuditScreen
+import br.com.sos.osmobile.feature.appointments.AppointmentScreen
+import br.com.sos.osmobile.feature.appointments.AppointmentViewModel
 import br.com.sos.osmobile.feature.backup.BackupScreen
 import br.com.sos.osmobile.feature.backup.BackupViewModel
 import br.com.sos.osmobile.feature.customers.CustomerScreen
@@ -315,6 +318,20 @@ fun OSMobileApp(appContainer: AppContainer) {
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
                 }
+                composable(AppRoute.Appointments.route) {
+                    val appointmentViewModel: AppointmentViewModel = viewModel(
+                        factory = AppointmentViewModel.factory(
+                            appointmentRepository = appContainer.appointmentRepository,
+                            customerRepository = appContainer.customerRepository,
+                            calendarRepository = appContainer.calendarRepository,
+                            settingsRepository = appContainer.settingsRepository,
+                        ),
+                    )
+                    AppointmentScreen(
+                        viewModel = appointmentViewModel,
+                        onOpenWorkOrder = { navController.navigate("work_orders/edit/$it") },
+                    )
+                }
                 composable(AppRoute.QuickMessages.route) {
                     val quickMessagesViewModel: QuickMessagesViewModel = viewModel(
                         factory = QuickMessagesViewModel.factory(
@@ -411,6 +428,7 @@ private fun routeIcon(route: AppRoute): ImageVector =
         AppRoute.WorkOrders -> Icons.Filled.Assignment
         AppRoute.WorkOrderList -> Icons.Filled.List
         AppRoute.WorkOrderPickup -> Icons.Filled.Assignment
+        AppRoute.Appointments -> Icons.Filled.CalendarMonth
         AppRoute.QuickMessages -> Icons.Filled.Message
         AppRoute.Sales -> Icons.Filled.ShoppingCart
         AppRoute.Finance -> Icons.Filled.Payment

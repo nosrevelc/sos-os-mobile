@@ -8,6 +8,8 @@ import br.com.sos.osmobile.core.database.AppDatabase
 import br.com.sos.osmobile.data.backup.BackupRepository
 import br.com.sos.osmobile.data.drive.DriveSyncRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
+import br.com.sos.osmobile.data.repository.AppointmentRepository
+import br.com.sos.osmobile.data.repository.CalendarRepository
 import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.QuoteConversionRepository
@@ -233,6 +235,36 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration14To15 = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS agendamentos (
+                    id_agendamento INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    id_cliente INTEGER NOT NULL,
+                    id_os INTEGER,
+                    titulo TEXT NOT NULL,
+                    tipo TEXT NOT NULL,
+                    data_inicio INTEGER NOT NULL,
+                    data_fim INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    observacoes TEXT,
+                    calendar_event_id INTEGER,
+                    calendar_sync_status TEXT NOT NULL,
+                    calendar_sync_error TEXT,
+                    data_criacao INTEGER NOT NULL,
+                    data_atualizacao INTEGER NOT NULL,
+                    FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente) ON UPDATE NO ACTION ON DELETE RESTRICT
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agendamentos_id_cliente ON agendamentos(id_cliente)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agendamentos_id_os ON agendamentos(id_os)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agendamentos_data_inicio ON agendamentos(data_inicio)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_agendamentos_status ON agendamentos(status)")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -252,6 +284,7 @@ class AppContainer(context: Context) {
             migration11To12,
             migration12To13,
             migration13To14,
+            migration14To15,
         )
         .build()
 
@@ -265,6 +298,13 @@ class AppContainer(context: Context) {
     val saleRepository = SaleRepository(database.saleDao(), auditRepository)
     val quoteConversionRepository = QuoteConversionRepository(database, auditRepository)
     val settingsRepository = SettingsRepository(database.settingsDao(), auditRepository)
+    val calendarRepository = CalendarRepository(context.applicationContext, settingsRepository)
+    val appointmentRepository = AppointmentRepository(
+        database.appointmentDao(),
+        workOrderRepository,
+        calendarRepository,
+        auditRepository,
+    )
     val workOrderPhotoRepository = WorkOrderPhotoRepository(
         context.applicationContext,
         database.workOrderPhotoDao(),

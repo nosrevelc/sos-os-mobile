@@ -69,6 +69,10 @@ class SettingsRepository(
         const val TEMPLATE_WELCOME_KEY = "template_welcome"
         const val TEMPLATE_QUOTE_EXPIRED_KEY = "template_quote_expired"
         const val TEMPLATE_QUOTE_REMINDER_KEY = "template_quote_reminder"
+        const val TEMPLATE_APPOINTMENT_CREATED_KEY = "template_appointment_created"
+        const val TEMPLATE_APPOINTMENT_REMINDER_2D_KEY = "template_appointment_reminder_2d"
+        const val TEMPLATE_APPOINTMENT_REMINDER_1D_KEY = "template_appointment_reminder_1d"
+        const val TEMPLATE_APPOINTMENT_REMINDER_TODAY_KEY = "template_appointment_reminder_today"
         const val PRINT_BLUETOOTH_ADDRESS_KEY = "print_bluetooth_address"
         const val PRINT_WORK_ORDER_AUTO_KEY = "print_work_order_auto"
         const val PRINT_WORK_ORDER_COPIES_KEY = "print_work_order_copies"
@@ -80,6 +84,7 @@ class SettingsRepository(
         const val PRINT_WORK_ORDER_HEADER_ALIGN_KEY = "print_work_order_header_align"
         const val DRIVE_SYNC_ENABLED_KEY = "drive_sync_enabled"
         const val DRIVE_ROOT_URI_KEY = "drive_root_uri"
+        const val CALENDAR_ID_KEY = "calendar_id"
 
         fun contactRawIdKey(customerId: Long): String = "contact_raw_id_customer_$customerId"
     }

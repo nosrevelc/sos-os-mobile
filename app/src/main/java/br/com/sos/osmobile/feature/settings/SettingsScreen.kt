@@ -88,6 +88,10 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     var welcomeTemplate by remember { mutableStateOf(settings.welcomeTemplate) }
     var quoteExpiredTemplate by remember { mutableStateOf(settings.quoteExpiredTemplate) }
     var quoteReminderTemplate by remember { mutableStateOf(settings.quoteReminderTemplate) }
+    var appointmentCreatedTemplate by remember { mutableStateOf(settings.appointmentCreatedTemplate) }
+    var appointmentReminder2DaysTemplate by remember { mutableStateOf(settings.appointmentReminder2DaysTemplate) }
+    var appointmentReminder1DayTemplate by remember { mutableStateOf(settings.appointmentReminder1DayTemplate) }
+    var appointmentReminderTodayTemplate by remember { mutableStateOf(settings.appointmentReminderTodayTemplate) }
     var quoteTemplate by remember { mutableStateOf(settings.quoteTemplate) }
     var resetConfirmation by remember { mutableStateOf("") }
     var bluetoothPrinters by remember { mutableStateOf(emptyList<BluetoothPrinterDevice>()) }
@@ -212,6 +216,10 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         welcomeTemplate = settings.welcomeTemplate
         quoteExpiredTemplate = settings.quoteExpiredTemplate
         quoteReminderTemplate = settings.quoteReminderTemplate
+        appointmentCreatedTemplate = settings.appointmentCreatedTemplate
+        appointmentReminder2DaysTemplate = settings.appointmentReminder2DaysTemplate
+        appointmentReminder1DayTemplate = settings.appointmentReminder1DayTemplate
+        appointmentReminderTodayTemplate = settings.appointmentReminderTodayTemplate
         quoteTemplate = settings.quoteTemplate
     }
 
@@ -652,6 +660,34 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
+            value = appointmentCreatedTemplate,
+            onValueChange = { appointmentCreatedTemplate = it },
+            label = { Text("Agendamento criado") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = appointmentReminder2DaysTemplate,
+            onValueChange = { appointmentReminder2DaysTemplate = it },
+            label = { Text("Lembrete agendamento 2 dias") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = appointmentReminder1DayTemplate,
+            onValueChange = { appointmentReminder1DayTemplate = it },
+            label = { Text("Lembrete agendamento 1 dia") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = appointmentReminderTodayTemplate,
+            onValueChange = { appointmentReminderTodayTemplate = it },
+            label = { Text("Lembrete agendamento hoje") },
+            minLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
             value = quoteTemplate,
             onValueChange = { quoteTemplate = it },
             label = { Text("Template orcamento") },
@@ -659,7 +695,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {linha_desconto}, {valor_minimo_aceite}, {sinal_minimo}, {linha_sinal_minimo}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {tipo_entrega}, {status_entrega}, {endereco_entrega}, {taxa_entrega}, {codigo_rastreio}, {empresa}, {data}, {dias}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_SEM_VALOR}, {PIX_QR}.",
+            text = "Tokens: {nome}, {telefone}, {cpf}, {os}, {orcamento}, {valor}, {subtotal}, {desconto}, {linha_desconto}, {valor_minimo_aceite}, {sinal_minimo}, {linha_sinal_minimo}, {valor_pago}, {saldo}, {status_pagamento}, {status}, {tipo_entrega}, {status_entrega}, {endereco_entrega}, {taxa_entrega}, {codigo_rastreio}, {empresa}, {data}, {dias}, {agendamento}, {agendamento_tipo}, {agendamento_status}, {agendamento_data}, {agendamento_hora}, {itens}, {servicos}, {produtos}, {PIX}, {PIX_SEM_VALOR}, {PIX_QR}.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -688,6 +724,12 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     )
                     viewModel.setReviewRequestTemplate(reviewRequestTemplate)
                     viewModel.setPickupReminderTemplate(pickupReminderTemplate)
+                    viewModel.setAppointmentTemplates(
+                        appointmentCreatedTemplate,
+                        appointmentReminder2DaysTemplate,
+                        appointmentReminder1DayTemplate,
+                        appointmentReminderTodayTemplate,
+                    )
                     viewModel.setExtraMessageTemplates(
                         paymentPendingTemplate,
                         paymentConfirmedTemplate,

@@ -3,6 +3,7 @@ package br.com.sos.osmobile.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import br.com.sos.osmobile.data.local.dao.AuditLogDao
+import br.com.sos.osmobile.data.local.dao.AppointmentDao
 import br.com.sos.osmobile.data.local.dao.CustomerDao
 import br.com.sos.osmobile.data.local.dao.QuoteDao
 import br.com.sos.osmobile.data.local.dao.SaleDao
@@ -16,6 +17,7 @@ import br.com.sos.osmobile.data.local.dao.WorkOrderPhotoDao
 import br.com.sos.osmobile.data.local.dao.WorkOrderSignatureDao
 import br.com.sos.osmobile.data.local.dao.WorkOrderWarrantyDao
 import br.com.sos.osmobile.data.local.entity.AppSettingEntity
+import br.com.sos.osmobile.data.local.entity.AppointmentEntity
 import br.com.sos.osmobile.data.local.entity.AuditLogEntity
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.entity.QuoteEntity
@@ -50,8 +52,9 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
         WorkOrderChecklistItemEntity::class,
         WorkOrderWarrantyEntity::class,
         WorkOrderPaymentEntity::class,
+        AppointmentEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -68,4 +71,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workOrderChecklistDao(): WorkOrderChecklistDao
     abstract fun workOrderWarrantyDao(): WorkOrderWarrantyDao
     abstract fun workOrderPaymentDao(): WorkOrderPaymentDao
+    abstract fun appointmentDao(): AppointmentDao
 }

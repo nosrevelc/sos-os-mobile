@@ -46,6 +46,10 @@ object MessageTemplateRenderer {
     val welcomeTemplate = "Ola {nome}, seja bem-vindo(a) a {empresa}. Estamos felizes em atender voce."
     val quoteExpiredTemplate = "Ola {nome}, seu orcamento {orcamento} expirou. Fale conosco se desejar atualizar os valores."
     val quoteReminderTemplate = "Ola {nome}, passando para lembrar do orcamento {orcamento} no valor de {valor}."
+    val appointmentCreatedTemplate = "Ola {nome}, seu agendamento foi marcado para {agendamento_data} as {agendamento_hora}. Tipo: {agendamento_tipo}."
+    val appointmentReminder2DaysTemplate = "Ola {nome}, lembrando do seu agendamento em 2 dias: {agendamento_data} as {agendamento_hora}."
+    val appointmentReminder1DayTemplate = "Ola {nome}, lembrando do seu agendamento amanha, {agendamento_data} as {agendamento_hora}."
+    val appointmentReminderTodayTemplate = "Ola {nome}, lembrando do seu agendamento hoje as {agendamento_hora}."
 
     private fun money(value: Double): String =
         NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
