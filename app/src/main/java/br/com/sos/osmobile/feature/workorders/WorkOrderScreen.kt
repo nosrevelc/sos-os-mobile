@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -455,6 +456,14 @@ fun WorkOrderScreen(
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
             if (form.editingId != null) {
+                Text("Drive: ${driveStatusText(form.driveSyncStatus, form.driveSyncError)}", style = MaterialTheme.typography.bodySmall, color = driveStatusColor(form.driveSyncStatus))
+                OutlinedButton(
+                    onClick = viewModel::syncDriveNow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.CloudUpload, contentDescription = null)
+                    Text("Sincronizar Drive")
+                }
                 Text("Fotos e comprovantes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },
@@ -493,6 +502,11 @@ fun WorkOrderScreen(
                                         style = MaterialTheme.typography.labelLarge,
                                     )
                                     Text(photo.fileName, style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        text = "Drive: ${driveStatusText(photo.driveSyncStatus, photo.driveSyncError.orEmpty())}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = driveStatusColor(photo.driveSyncStatus),
+                                    )
                                 }
                                 IconButton(
                                     onClick = {
@@ -1846,6 +1860,22 @@ private fun draftItemTokens(items: List<WorkOrderDraftItem>): Map<String, String
         "total_itens" to formatCurrency(items.sumOf { it.subtotal }),
     )
 }
+
+private fun driveStatusText(status: String, error: String): String =
+    when {
+        status.isBlank() -> "Nao iniciado"
+        error.isNotBlank() && status != "Sincronizado" -> "$status - $error"
+        else -> status
+    }
+
+@Composable
+private fun driveStatusColor(status: String): Color =
+    when (status) {
+        "Sincronizado" -> MaterialTheme.colorScheme.primary
+        "Erro" -> MaterialTheme.colorScheme.error
+        "Pendente", "Sem configuracao" -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
 private fun formatQuantity(value: Double): String =
     if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(Locale("pt", "BR"), value)

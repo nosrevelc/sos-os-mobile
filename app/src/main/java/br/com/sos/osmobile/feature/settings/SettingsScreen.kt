@@ -314,9 +314,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         }
         Text(
             text = if (settings.driveRootUri.isBlank()) {
-                "Selecione uma pasta do Google Drive no Android. OS e anexos ficam pendentes ate configurar."
+                "Entre em Meu Drive, crie/selecione uma pasta como OS Mobile e toque em Usar esta pasta. A raiz do Drive nao pode ser usada."
             } else {
-                "Pasta configurada. O app cria Cliente/OS/Fotos/Comprovantes e tenta sincronizar quando houver internet."
+                "Status: pasta configurada. O app cria Cliente/OS/Fotos/Comprovantes e tenta sincronizar quando houver internet."
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

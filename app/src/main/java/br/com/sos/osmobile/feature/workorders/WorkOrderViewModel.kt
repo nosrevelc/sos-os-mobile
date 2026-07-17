@@ -102,6 +102,8 @@ data class WorkOrderFormState(
     val notes: String = "",
     val items: List<WorkOrderDraftItem> = emptyList(),
     val originalItems: List<WorkOrderDraftItem> = emptyList(),
+    val driveSyncStatus: String = "",
+    val driveSyncError: String = "",
     val message: String? = null,
 )
 
@@ -409,6 +411,7 @@ class WorkOrderViewModel(
                 }
                 editWorkOrder(createdId, "OS criada com sucesso.")
                 driveSyncRepository.syncWorkOrder(createdId)
+                refreshDriveStatus(createdId)
                 onSaved?.invoke(createdId)
             } else {
                 val updated = workOrderRepository.updateContent(
@@ -466,6 +469,8 @@ class WorkOrderViewModel(
                 deliveryNotes = workOrder.deliveryNotes.orEmpty(),
                 items = draftItems,
                 originalItems = draftItems,
+                driveSyncStatus = workOrder.driveSyncStatus,
+                driveSyncError = workOrder.driveSyncError.orEmpty(),
                 message = message ?: "Editando OS ${workOrder.numero}.",
             )
             loadHistory(workOrderId)
@@ -598,11 +603,26 @@ class WorkOrderViewModel(
                 driveSyncRepository.syncWorkOrder(workOrderId)
                 driveSyncRepository.syncPhoto(photoId)
                 loadPhotos(workOrderId)
+                refreshDriveStatus(workOrderId)
             }.onSuccess {
                 formState = formState.copy(message = if (isPaymentProof) "Comprovante anexado." else "Foto adicionada.")
             }.onFailure {
                 formState = formState.copy(message = "Nao foi possivel adicionar a foto: ${it.message.orEmpty()}")
             }
+        }
+    }
+
+    fun syncDriveNow() {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de sincronizar.")
+            return
+        }
+        viewModelScope.launch {
+            formState = formState.copy(message = "Sincronizando Drive...")
+            driveSyncRepository.syncWorkOrder(workOrderId)
+            loadPhotos(workOrderId)
+            refreshDriveStatus(workOrderId)
+            formState = formState.copy(message = "Status do Drive atualizado.")
         }
     }
 
@@ -774,6 +794,14 @@ class WorkOrderViewModel(
 
     private suspend fun loadPayments(workOrderId: Long) {
         payments = paymentRepository.listByWorkOrder(workOrderId)
+    }
+
+    private suspend fun refreshDriveStatus(workOrderId: Long) {
+        val workOrder = workOrderRepository.findById(workOrderId) ?: return
+        formState = formState.copy(
+            driveSyncStatus = workOrder.driveSyncStatus,
+            driveSyncError = workOrder.driveSyncError.orEmpty(),
+        )
     }
 
     private fun workOrderMessageTokens(

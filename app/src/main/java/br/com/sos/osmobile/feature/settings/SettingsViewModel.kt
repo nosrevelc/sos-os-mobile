@@ -243,6 +243,11 @@ class SettingsViewModel(
     fun setDriveSyncEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.set(DRIVE_SYNC_ENABLED_KEY, enabled.toString())
+            driveSyncMessage = if (enabled) {
+                "Sincronizacao do Drive ativada. Selecione uma pasta e sincronize pendentes."
+            } else {
+                "Sincronizacao do Drive desativada."
+            }
         }
     }
 
@@ -250,11 +255,13 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.set(DRIVE_ROOT_URI_KEY, uri)
             settingsRepository.set(DRIVE_SYNC_ENABLED_KEY, true.toString())
+            driveSyncMessage = "Pasta do Drive configurada. Sincronizacao pendente sera tentada automaticamente."
         }
     }
 
     fun syncDrivePending() {
         viewModelScope.launch {
+            driveSyncMessage = "Sincronizando pendentes do Drive..."
             driveSyncMessage = when (val result = driveSyncRepository.syncAllPending()) {
                 is DriveSyncResult.Done -> "Sincronizacao concluida: ${result.syncedItems} item(ns)."
                 is DriveSyncResult.Skipped -> result.reason
