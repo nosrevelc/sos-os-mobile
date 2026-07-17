@@ -80,9 +80,12 @@ class DriveSyncRepository(
                 workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
                 photoDao.resetDriveSyncByWorkOrder(workOrder.id)
             }
-            val folder = ensureWorkOrderFolder(workOrder)
-            markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, folder.uri.toString())
-            photoDao.listPendingDriveSyncByWorkOrder(workOrder.id).forEach { syncPhoto(it) }
+            syncWorkOrderFolder(workOrder)
+            val failures = photoDao.listPendingDriveSyncByWorkOrder(workOrder.id)
+                .mapNotNull { syncPhoto(it).exceptionOrNull()?.message }
+            if (failures.isNotEmpty()) {
+                error(failures.first())
+            }
             auditRepository.record("Google Drive", "Pasta da OS sincronizada", "ordens_servico", workOrder.id, details = workOrder.numero)
         }.onFailure {
             markWorkOrder(workOrder, DriveSyncStatus.ERROR, it.message ?: "Falha ao sincronizar.")
@@ -93,7 +96,25 @@ class DriveSyncRepository(
         val workOrder = workOrderDao.findById(workOrderId) ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
         workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
         photoDao.resetDriveSyncByWorkOrder(workOrder.id)
-        return syncWorkOrder(workOrderId)
+        if (!isConfigured()) {
+            markWorkOrder(workOrder, DriveSyncStatus.NOT_CONFIGURED, "Configure a pasta do Drive.", null)
+            return Result.failure(IllegalStateException("Drive nao configurado."))
+        }
+        if (!isOnline()) {
+            markWorkOrder(workOrder, DriveSyncStatus.PENDING, "Sem internet.", null)
+            return Result.failure(IllegalStateException("Sem internet."))
+        }
+        return runCatching {
+            syncWorkOrderFolder(workOrder)
+            val failures = photoDao.listByWorkOrderAsc(workOrder.id)
+                .mapNotNull { syncPhoto(it).exceptionOrNull()?.message }
+            if (failures.isNotEmpty()) {
+                error(failures.first())
+            }
+            auditRepository.record("Google Drive", "Sincronizacao da OS refeita", "ordens_servico", workOrder.id, details = workOrder.numero)
+        }.onFailure {
+            markWorkOrder(workOrder, DriveSyncStatus.ERROR, it.message ?: "Falha ao refazer sincronizacao.", null)
+        }
     }
 
     suspend fun syncPhoto(photoId: Long): Result<Unit> {
@@ -158,6 +179,12 @@ class DriveSyncRepository(
         osFolder.findOrCreateFolder("Assinaturas")
         osFolder.findOrCreateFolder("Documentos")
         return osFolder
+    }
+
+    private suspend fun syncWorkOrderFolder(workOrder: WorkOrderEntity): DocumentFile {
+        val folder = ensureWorkOrderFolder(workOrder)
+        markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, folder.uri.toString())
+        return folder
     }
 
     private suspend fun rootFolder(): DocumentFile? {

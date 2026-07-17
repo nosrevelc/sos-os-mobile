@@ -12,6 +12,9 @@ interface WorkOrderPhotoDao {
     @Query("SELECT * FROM fotos_os WHERE id_os = :workOrderId ORDER BY data_criacao DESC")
     suspend fun listByWorkOrder(workOrderId: Long): List<WorkOrderPhotoEntity>
 
+    @Query("SELECT * FROM fotos_os WHERE id_os = :workOrderId ORDER BY data_criacao ASC")
+    suspend fun listByWorkOrderAsc(workOrderId: Long): List<WorkOrderPhotoEntity>
+
     @Query("SELECT * FROM fotos_os ORDER BY id_os, data_criacao")
     suspend fun listAll(): List<WorkOrderPhotoEntity>
 

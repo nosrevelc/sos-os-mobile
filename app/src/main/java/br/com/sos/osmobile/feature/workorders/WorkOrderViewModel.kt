@@ -619,10 +619,15 @@ class WorkOrderViewModel(
         }
         viewModelScope.launch {
             formState = formState.copy(message = "Sincronizando Drive...")
-            driveSyncRepository.syncWorkOrder(workOrderId)
+            val result = driveSyncRepository.syncWorkOrder(workOrderId)
             loadPhotos(workOrderId)
             refreshDriveStatus(workOrderId)
-            formState = formState.copy(message = "Status do Drive atualizado.")
+            formState = formState.copy(
+                message = result.fold(
+                    onSuccess = { "Drive sincronizado." },
+                    onFailure = { "Falha ao sincronizar Drive: ${it.message.orEmpty()}" },
+                ),
+            )
         }
     }
 
@@ -633,10 +638,15 @@ class WorkOrderViewModel(
         }
         viewModelScope.launch {
             formState = formState.copy(message = "Refazendo sincronizacao do Drive...")
-            driveSyncRepository.rebuildWorkOrderSync(workOrderId)
+            val result = driveSyncRepository.rebuildWorkOrderSync(workOrderId)
             loadPhotos(workOrderId)
             refreshDriveStatus(workOrderId)
-            formState = formState.copy(message = "Sincronizacao do Drive refeita.")
+            formState = formState.copy(
+                message = result.fold(
+                    onSuccess = { "Sincronizacao do Drive refeita." },
+                    onFailure = { "Falha ao refazer Drive: ${it.message.orEmpty()}" },
+                ),
+            )
         }
     }
 
