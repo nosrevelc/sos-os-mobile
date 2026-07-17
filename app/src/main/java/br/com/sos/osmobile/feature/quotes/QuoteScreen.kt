@@ -228,17 +228,15 @@ fun QuoteScreen(
                 ShareTextButton(label = "Compartilhar mensagem", text = it)
                 WhatsAppTextButton(phone = viewModel.messagePhone, text = it)
             }
-            if (selectedCustomer != null && currentMessage != null) {
+            if (selectedCustomer != null) {
                 Text("Enviar mensagem ao cliente", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                MessageActionButtons(
-                    phone = selectedCustomer.telefone,
-                    email = selectedCustomer.email,
-                    subject = "Orcamento ${form.editingNumber ?: "novo"}",
-                    text = currentMessage,
-                )
-                if (pixPayload.isNotBlank()) {
-                    Text("QR Code PIX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    PixQrCode(payload = pixPayload)
+                currentMessage?.let { message ->
+                    MessageActionButtons(
+                        phone = selectedCustomer.telefone,
+                        email = selectedCustomer.email,
+                        subject = "Orcamento ${form.editingNumber ?: "novo"}",
+                        text = message,
+                    )
                 }
                 if (openPixPayload.isNotBlank()) {
                     OutlinedButton(
@@ -256,6 +254,10 @@ fun QuoteScreen(
                             text = openPixPayload,
                         )
                     }
+                }
+                if (pixPayload.isNotBlank()) {
+                    Text("QR Code PIX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    PixQrCode(payload = pixPayload)
                 }
             }
             viewModel.historyText?.let {

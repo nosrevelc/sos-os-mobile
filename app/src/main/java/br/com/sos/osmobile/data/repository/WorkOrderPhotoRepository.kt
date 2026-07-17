@@ -16,7 +16,7 @@ class WorkOrderPhotoRepository(
     suspend fun listByWorkOrder(workOrderId: Long): List<WorkOrderPhotoEntity> =
         photoDao.listByWorkOrder(workOrderId)
 
-    suspend fun addPhoto(workOrderId: Long, source: Uri): Long {
+    suspend fun addPhoto(workOrderId: Long, source: Uri, isPaymentProof: Boolean = false): Long {
         val now = Clock.nowMillis()
         val mimeType = context.contentResolver.getType(source) ?: "image/jpeg"
         val extension = when (mimeType) {
@@ -26,7 +26,7 @@ class WorkOrderPhotoRepository(
             else -> "jpg"
         }
         val dir = File(context.filesDir, "work_order_photos/$workOrderId").apply { mkdirs() }
-        val fileName = if (mimeType == "application/pdf") "comprovante_${now}.$extension" else "foto_${now}.$extension"
+        val fileName = if (isPaymentProof) "comprovante_${now}.$extension" else "foto_${now}.$extension"
         val target = File(dir, fileName)
         context.contentResolver.openInputStream(source)?.use { input ->
             target.outputStream().use { output -> input.copyTo(output) }

@@ -584,17 +584,17 @@ class WorkOrderViewModel(
         }
     }
 
-    fun addPhoto(uri: Uri) {
+    fun addPhoto(uri: Uri, isPaymentProof: Boolean = false) {
         val workOrderId = formState.editingId ?: run {
             formState = formState.copy(message = "Salve a OS antes de adicionar fotos.")
             return
         }
         viewModelScope.launch {
             runCatching {
-                photoRepository.addPhoto(workOrderId, uri)
+                photoRepository.addPhoto(workOrderId, uri, isPaymentProof)
                 loadPhotos(workOrderId)
             }.onSuccess {
-                formState = formState.copy(message = "Foto adicionada.")
+                formState = formState.copy(message = if (isPaymentProof) "Comprovante anexado." else "Foto adicionada.")
             }.onFailure {
                 formState = formState.copy(message = "Nao foi possivel adicionar a foto: ${it.message.orEmpty()}")
             }

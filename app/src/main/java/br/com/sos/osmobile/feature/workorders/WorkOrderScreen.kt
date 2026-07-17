@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -305,7 +306,7 @@ fun WorkOrderScreen(
     val paymentProofLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
-        if (uri != null) viewModel.addPhoto(uri)
+        if (uri != null) viewModel.addPhoto(uri, isPaymentProof = true)
     }
 
     LazyColumn(
@@ -467,13 +468,14 @@ fun WorkOrderScreen(
                     onClick = { paymentProofLauncher.launch("*/*") },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Filled.AttachMoney, contentDescription = null)
+                    Icon(Icons.Filled.AttachFile, contentDescription = null)
                     Text("Anexar comprovante")
                 }
                 if (viewModel.photos.isEmpty()) {
                     Text("Nenhum anexo adicionado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     viewModel.photos.forEach { photo ->
+                        val isPaymentProof = photo.fileName.startsWith("comprovante_")
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                             Row(
                                 modifier = Modifier
@@ -482,8 +484,18 @@ fun WorkOrderScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(photo.fileName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                                TextButton(
+                                Icon(
+                                    imageVector = if (isPaymentProof) Icons.Filled.Description else Icons.Filled.PhotoCamera,
+                                    contentDescription = if (isPaymentProof) "Comprovante" else "Foto",
+                                )
+                                Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
+                                    Text(
+                                        text = if (isPaymentProof) "Comprovante" else "Foto",
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                    Text(photo.fileName, style = MaterialTheme.typography.bodySmall)
+                                }
+                                IconButton(
                                     onClick = {
                                         runCatching {
                                             context.startActivity(
@@ -496,11 +508,10 @@ fun WorkOrderScreen(
                                         }
                                     },
                                 ) {
-                                    Text("Abrir")
+                                    Icon(Icons.Filled.OpenInFull, contentDescription = "Abrir anexo")
                                 }
-                                TextButton(onClick = { viewModel.deletePhoto(photo.id) }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = null)
-                                    Text("Remover")
+                                IconButton(onClick = { viewModel.deletePhoto(photo.id) }) {
+                                    Icon(Icons.Filled.Delete, contentDescription = "Remover anexo")
                                 }
                             }
                         }
@@ -685,7 +696,7 @@ fun WorkOrderScreen(
                     }
                 }
             }
-            viewModel.messageText?.let {
+            viewModel.messageText?.takeIf { selectedCustomer == null || currentMessage == null }?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
