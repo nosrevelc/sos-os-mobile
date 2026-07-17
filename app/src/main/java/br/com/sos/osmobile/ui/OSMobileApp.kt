@@ -2,6 +2,8 @@ package br.com.sos.osmobile.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.BarChart
@@ -104,7 +106,9 @@ fun OSMobileApp(appContainer: AppContainer) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 Text("OS Mobile", modifier = Modifier.padding(24.dp, 20.dp, 16.dp, 12.dp))
                 visibleRoutes.forEach { route ->
                     NavigationDrawerItem(

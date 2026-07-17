@@ -230,7 +230,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Modulos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Modulos", initiallyExpanded = true) {
         SettingSwitch("Orcamento", checked = settings.orcamento, onCheckedChange = { viewModel.setModule("modulo_orcamento", it) })
         SettingSwitch("Imagens", checked = settings.fotos, onCheckedChange = { viewModel.setModule("modulo_fotos", it) })
         SettingSwitch("Assinatura", checked = settings.assinatura, onCheckedChange = { viewModel.setModule("modulo_assinatura", it) })
@@ -259,8 +259,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 }
             }
         }
+        }
 
-        Text("Agenda", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Agenda") {
         OutlinedButton(
             onClick = {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
@@ -290,8 +291,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        }
 
-        Text("Google Drive", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Google Drive") {
         SettingSwitch(
             label = "Sincronizar documentos no Drive",
             checked = settings.driveSyncEnabled,
@@ -321,8 +323,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        }
 
-        Text("Impressao", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Impressao") {
         OutlinedButton(
             onClick = {
                 if (BluetoothThermalPrinter.hasBluetoothPermission(context)) {
@@ -434,8 +437,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         bluetoothMessage?.let {
             Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
         }
+        }
 
-        Text("Fiscal", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Fiscal") {
         FiscalEnvironmentSelector(
             selected = fiscalEnvironment,
             onSelected = { fiscalEnvironment = it },
@@ -489,8 +493,9 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        }
 
-        Text("Mensagens", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Mensagens") {
         OutlinedTextField(
             value = companyName,
             onValueChange = { companyName = it },
@@ -750,12 +755,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             ) {
                 Text("Salvar mensagens")
             }
-            OutlinedButton(onClick = viewModel::resetTemplates) {
+        OutlinedButton(onClick = viewModel::resetTemplates) {
                 Text("Padrao")
             }
         }
+        }
 
-        Text("Area perigosa", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingsSection("Area perigosa") {
         Text(
             text = "Use apenas para sair da fase de testes. Apaga clientes, servicos/produtos, OS, orcamentos, pagamentos, fotos, assinaturas, checklist, garantias, estoque, vendas e historico. Mantem configuracoes, templates, Pix e impressao.",
             style = MaterialTheme.typography.bodySmall,
@@ -780,6 +786,35 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         }
         viewModel.resetMessage?.let {
             Text(text = it, color = MaterialTheme.colorScheme.secondary)
+        }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    initiallyExpanded: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    OutlinedButton(
+        onClick = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = if (expanded) "v $title" else "> $title",
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+    if (expanded) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            content()
         }
     }
 }
