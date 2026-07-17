@@ -232,7 +232,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     ) {
         Text("Modulos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         SettingSwitch("Orcamento", checked = settings.orcamento, onCheckedChange = { viewModel.setModule("modulo_orcamento", it) })
-        SettingSwitch("Fotos", checked = settings.fotos, onCheckedChange = { viewModel.setModule("modulo_fotos", it) })
+        SettingSwitch("Imagens", checked = settings.fotos, onCheckedChange = { viewModel.setModule("modulo_fotos", it) })
         SettingSwitch("Assinatura", checked = settings.assinatura, onCheckedChange = { viewModel.setModule("modulo_assinatura", it) })
         SettingSwitch("Checklist", checked = settings.checklist, onCheckedChange = { viewModel.setModule("modulo_checklist", it) })
         SettingSwitch("Garantia", checked = settings.garantia, onCheckedChange = { viewModel.setModule("modulo_garantia", it) })
@@ -316,7 +316,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             text = if (settings.driveRootUri.isBlank()) {
                 "Entre em Meu Drive, crie/selecione uma pasta como OS Mobile e toque em Usar esta pasta. A raiz do Drive nao pode ser usada."
             } else {
-                "Status: pasta configurada. O app cria Cliente/OS/Fotos/Comprovantes e tenta sincronizar quando houver internet."
+                "Status: pasta configurada. O app cria Cliente/OS/Imagens/Documentos e tenta sincronizar quando houver internet."
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

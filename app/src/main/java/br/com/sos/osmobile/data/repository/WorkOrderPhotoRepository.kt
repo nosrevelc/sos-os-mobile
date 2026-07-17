@@ -17,7 +17,7 @@ class WorkOrderPhotoRepository(
     suspend fun listByWorkOrder(workOrderId: Long): List<WorkOrderPhotoEntity> =
         photoDao.listByWorkOrder(workOrderId)
 
-    suspend fun addPhoto(workOrderId: Long, source: Uri, isPaymentProof: Boolean = false): Long {
+    suspend fun addPhoto(workOrderId: Long, source: Uri, isDocument: Boolean = false, documentDescription: String = ""): Long {
         val now = Clock.nowMillis()
         val mimeType = context.contentResolver.getType(source) ?: "image/jpeg"
         val extension = when (mimeType) {
@@ -28,10 +28,10 @@ class WorkOrderPhotoRepository(
         }
         val dir = File(context.filesDir, "work_order_photos/$workOrderId").apply { mkdirs() }
         val originalName = originalFileName(source, extension)
-        val fileName = if (isPaymentProof) {
-            "comprovante_${now}_$originalName"
+        val fileName = if (isDocument) {
+            "documento_${now}_${sanitizeToken(documentDescription)}_$originalName"
         } else {
-            "foto_${now}_$originalName"
+            "imagem_${now}_$originalName"
         }
         val target = File(dir, fileName)
         context.contentResolver.openInputStream(source)?.use { input ->
@@ -46,7 +46,7 @@ class WorkOrderPhotoRepository(
                 createdAt = now,
             ),
         )
-        auditRepository.record("Fotos", "Foto adicionada na OS", "ordens_servico", workOrderId, details = fileName)
+        auditRepository.record("Anexos", "Anexo adicionado na OS", "ordens_servico", workOrderId, details = fileName)
         return id
     }
 
@@ -54,7 +54,7 @@ class WorkOrderPhotoRepository(
         val photo = photoDao.findById(id) ?: return
         File(context.filesDir, photo.relativePath).delete()
         photoDao.deleteById(id)
-        auditRepository.record("Fotos", "Foto removida da OS", "ordens_servico", photo.workOrderId, details = photo.fileName)
+        auditRepository.record("Anexos", "Anexo removido da OS", "ordens_servico", photo.workOrderId, details = photo.fileName)
     }
 
     fun uriFor(photo: WorkOrderPhotoEntity): Uri =
@@ -91,4 +91,12 @@ class WorkOrderPhotoRepository(
             .trim('.', '_', ' ')
             .take(90)
             .ifBlank { "arquivo" }
+
+    private fun sanitizeToken(value: String): String =
+        value
+            .replace(Regex("[\\\\/:*?\"<>|_]"), "-")
+            .replace(Regex("\\s+"), "-")
+            .trim('.', '-', ' ')
+            .take(40)
+            .ifBlank { "documento" }
 }

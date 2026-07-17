@@ -137,7 +137,7 @@ class DriveSyncRepository(
                 photoDao.updateDriveSync(photo.id, null, DriveSyncStatus.PENDING, null)
             }
             val workOrderFolder = ensureWorkOrderFolder(workOrder)
-            val targetFolderName = if (photo.fileName.startsWith("comprovante_")) "Comprovantes" else "Fotos"
+            val targetFolderName = if (isDocumentAttachment(photo.fileName)) "Documentos" else "Imagens"
             val targetFolder = workOrderFolder.findOrCreateFolder(targetFolderName)
             val existing = targetFolder.findFile(photo.fileName)
             val targetFile = existing ?: targetFolder.createFile(photo.mimeType, photo.fileName)
@@ -174,10 +174,9 @@ class DriveSyncRepository(
         val customerFolderName = if (customerPhone.isBlank()) customerName else "${customerName}_$customerPhone"
         val customerFolder = root.findOrCreateFolder(customerFolderName)
         val osFolder = customerFolder.findOrCreateFolder("OS-${sanitizeName(workOrder.numero)}")
-        osFolder.findOrCreateFolder("Fotos")
-        osFolder.findOrCreateFolder("Comprovantes")
-        osFolder.findOrCreateFolder("Assinaturas")
+        osFolder.findOrCreateFolder("Imagens")
         osFolder.findOrCreateFolder("Documentos")
+        osFolder.findOrCreateFolder("Assinaturas")
         return osFolder
     }
 
@@ -218,6 +217,9 @@ class DriveSyncRepository(
 
     private fun sanitizeName(value: String): String =
         value.replace(Regex("[\\\\/:*?\"<>|]"), "-").trim().take(80).ifBlank { "Sem nome" }
+
+    private fun isDocumentAttachment(fileName: String): Boolean =
+        fileName.startsWith("documento_") || fileName.startsWith("comprovante_")
 }
 
 sealed class DriveSyncResult {

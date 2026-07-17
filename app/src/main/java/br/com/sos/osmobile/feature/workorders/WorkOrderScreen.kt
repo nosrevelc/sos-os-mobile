@@ -298,15 +298,53 @@ fun WorkOrderScreen(
             bluetoothLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
         }
     }
+    var showDocumentDialog by remember { mutableStateOf(false) }
+    var documentDescription by remember { mutableStateOf("") }
+    var selectedDocumentDescription by remember { mutableStateOf("") }
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         if (uri != null) viewModel.addPhoto(uri)
     }
-    val paymentProofLauncher = rememberLauncherForActivityResult(
+    val documentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
-        if (uri != null) viewModel.addPhoto(uri, isPaymentProof = true)
+        if (uri != null) viewModel.addPhoto(uri, isDocument = true, documentDescription = selectedDocumentDescription)
+        selectedDocumentDescription = ""
+    }
+
+    if (showDocumentDialog) {
+        AlertDialog(
+            onDismissRequest = { showDocumentDialog = false },
+            title = { Text("Qual documento?") },
+            text = {
+                OutlinedTextField(
+                    value = documentDescription,
+                    onValueChange = { documentDescription = it },
+                    label = { Text("Ex: comprovante, contrato, nota, RG") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = documentDescription.isNotBlank(),
+                    onClick = {
+                        selectedDocumentDescription = documentDescription.trim()
+                        documentDescription = ""
+                        showDocumentDialog = false
+                        documentLauncher.launch("*/*")
+                    },
+                ) {
+                    Text("Selecionar arquivo")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDocumentDialog = false }) {
+                    Text("Cancelar")
+                }
+            },
+        )
     }
 
     LazyColumn(
@@ -471,26 +509,27 @@ fun WorkOrderScreen(
                     Icon(Icons.Filled.CloudUpload, contentDescription = null)
                     Text("Refazer sincronizacao Drive")
                 }
-                Text("Fotos e comprovantes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text("Imagens e documentos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Filled.PhotoCamera, contentDescription = null)
-                    Text("Adicionar foto")
+                    Text("Adicionar imagem")
                 }
                 OutlinedButton(
-                    onClick = { paymentProofLauncher.launch("*/*") },
+                    onClick = { showDocumentDialog = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Filled.AttachFile, contentDescription = null)
-                    Text("Anexar comprovante")
+                    Text("Anexar documento")
                 }
                 if (viewModel.photos.isEmpty()) {
                     Text("Nenhum anexo adicionado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     viewModel.photos.forEach { photo ->
-                        val isPaymentProof = photo.fileName.startsWith("comprovante_")
+                        val isDocument = isDocumentAttachment(photo.fileName)
+                        val documentLabel = attachmentDocumentDescription(photo.fileName)
                         val originalFileName = attachmentOriginalName(photo.fileName)
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                             Row(
@@ -501,12 +540,12 @@ fun WorkOrderScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = if (isPaymentProof) Icons.Filled.Description else Icons.Filled.PhotoCamera,
-                                    contentDescription = if (isPaymentProof) "Comprovante" else "Foto",
+                                    imageVector = if (isDocument) Icons.Filled.Description else Icons.Filled.PhotoCamera,
+                                    contentDescription = if (isDocument) "Documento" else "Imagem",
                                 )
                                 Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
                                     Text(
-                                        text = if (isPaymentProof) "Comprovante" else "Foto",
+                                        text = if (isDocument) "Documento${documentLabel?.let { ": $it" }.orEmpty()}" else "Imagem",
                                         style = MaterialTheme.typography.labelLarge,
                                     )
                                     Text(originalFileName, style = MaterialTheme.typography.bodySmall)
@@ -1877,13 +1916,28 @@ private fun driveStatusText(status: String, error: String): String =
     }
 
 private fun attachmentOriginalName(fileName: String): String {
-    val parts = fileName.split("_", limit = 3)
-    return if (parts.size == 3 && (parts[0] == "foto" || parts[0] == "comprovante")) {
-        parts[2]
-    } else {
-        fileName
+    val documentParts = fileName.split("_", limit = 4)
+    if (documentParts.size == 4 && documentParts[0] == "documento") {
+        return documentParts[3]
+    }
+    val legacyParts = fileName.split("_", limit = 3)
+    return when {
+        legacyParts.size == 3 && legacyParts[0] in setOf("imagem", "foto", "comprovante") -> legacyParts[2]
+        else -> fileName
     }
 }
+
+private fun attachmentDocumentDescription(fileName: String): String? {
+    val parts = fileName.split("_", limit = 4)
+    return if (parts.size == 4 && parts[0] == "documento") {
+        parts[2].replace("-", " ").takeIf { it.isNotBlank() }
+    } else {
+        null
+    }
+}
+
+private fun isDocumentAttachment(fileName: String): Boolean =
+    fileName.startsWith("documento_") || fileName.startsWith("comprovante_")
 
 @Composable
 private fun driveStatusColor(status: String): Color =

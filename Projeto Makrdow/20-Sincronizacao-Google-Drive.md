@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-O sistema deve continuar funcionando localmente no Android mesmo sem internet. A criacao da OS, anexos, fotos, comprovantes, assinatura e documentos ocorre primeiro no banco/armazenamento local. Quando houver internet e uma pasta do Drive estiver configurada, o app tenta sincronizar.
+O sistema deve continuar funcionando localmente no Android mesmo sem internet. A criacao da OS, anexos, imagens, documentos e assinatura ocorre primeiro no banco/armazenamento local. Quando houver internet e uma pasta do Drive estiver configurada, o app tenta sincronizar.
 
 ## Estrutura no Drive
 
@@ -14,10 +14,9 @@ Estrutura criada pelo app:
 Pasta escolhida
 └── Nome do cliente_Telefone
     └── OS-2607170001
-        ├── Fotos
-        ├── Comprovantes
-        ├── Assinaturas
-        └── Documentos
+        ├── Imagens
+        ├── Documentos
+        └── Assinaturas
 ```
 
 ## Regra principal
@@ -27,8 +26,9 @@ Pasta escolhida
 3. Se nao houver internet/configuracao, a OS fica pendente.
 4. A pasta da OS usa exatamente o numero gerado pelo sistema, por exemplo `OS-2607170001`.
 5. A pasta do cliente usa nome e telefone para evitar conflito entre clientes com nomes iguais.
-6. Ao anexar foto ou comprovante, o app salva localmente e tenta sincronizar no mesmo momento.
-7. Falhas nao bloqueiam o atendimento.
+6. Ao anexar imagem ou documento, o app salva localmente e tenta sincronizar no mesmo momento.
+7. Ao anexar documento, o app pergunta qual documento se trata antes de abrir o seletor de arquivo.
+8. Falhas nao bloqueiam o atendimento.
 
 ## Status de sincronizacao
 
@@ -45,7 +45,7 @@ Use esta acao quando:
 
 - a pasta do cliente foi apagada no Drive;
 - a pasta da OS foi apagada no Drive;
-- fotos ou comprovantes sumiram do Drive;
+- imagens ou documentos sumiram do Drive;
 - o status indica sincronizado, mas o arquivo nao aparece mais no Drive.
 
 ## Implementacao atual
