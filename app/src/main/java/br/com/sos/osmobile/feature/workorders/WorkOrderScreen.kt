@@ -509,8 +509,7 @@ fun WorkOrderScreen(
                                         text = if (isPaymentProof) "Comprovante" else "Foto",
                                         style = MaterialTheme.typography.labelLarge,
                                     )
-                                    Text("Original: $originalFileName", style = MaterialTheme.typography.bodySmall)
-                                    Text("Arquivo salvo: ${photo.fileName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(originalFileName, style = MaterialTheme.typography.bodySmall)
                                     Text(
                                         text = "Drive: ${driveStatusText(photo.driveSyncStatus, photo.driveSyncError.orEmpty())}",
                                         style = MaterialTheme.typography.bodySmall,
