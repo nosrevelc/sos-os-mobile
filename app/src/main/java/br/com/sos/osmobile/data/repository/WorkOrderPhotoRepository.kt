@@ -75,7 +75,12 @@ class WorkOrderPhotoRepository(
             val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
         }
-        return sanitizeFileName(displayName ?: "arquivo.$fallbackExtension")
+        val uriName = source.lastPathSegment
+            ?.let(Uri::decode)
+            ?.substringAfterLast('/')
+            ?.substringAfterLast(':')
+            ?.takeIf { it.isNotBlank() }
+        return sanitizeFileName(displayName ?: uriName ?: "arquivo.$fallbackExtension")
             .let { name -> if (name.contains(".")) name else "$name.$fallbackExtension" }
     }
 

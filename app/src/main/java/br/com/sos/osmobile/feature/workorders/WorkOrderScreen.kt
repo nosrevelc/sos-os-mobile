@@ -491,6 +491,7 @@ fun WorkOrderScreen(
                 } else {
                     viewModel.photos.forEach { photo ->
                         val isPaymentProof = photo.fileName.startsWith("comprovante_")
+                        val originalFileName = attachmentOriginalName(photo.fileName)
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                             Row(
                                 modifier = Modifier
@@ -508,7 +509,8 @@ fun WorkOrderScreen(
                                         text = if (isPaymentProof) "Comprovante" else "Foto",
                                         style = MaterialTheme.typography.labelLarge,
                                     )
-                                    Text(photo.fileName, style = MaterialTheme.typography.bodySmall)
+                                    Text("Original: $originalFileName", style = MaterialTheme.typography.bodySmall)
+                                    Text("Arquivo salvo: ${photo.fileName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Text(
                                         text = "Drive: ${driveStatusText(photo.driveSyncStatus, photo.driveSyncError.orEmpty())}",
                                         style = MaterialTheme.typography.bodySmall,
@@ -1874,6 +1876,15 @@ private fun driveStatusText(status: String, error: String): String =
         error.isNotBlank() && status != "Sincronizado" -> "$status - $error"
         else -> status
     }
+
+private fun attachmentOriginalName(fileName: String): String {
+    val parts = fileName.split("_", limit = 3)
+    return if (parts.size == 3 && (parts[0] == "foto" || parts[0] == "comprovante")) {
+        parts[2]
+    } else {
+        fileName
+    }
+}
 
 @Composable
 private fun driveStatusColor(status: String): Color =
