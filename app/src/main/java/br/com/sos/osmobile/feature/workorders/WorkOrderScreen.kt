@@ -110,7 +110,6 @@ import br.com.sos.osmobile.ui.components.ShareFileButton
 import br.com.sos.osmobile.ui.components.SharePdfButton
 import br.com.sos.osmobile.ui.components.ShareTextButton
 import br.com.sos.osmobile.ui.components.ServiceProductSearchSelector
-import br.com.sos.osmobile.ui.components.WhatsAppTextButton
 import br.com.sos.osmobile.ui.components.openEmail
 import br.com.sos.osmobile.ui.components.openSms
 import br.com.sos.osmobile.ui.components.openWhatsApp
@@ -695,15 +694,6 @@ fun WorkOrderScreen(
                         }
                     }
                 }
-            }
-            viewModel.messageText?.takeIf { selectedCustomer == null || currentMessage == null }?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                ShareTextButton(label = "Compartilhar mensagem", text = it)
-                WhatsAppTextButton(phone = viewModel.messagePhone, text = it)
             }
             if (selectedCustomer != null && currentMessage != null) {
                 Text("Enviar mensagem ao cliente", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
