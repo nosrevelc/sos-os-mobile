@@ -122,7 +122,9 @@ class DriveSyncRepository(
         val root = rootFolder() ?: error("Pasta do Drive nao configurada.")
         val summary = workOrderDao.findSummaryById(workOrder.id)
         val customerName = sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
-        val customerFolder = root.findOrCreateFolder(customerName)
+        val customerPhone = sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
+        val customerFolderName = if (customerPhone.isBlank()) customerName else "${customerName}_$customerPhone"
+        val customerFolder = root.findOrCreateFolder(customerFolderName)
         val osFolder = customerFolder.findOrCreateFolder("OS-${sanitizeName(workOrder.numero)}")
         osFolder.findOrCreateFolder("Fotos")
         osFolder.findOrCreateFolder("Comprovantes")

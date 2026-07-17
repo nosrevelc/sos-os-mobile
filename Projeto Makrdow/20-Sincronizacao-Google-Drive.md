@@ -12,8 +12,8 @@ Estrutura criada pelo app:
 
 ```text
 Pasta escolhida
-└── Nome do cliente
-    └── OS-000001
+└── Nome do cliente_Telefone
+    └── OS-2607170001
         ├── Fotos
         ├── Comprovantes
         ├── Assinaturas
@@ -25,8 +25,10 @@ Pasta escolhida
 1. A OS e salva localmente primeiro.
 2. Se Drive estiver configurado e houver internet, o app cria a pasta da OS.
 3. Se nao houver internet/configuracao, a OS fica pendente.
-4. Ao anexar foto ou comprovante, o app salva localmente e tenta sincronizar no mesmo momento.
-5. Falhas nao bloqueiam o atendimento.
+4. A pasta da OS usa exatamente o numero gerado pelo sistema, por exemplo `OS-2607170001`.
+5. A pasta do cliente usa nome e telefone para evitar conflito entre clientes com nomes iguais.
+6. Ao anexar foto ou comprovante, o app salva localmente e tenta sincronizar no mesmo momento.
+7. Falhas nao bloqueiam o atendimento.
 
 ## Status de sincronizacao
 
