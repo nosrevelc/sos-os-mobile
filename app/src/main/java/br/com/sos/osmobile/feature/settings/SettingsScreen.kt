@@ -1,6 +1,7 @@
 package br.com.sos.osmobile.feature.settings
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -113,6 +114,19 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             loadBluetoothPrinters()
         } else {
             bluetoothMessage = "Permissao Bluetooth negada."
+        }
+    }
+    val driveFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        uri?.let {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }
+            viewModel.setDriveRootUri(it.toString())
         }
     }
     fun testBluetoothPrinter() {
@@ -265,6 +279,37 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         }
         Text(
             text = "Selecione uma conta configurada no Android ou use a agenda local.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Text("Google Drive", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SettingSwitch(
+            label = "Sincronizar documentos no Drive",
+            checked = settings.driveSyncEnabled,
+            onCheckedChange = viewModel::setDriveSyncEnabled,
+        )
+        OutlinedButton(
+            onClick = { driveFolderLauncher.launch(null) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(if (settings.driveRootUri.isBlank()) "Selecionar pasta do Drive" else "Alterar pasta do Drive")
+        }
+        OutlinedButton(
+            onClick = viewModel::syncDrivePending,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Sincronizar pendentes agora")
+        }
+        viewModel.driveSyncMessage?.let {
+            Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+        }
+        Text(
+            text = if (settings.driveRootUri.isBlank()) {
+                "Selecione uma pasta do Google Drive no Android. OS e anexos ficam pendentes ate configurar."
+            } else {
+                "Pasta configurada. O app cria Cliente/OS/Fotos/Comprovantes e tenta sincronizar quando houver internet."
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

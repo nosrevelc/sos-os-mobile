@@ -78,6 +78,8 @@ class SettingsRepository(
         const val PRINT_WORK_ORDER_TEXT_SIZE_KEY = "print_work_order_text_size"
         const val PRINT_WORK_ORDER_HEADER_BOLD_KEY = "print_work_order_header_bold"
         const val PRINT_WORK_ORDER_HEADER_ALIGN_KEY = "print_work_order_header_align"
+        const val DRIVE_SYNC_ENABLED_KEY = "drive_sync_enabled"
+        const val DRIVE_ROOT_URI_KEY = "drive_root_uri"
 
         fun contactRawIdKey(customerId: Long): String = "contact_raw_id_customer_$customerId"
     }

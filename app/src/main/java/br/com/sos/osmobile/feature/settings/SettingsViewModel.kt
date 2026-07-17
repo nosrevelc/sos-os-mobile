@@ -21,6 +21,8 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_I
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_IM_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_PROVIDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.FISCAL_REGIME_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.DRIVE_ROOT_URI_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.DRIVE_SYNC_ENABLED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_KEY_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PIX_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.PRINT_BLUETOOTH_ADDRESS_KEY
@@ -55,6 +57,8 @@ import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_WORK_ORDER_OPEN_KEY
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
+import br.com.sos.osmobile.data.drive.DriveSyncRepository
+import br.com.sos.osmobile.data.drive.DriveSyncResult
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -115,17 +119,23 @@ data class SettingsUiState(
     val quoteTemplate: String = MessageTemplateRenderer.quoteDefaultTemplate,
     val contactAccounts: List<ContactAccount> = emptyList(),
     val contactsMessage: String? = null,
+    val driveSyncEnabled: Boolean = false,
+    val driveRootUri: String = "",
 )
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val contactsRepository: ContactsRepository,
     private val backupRepository: BackupRepository,
+    private val driveSyncRepository: DriveSyncRepository,
 ) : ViewModel() {
     private val contactAccounts = MutableStateFlow<List<ContactAccount>>(emptyList())
     private val contactsMessage = MutableStateFlow<String?>(null)
 
     var resetMessage by mutableStateOf<String?>(null)
+        private set
+
+    var driveSyncMessage by mutableStateOf<String?>(null)
         private set
 
     val settings = combine(
@@ -194,6 +204,8 @@ class SettingsViewModel(
                 quoteTemplate = rawValues[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
                 contactAccounts = entities.second,
                 contactsMessage = entities.third,
+                driveSyncEnabled = values[DRIVE_SYNC_ENABLED_KEY] ?: false,
+                driveRootUri = rawValues[DRIVE_ROOT_URI_KEY].orEmpty(),
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -213,6 +225,28 @@ class SettingsViewModel(
     fun setContactsGoogleAccount(value: String) {
         viewModelScope.launch {
             settingsRepository.set(CONTACTS_GOOGLE_ACCOUNT_KEY, value.trim())
+        }
+    }
+
+    fun setDriveSyncEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.set(DRIVE_SYNC_ENABLED_KEY, enabled.toString())
+        }
+    }
+
+    fun setDriveRootUri(uri: String) {
+        viewModelScope.launch {
+            settingsRepository.set(DRIVE_ROOT_URI_KEY, uri)
+            settingsRepository.set(DRIVE_SYNC_ENABLED_KEY, true.toString())
+        }
+    }
+
+    fun syncDrivePending() {
+        viewModelScope.launch {
+            driveSyncMessage = when (val result = driveSyncRepository.syncAllPending()) {
+                is DriveSyncResult.Done -> "Sincronizacao concluida: ${result.syncedItems} item(ns)."
+                is DriveSyncResult.Skipped -> result.reason
+            }
         }
     }
 
@@ -417,11 +451,12 @@ class SettingsViewModel(
             repository: SettingsRepository,
             contactsRepository: ContactsRepository,
             backupRepository: BackupRepository,
+            driveSyncRepository: DriveSyncRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(repository, contactsRepository, backupRepository) as T
+                    return SettingsViewModel(repository, contactsRepository, backupRepository, driveSyncRepository) as T
                 }
             }
     }

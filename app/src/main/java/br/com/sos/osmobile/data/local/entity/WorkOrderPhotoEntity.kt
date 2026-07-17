@@ -30,6 +30,12 @@ data class WorkOrderPhotoEntity(
     val relativePath: String,
     @ColumnInfo(name = "mime_type")
     val mimeType: String,
+    @ColumnInfo(name = "drive_file_uri")
+    val driveFileUri: String? = null,
+    @ColumnInfo(name = "drive_sync_status")
+    val driveSyncStatus: String = DriveSyncStatus.PENDING,
+    @ColumnInfo(name = "drive_sync_error")
+    val driveSyncError: String? = null,
     @ColumnInfo(name = "data_criacao")
     val createdAt: Long,
 )

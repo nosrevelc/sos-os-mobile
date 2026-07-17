@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import br.com.sos.osmobile.data.local.entity.WorkOrderEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderItemEntity
+import br.com.sos.osmobile.data.local.entity.DriveSyncStatus
 import br.com.sos.osmobile.data.local.model.DocumentItem
 import br.com.sos.osmobile.data.local.model.WorkOrderServiceUsage
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
@@ -46,6 +47,21 @@ interface WorkOrderDao {
 
     @Query("SELECT * FROM ordens_servico WHERE id_os = :id")
     suspend fun findById(id: Long): WorkOrderEntity?
+
+    @Query("SELECT * FROM ordens_servico WHERE drive_sync_status != :syncedStatus ORDER BY data_abertura ASC")
+    suspend fun listPendingDriveSync(syncedStatus: String = DriveSyncStatus.SYNCED): List<WorkOrderEntity>
+
+    @Query(
+        """
+        UPDATE ordens_servico
+        SET drive_folder_uri = :folderUri,
+            drive_sync_status = :status,
+            drive_sync_error = :error,
+            data_atualizacao = :updatedAt
+        WHERE id_os = :id
+        """,
+    )
+    suspend fun updateDriveSync(id: Long, folderUri: String?, status: String, error: String?, updatedAt: Long)
 
     @Query(
         """

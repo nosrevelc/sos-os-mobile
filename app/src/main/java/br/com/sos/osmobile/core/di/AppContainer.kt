@@ -6,6 +6,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import br.com.sos.osmobile.core.database.AppDatabase
 import br.com.sos.osmobile.data.backup.BackupRepository
+import br.com.sos.osmobile.data.drive.DriveSyncRepository
 import br.com.sos.osmobile.data.repository.AuditRepository
 import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
@@ -221,6 +222,17 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration13To14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN drive_folder_uri TEXT")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN drive_sync_status TEXT NOT NULL DEFAULT 'Pendente'")
+            db.execSQL("ALTER TABLE ordens_servico ADD COLUMN drive_sync_error TEXT")
+            db.execSQL("ALTER TABLE fotos_os ADD COLUMN drive_file_uri TEXT")
+            db.execSQL("ALTER TABLE fotos_os ADD COLUMN drive_sync_status TEXT NOT NULL DEFAULT 'Pendente'")
+            db.execSQL("ALTER TABLE fotos_os ADD COLUMN drive_sync_error TEXT")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -239,6 +251,7 @@ class AppContainer(context: Context) {
             migration10To11,
             migration11To12,
             migration12To13,
+            migration13To14,
         )
         .build()
 
@@ -274,5 +287,16 @@ class AppContainer(context: Context) {
         database.workOrderPaymentDao(),
         auditRepository,
     )
+    val driveSyncRepository = DriveSyncRepository(
+        context.applicationContext,
+        database.workOrderDao(),
+        database.workOrderPhotoDao(),
+        settingsRepository,
+        auditRepository,
+    )
     val backupRepository = BackupRepository(database, context.applicationContext)
+
+    init {
+        driveSyncRepository.startAutoSync()
+    }
 }

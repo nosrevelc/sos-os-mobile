@@ -269,6 +269,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
                             stockRepository = appContainer.stockRepository,
+                            driveSyncRepository = appContainer.driveSyncRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel)
@@ -287,6 +288,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
                             stockRepository = appContainer.stockRepository,
+                            driveSyncRepository = appContainer.driveSyncRepository,
                         ),
                     )
                     WorkOrderListScreen(
@@ -308,6 +310,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
                             stockRepository = appContainer.stockRepository,
+                            driveSyncRepository = appContainer.driveSyncRepository,
                         ),
                     )
                     WorkOrderPickupScreen(viewModel = workOrderViewModel)
@@ -368,6 +371,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             warrantyRepository = appContainer.workOrderWarrantyRepository,
                             paymentRepository = appContainer.workOrderPaymentRepository,
                             stockRepository = appContainer.stockRepository,
+                            driveSyncRepository = appContainer.driveSyncRepository,
                         ),
                     )
                     WorkOrderScreen(viewModel = workOrderViewModel, initialEditId = id)
@@ -384,6 +388,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                             repository = appContainer.settingsRepository,
                             contactsRepository = appContainer.contactsRepository,
                             backupRepository = appContainer.backupRepository,
+                            driveSyncRepository = appContainer.driveSyncRepository,
                         ),
                     )
                     SettingsScreen(viewModel = settingsViewModel)

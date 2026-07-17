@@ -61,6 +61,12 @@ data class WorkOrderEntity(
     val fiscalKey: String? = null,
     @ColumnInfo(name = "protocolo_fiscal")
     val fiscalProtocol: String? = null,
+    @ColumnInfo(name = "drive_folder_uri")
+    val driveFolderUri: String? = null,
+    @ColumnInfo(name = "drive_sync_status")
+    val driveSyncStatus: String = DriveSyncStatus.PENDING,
+    @ColumnInfo(name = "drive_sync_error")
+    val driveSyncError: String? = null,
     @ColumnInfo(name = "data_atualizacao")
     val updatedAt: Long,
 )
@@ -71,4 +77,11 @@ object FiscalStatus {
     const val AUTHORIZED = "Autorizada"
     const val REJECTED = "Rejeitada"
     const val CANCELED = "Cancelada"
+}
+
+object DriveSyncStatus {
+    const val PENDING = "Pendente"
+    const val SYNCED = "Sincronizado"
+    const val ERROR = "Erro"
+    const val NOT_CONFIGURED = "Sem configuracao"
 }

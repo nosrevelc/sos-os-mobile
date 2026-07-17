@@ -18,6 +18,7 @@ import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductType
 import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
+import br.com.sos.osmobile.data.drive.DriveSyncRepository
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
 import br.com.sos.osmobile.data.model.DeliveryStatus
@@ -150,6 +151,7 @@ class WorkOrderViewModel(
     private val warrantyRepository: WorkOrderWarrantyRepository,
     private val paymentRepository: WorkOrderPaymentRepository,
     private val stockRepository: StockRepository,
+    private val driveSyncRepository: DriveSyncRepository,
 ) : ViewModel() {
     val uiState: StateFlow<WorkOrderUiState> = combine(
         customerRepository.observeActive(),
@@ -406,6 +408,7 @@ class WorkOrderViewModel(
                     paymentRepository.addPayment(createdId, initialPayment, initialPaymentMethod, initialPaymentNote)
                 }
                 editWorkOrder(createdId, "OS criada com sucesso.")
+                driveSyncRepository.syncWorkOrder(createdId)
                 onSaved?.invoke(createdId)
             } else {
                 val updated = workOrderRepository.updateContent(
@@ -591,7 +594,9 @@ class WorkOrderViewModel(
         }
         viewModelScope.launch {
             runCatching {
-                photoRepository.addPhoto(workOrderId, uri, isPaymentProof)
+                val photoId = photoRepository.addPhoto(workOrderId, uri, isPaymentProof)
+                driveSyncRepository.syncWorkOrder(workOrderId)
+                driveSyncRepository.syncPhoto(photoId)
                 loadPhotos(workOrderId)
             }.onSuccess {
                 formState = formState.copy(message = if (isPaymentProof) "Comprovante anexado." else "Foto adicionada.")
@@ -836,6 +841,7 @@ class WorkOrderViewModel(
             warrantyRepository: WorkOrderWarrantyRepository,
             paymentRepository: WorkOrderPaymentRepository,
             stockRepository: StockRepository,
+            driveSyncRepository: DriveSyncRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -852,6 +858,7 @@ class WorkOrderViewModel(
                         warrantyRepository = warrantyRepository,
                         paymentRepository = paymentRepository,
                         stockRepository = stockRepository,
+                        driveSyncRepository = driveSyncRepository,
                     ) as T
                 }
             }
