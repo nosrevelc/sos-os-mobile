@@ -72,6 +72,43 @@ class DriveSyncRepository(
         }
     }
 
+    suspend fun importDesignFiles(workOrderId: Long): Result<DriveImportResult> = syncMutex.withLock {
+        val workOrder = workOrderDao.findById(workOrderId)
+            ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
+        if (!isConfigured()) return Result.failure(IllegalStateException("Drive nao configurado."))
+        if (!isOnline()) return Result.failure(IllegalStateException("Sem internet."))
+        runCatching {
+            val workOrderFolder = ensureWorkOrderFolders(workOrder)
+            markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, workOrderFolder.toString())
+            val designFolder = ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
+            val existingPhotos = photoDao.listByWorkOrderAsc(workOrder.id)
+            val remoteFiles = findChildren(designFolder).filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
+            var imported = 0
+            var alreadyImported = 0
+            remoteFiles.forEach { file ->
+                if (existingPhotos.any { it.driveFileUri == file.uri.toString() || it.fileName.endsWith("_${sanitizeFileName(file.name)}") }) {
+                    alreadyImported++
+                } else {
+                    importDriveFileAsDocument(workOrder.id, file)
+                    imported++
+                }
+            }
+            auditRepository.record(
+                module = "Google Drive",
+                action = "Arquivos de design importados",
+                table = "ordens_servico",
+                recordId = workOrder.id,
+                details = "importados=$imported, existentes=$alreadyImported",
+            )
+            DriveImportResult(
+                folderName = DRIVE_DESIGN_FOLDER,
+                foundFiles = remoteFiles.size,
+                importedFiles = imported,
+                alreadyImportedFiles = alreadyImported,
+            )
+        }
+    }
+
     private suspend fun syncWorkOrderLocked(workOrderId: Long): Result<Unit> {
         val workOrder = workOrderDao.findById(workOrderId) ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
         if (!isConfigured()) {
@@ -227,6 +264,30 @@ class DriveSyncRepository(
         }.onFailure {
             signatureDao.updateDriveSync(signature.id, null, DriveSyncStatus.ERROR, it.message ?: "Falha ao sincronizar assinatura.")
         }
+    }
+
+    private suspend fun importDriveFileAsDocument(workOrderId: Long, file: DriveChild) {
+        val now = Clock.nowMillis()
+        val originalName = sanitizeFileName(file.name)
+        val mimeType = file.mimeType.ifBlank { mimeTypeFromFileName(originalName) }
+        val targetName = "documento_${now}_${DRIVE_DESIGN_FOLDER}_$originalName"
+        val relativePath = "work_order_photos/$workOrderId/$targetName"
+        val targetFile = File(context.filesDir, relativePath).apply { parentFile?.mkdirs() }
+        context.contentResolver.openInputStream(file.uri)?.use { input ->
+            targetFile.outputStream().use { output -> input.copyTo(output) }
+        } ?: error("Nao foi possivel abrir ${file.name} no Drive.")
+        photoDao.insert(
+            WorkOrderPhotoEntity(
+                workOrderId = workOrderId,
+                fileName = targetName,
+                relativePath = relativePath,
+                mimeType = mimeType,
+                driveFileUri = file.uri.toString(),
+                driveSyncStatus = DriveSyncStatus.SYNCED,
+                driveSyncError = null,
+                createdAt = now,
+            ),
+        )
     }
 
     private suspend fun revalidateSyncedItems() {
@@ -651,8 +712,32 @@ class DriveSyncRepository(
     private fun sanitizeName(value: String): String =
         value.replace(Regex("[\\\\/:*?\"<>|]"), "-").trim().take(80).ifBlank { "Sem nome" }
 
+    private fun sanitizeFileName(value: String): String =
+        value
+            .replace(Regex("[\\\\/:*?\"<>|]"), "-")
+            .replace(Regex("\\s+"), "_")
+            .trim('.', '_', ' ')
+            .take(90)
+            .ifBlank { "arquivo" }
+
+    private fun mimeTypeFromFileName(fileName: String): String =
+        when (fileName.substringAfterLast('.', "").lowercase()) {
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "webp" -> "image/webp"
+            "pdf" -> "application/pdf"
+            "svg" -> "image/svg+xml"
+            "ai" -> "application/postscript"
+            "cdr" -> "application/octet-stream"
+            else -> "application/octet-stream"
+        }
+
     private fun isDocumentAttachment(fileName: String): Boolean =
         fileName.startsWith("documento_") || fileName.startsWith("comprovante_")
+
+    private companion object {
+        const val DRIVE_DESIGN_FOLDER = "Design"
+    }
 }
 
 private data class WorkOrderDriveFolders(
@@ -692,4 +777,11 @@ data class DriveSmartSyncResult(
 data class DriveValidationResult(
     val checked: Boolean,
     val missingItems: Int,
+)
+
+data class DriveImportResult(
+    val folderName: String,
+    val foundFiles: Int,
+    val importedFiles: Int,
+    val alreadyImportedFiles: Int,
 )

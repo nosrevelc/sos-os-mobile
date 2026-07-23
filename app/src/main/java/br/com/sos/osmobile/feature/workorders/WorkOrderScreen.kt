@@ -521,6 +521,13 @@ fun WorkOrderScreen(
                     Icon(Icons.Filled.AttachFile, contentDescription = null)
                     Text("Anexar documento")
                 }
+                OutlinedButton(
+                    onClick = viewModel::importDesignFromDriveNow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.CloudUpload, contentDescription = null)
+                    Text("Importar Design do Drive")
+                }
                 if (viewModel.photos.isEmpty()) {
                     Text("Nenhum anexo adicionado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {

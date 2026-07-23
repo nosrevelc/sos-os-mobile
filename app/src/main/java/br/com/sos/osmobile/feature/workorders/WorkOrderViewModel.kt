@@ -654,6 +654,31 @@ class WorkOrderViewModel(
         }
     }
 
+    fun importDesignFromDriveNow() {
+        val workOrderId = formState.editingId ?: run {
+            formState = formState.copy(message = "Salve a OS antes de importar arquivos do Drive.")
+            return
+        }
+        viewModelScope.launch {
+            formState = formState.copy(message = "Buscando arquivos na pasta Design do Drive...")
+            val result = driveSyncRepository.importDesignFiles(workOrderId)
+            loadPhotos(workOrderId)
+            refreshDriveStatus(workOrderId)
+            formState = formState.copy(
+                message = result.fold(
+                    onSuccess = {
+                        if (it.foundFiles == 0) {
+                            "Pasta Design pronta no Drive. Coloque os arquivos nela e toque em importar novamente."
+                        } else {
+                            "Design importado: ${it.importedFiles} novo(s), ${it.alreadyImportedFiles} ja existente(s)."
+                        }
+                    },
+                    onFailure = { "Falha ao importar Design do Drive: ${it.message.orEmpty()}" },
+                ),
+            )
+        }
+    }
+
     fun buildDriveDebugReport() {
         val workOrderId = formState.editingId ?: run {
             formState = formState.copy(message = "Salve a OS antes de gerar debug do Drive.")

@@ -16,6 +16,7 @@ Pasta escolhida
     └── OS-2607170001
         ├── Imagens
         ├── Documentos
+        ├── Design
         └── Assinaturas
 ```
 
@@ -29,6 +30,28 @@ Pasta escolhida
 6. Ao anexar imagem ou documento, o app salva localmente e tenta sincronizar no mesmo momento.
 7. Ao anexar documento, o app pergunta qual documento se trata antes de abrir o seletor de arquivo.
 8. Falhas nao bloqueiam o atendimento.
+
+## Importacao manual de arquivos do Drive para a OS
+
+Alguns arquivos podem ser criados fora do aplicativo, por exemplo artes, layouts e arquivos de design feitos em computador. Para isso a OS possui uma pasta de entrada no Drive:
+
+```text
+Pasta escolhida
+└── Nome do cliente_Telefone
+    └── OS-2607170001
+        └── Design
+```
+
+Regra da funcionalidade:
+
+1. O app nao baixa arquivos do Drive em segundo plano.
+2. Na tela da OS existe o botao `Importar Design do Drive`.
+3. Ao tocar no botao, o app cria a pasta `Design` se ela ainda nao existir.
+4. Se a pasta estiver vazia, o app informa o usuario para colocar os arquivos nela e tentar novamente.
+5. Se houver arquivos, o app baixa para o armazenamento local e registra como documento da OS.
+6. Arquivos ja importados nao sao duplicados.
+7. O retorno ao usuario deve informar quantos arquivos foram importados e quantos ja existiam.
+8. Os arquivos importados passam a aparecer na lista de anexos da OS junto com documentos e imagens.
 
 ## Status de sincronizacao
 
