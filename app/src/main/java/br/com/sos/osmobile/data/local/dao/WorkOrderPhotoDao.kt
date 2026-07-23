@@ -51,6 +51,8 @@ interface WorkOrderPhotoDao {
             drive_sync_status = :status,
             drive_sync_error = NULL
         WHERE id_os = :workOrderId
+            AND nome_arquivo NOT LIKE 'design_%'
+            AND nome_arquivo NOT LIKE 'documento_%_Design_%'
         """,
     )
     suspend fun resetDriveSyncByWorkOrder(workOrderId: Long, status: String = DriveSyncStatus.PENDING)

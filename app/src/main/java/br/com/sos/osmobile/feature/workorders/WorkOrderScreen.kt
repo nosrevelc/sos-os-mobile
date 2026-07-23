@@ -532,6 +532,7 @@ fun WorkOrderScreen(
                     Text("Nenhum anexo adicionado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     viewModel.photos.forEach { photo ->
+                        val isDesign = isDesignAttachment(photo.fileName)
                         val isDocument = isDocumentAttachment(photo.fileName)
                         val documentLabel = attachmentDocumentDescription(photo.fileName)
                         val originalFileName = attachmentOriginalName(photo.fileName)
@@ -544,12 +545,20 @@ fun WorkOrderScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = if (isDocument) Icons.Filled.Description else Icons.Filled.PhotoCamera,
-                                    contentDescription = if (isDocument) "Documento" else "Imagem",
+                                    imageVector = if (isDesign || isDocument) Icons.Filled.Description else Icons.Filled.PhotoCamera,
+                                    contentDescription = when {
+                                        isDesign -> "Design"
+                                        isDocument -> "Documento"
+                                        else -> "Imagem"
+                                    },
                                 )
                                 Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
                                     Text(
-                                        text = if (isDocument) "Documento${documentLabel?.let { ": $it" }.orEmpty()}" else "Imagem",
+                                        text = when {
+                                            isDesign -> "Design"
+                                            isDocument -> "Documento${documentLabel?.let { ": $it" }.orEmpty()}"
+                                            else -> "Imagem"
+                                        },
                                         style = MaterialTheme.typography.labelLarge,
                                     )
                                     Row(
@@ -2056,7 +2065,14 @@ private fun driveStatusIcon(status: String): ImageVector =
     }
 
 private fun attachmentOriginalName(fileName: String): String {
+    val designParts = fileName.split("_", limit = 3)
+    if (designParts.size == 3 && designParts[0] == "design") {
+        return designParts[2]
+    }
     val documentParts = fileName.split("_", limit = 4)
+    if (documentParts.size == 4 && documentParts[0] == "documento" && documentParts[2] == "Design") {
+        return documentParts[3]
+    }
     if (documentParts.size == 4 && documentParts[0] == "documento") {
         return documentParts[3]
     }
@@ -2069,7 +2085,7 @@ private fun attachmentOriginalName(fileName: String): String {
 
 private fun attachmentDocumentDescription(fileName: String): String? {
     val parts = fileName.split("_", limit = 4)
-    return if (parts.size == 4 && parts[0] == "documento") {
+    return if (parts.size == 4 && parts[0] == "documento" && parts[2] != "Design") {
         parts[2].replace("-", " ").takeIf { it.isNotBlank() }
     } else {
         null
@@ -2077,7 +2093,11 @@ private fun attachmentDocumentDescription(fileName: String): String? {
 }
 
 private fun isDocumentAttachment(fileName: String): Boolean =
-    fileName.startsWith("documento_") || fileName.startsWith("comprovante_")
+    (fileName.startsWith("documento_") && !isDesignAttachment(fileName)) || fileName.startsWith("comprovante_")
+
+private fun isDesignAttachment(fileName: String): Boolean =
+    fileName.startsWith("design_") ||
+        (fileName.startsWith("documento_") && fileName.split("_", limit = 4).getOrNull(2) == "Design")
 
 @Composable
 private fun driveStatusColor(status: String): Color =

@@ -128,6 +128,7 @@ class DriveSyncRepository(
             }
             val folders = syncWorkOrderFolder(workOrder)
             val failures = photoDao.listPendingDriveSyncByWorkOrder(workOrder.id)
+                .filterNot { isDesignAttachment(it.fileName) }
                 .mapNotNull { syncPhoto(it, folders).exceptionOrNull()?.message }
                 .toMutableList()
             signatureDao.findByWorkOrder(workOrder.id)
@@ -165,6 +166,7 @@ class DriveSyncRepository(
         return runCatching {
             val folders = syncWorkOrderFolder(workOrder)
             val failures = photoDao.listByWorkOrderAsc(workOrder.id)
+                .filterNot { isDesignAttachment(it.fileName) }
                 .mapNotNull { syncPhoto(it, folders).exceptionOrNull()?.message }
                 .toMutableList()
             signatureDao.findByWorkOrder(workOrder.id)
@@ -201,6 +203,13 @@ class DriveSyncRepository(
             return Result.failure(IllegalStateException("Sem internet."))
         }
         return runCatching {
+            if (isDesignAttachment(photo.fileName)) {
+                if (!photo.driveFileUri.isNullOrBlank() && documentExists(photo.driveFileUri)) {
+                    photoDao.updateDriveSync(photo.id, photo.driveFileUri, DriveSyncStatus.SYNCED, null)
+                    return@runCatching
+                }
+                error("Arquivo Design importado do Drive nao deve ser reenviado para Documentos ou Imagens.")
+            }
             val workOrder = workOrderDao.findById(photo.workOrderId) ?: error("OS nao encontrada.")
             val driveFolders = folders ?: syncWorkOrderFolder(workOrder)
             val localFile = File(context.filesDir, photo.relativePath)
@@ -270,7 +279,7 @@ class DriveSyncRepository(
         val now = Clock.nowMillis()
         val originalName = sanitizeFileName(file.name)
         val mimeType = file.mimeType.ifBlank { mimeTypeFromFileName(originalName) }
-        val targetName = "documento_${now}_${DRIVE_DESIGN_FOLDER}_$originalName"
+        val targetName = "design_${now}_$originalName"
         val relativePath = "work_order_photos/$workOrderId/$targetName"
         val targetFile = File(context.filesDir, relativePath).apply { parentFile?.mkdirs() }
         context.contentResolver.openInputStream(file.uri)?.use { input ->
@@ -317,12 +326,13 @@ class DriveSyncRepository(
             photoDao.resetDriveSyncByWorkOrder(workOrder.id)
             signatureDao.resetDriveSyncByWorkOrder(workOrder.id)
             clearStoredSubFolders(workOrder.id)
-            val signatureMissing = if (signatureDao.findByWorkOrder(workOrder.id) != null) 1 else 0
-            return DriveValidationResult(
-                checked = true,
-                missingItems = 1 + photoDao.listByWorkOrderAsc(workOrder.id).size + signatureMissing,
-            )
-        }
+                val signatureMissing = if (signatureDao.findByWorkOrder(workOrder.id) != null) 1 else 0
+                val uploadablePhotoMissing = photoDao.listByWorkOrderAsc(workOrder.id).count { !isDesignAttachment(it.fileName) }
+                return DriveValidationResult(
+                    checked = true,
+                    missingItems = 1 + uploadablePhotoMissing + signatureMissing,
+                )
+            }
 
         photoDao.listByWorkOrderAsc(workOrderId)
             .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED }
@@ -368,9 +378,14 @@ class DriveSyncRepository(
     }
 
     private suspend fun drivePhotoExistsInExpectedFolder(workOrderFolder: Uri, photo: WorkOrderPhotoEntity): Boolean {
-        val folderName = if (isDocumentAttachment(photo.fileName)) "Documentos" else "Imagens"
+        val folderName = when {
+            isDesignAttachment(photo.fileName) -> DRIVE_DESIGN_FOLDER
+            isDocumentAttachment(photo.fileName) -> "Documentos"
+            else -> "Imagens"
+        }
         val targetFolder = findExistingNamedFolder(photo.workOrderId, workOrderFolder, folderName) ?: return false
         return findChildFile(targetFolder, photo.fileName) != null
+            || photo.driveFileUri?.takeIf { it.isNotBlank() }?.let(::documentExists) == true
     }
 
     private suspend fun driveSignatureExistsInExpectedFolder(workOrderFolder: Uri, signature: WorkOrderSignatureEntity): Boolean {
@@ -734,6 +749,10 @@ class DriveSyncRepository(
 
     private fun isDocumentAttachment(fileName: String): Boolean =
         fileName.startsWith("documento_") || fileName.startsWith("comprovante_")
+
+    private fun isDesignAttachment(fileName: String): Boolean =
+        fileName.startsWith("design_") ||
+            (fileName.startsWith("documento_") && fileName.split("_", limit = 4).getOrNull(2) == DRIVE_DESIGN_FOLDER)
 
     private companion object {
         const val DRIVE_DESIGN_FOLDER = "Design"

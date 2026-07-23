@@ -50,8 +50,10 @@ Regra da funcionalidade:
 4. Se a pasta estiver vazia, o app informa o usuario para colocar os arquivos nela e tentar novamente.
 5. Se houver arquivos, o app baixa para o armazenamento local e registra como documento da OS.
 6. Arquivos ja importados nao sao duplicados.
-7. O retorno ao usuario deve informar quantos arquivos foram importados e quantos ja existiam.
-8. Os arquivos importados passam a aparecer na lista de anexos da OS junto com documentos e imagens.
+7. O arquivo importado recebe tipo visual `Design` e status `Sincronizado`.
+8. Arquivo `Design` nao entra na fila de envio para as pastas `Documentos` ou `Imagens`.
+9. O retorno ao usuario deve informar quantos arquivos foram importados e quantos ja existiam.
+10. Os arquivos importados passam a aparecer na lista de anexos da OS junto com documentos e imagens, mas sem serem confundidos com eles.
 
 ## Status de sincronizacao
 
