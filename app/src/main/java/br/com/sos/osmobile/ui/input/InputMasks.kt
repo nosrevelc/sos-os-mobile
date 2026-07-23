@@ -8,13 +8,23 @@ object InputMasks {
         value.filter(Char::isDigit).take(maxLength)
 
     fun phone(value: String): String {
-        val digits = digits(value, 11)
+        val digits = brazilianPhoneDigits(value)
         return when {
             digits.length <= 2 -> digits
             digits.length <= 6 -> "(${digits.take(2)}) ${digits.drop(2)}"
             digits.length <= 10 -> "(${digits.take(2)}) ${digits.substring(2, 6)}-${digits.drop(6)}"
             else -> "(${digits.take(2)}) ${digits.substring(2, 7)}-${digits.drop(7)}"
         }
+    }
+
+    private fun brazilianPhoneDigits(value: String): String {
+        val rawDigits = digits(value)
+        val withoutInternationalPrefix = when {
+            rawDigits.startsWith("0055") && rawDigits.length > 12 -> rawDigits.drop(4)
+            rawDigits.startsWith("55") && rawDigits.length > 11 -> rawDigits.drop(2)
+            else -> rawDigits
+        }
+        return withoutInternationalPrefix.take(11)
     }
 
     fun cpfCnpj(value: String): String {
