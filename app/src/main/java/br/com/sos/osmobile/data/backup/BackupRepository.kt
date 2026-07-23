@@ -1,6 +1,8 @@
 package br.com.sos.osmobile.data.backup
 
 import android.content.Context
+import android.net.Uri
+import android.provider.DocumentsContract
 import android.util.Base64
 import br.com.sos.osmobile.core.database.AppDatabase
 import br.com.sos.osmobile.core.time.Clock
@@ -21,8 +23,12 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderPhotoEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderSignatureEntity
 import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.DRIVE_ROOT_URI_KEY
 import androidx.room.withTransaction
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import org.json.JSONObject
 
 data class BackupImportResult(
@@ -48,9 +54,22 @@ data class OperationalResetResult(
     val workOrders: Int,
 )
 
+data class DriveBackupFile(
+    val name: String,
+    val uri: String,
+    val sizeBytes: Long?,
+    val modifiedAt: Long?,
+)
+
+data class DriveBackupSaveResult(
+    val name: String,
+    val sizeBytes: Long,
+)
+
 class BackupRepository(
     private val database: AppDatabase,
     private val context: Context,
+    private val settingsRepository: SettingsRepository,
 ) {
     suspend fun exportSettingsJson(): String {
         val settings = database.settingsDao().listAll()
@@ -64,6 +83,7 @@ class BackupRepository(
     }
 
     suspend fun exportJson(): String {
+        val settings = database.settingsDao().listAll().filter { it.chave.isPortableBackupSetting() }
         val customers = database.customerDao().listAll()
         val services = database.serviceProductDao().listAll()
         val quotes = database.quoteDao().listAll()
@@ -81,6 +101,9 @@ class BackupRepository(
 
         return buildString {
             appendLine("{")
+            appendLine("\"tipo\":\"backup_completo\",")
+            appendLine("\"geradoEm\":${Clock.nowMillis()},")
+            appendLine("\"configuracoes\":${settings.joinToString(prefix = "[", postfix = "]") { """{"chave":${str(it.chave)},"valor":${str(it.valor)},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"clientes\":${customers.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"nome":${str(it.nome)},"cpfCnpj":${str(it.cpfCnpj)},"telefone":${str(it.telefone)},"email":${str(it.email)},"endereco":${str(it.endereco)},"observacoes":${str(it.observacoes)},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"servicos_produtos\":${services.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"codigo":${str(it.codigo)},"nome":${str(it.nome)},"tipo":${str(it.tipo)},"categoria":${str(it.categoria)},"descricao":${str(it.descricao)},"unitPrice":${it.unitPrice},"minimumStock":${it.minimumStock},"ncm":${str(it.ncm)},"cfop":${str(it.cfop)},"unidade":${str(it.unidade)},"cstCsosn":${str(it.cstCsosn)},"ativo":${it.ativo},"createdAt":${it.createdAt},"updatedAt":${it.updatedAt}}""" }},")
             appendLine("\"orcamentos\":${quotes.joinToString(prefix = "[", postfix = "]") { """{"id":${it.id},"numero":${str(it.numero)},"customerId":${it.customerId},"createdAt":${it.createdAt},"validUntil":${it.validUntil ?: "null"},"status":${str(it.status)},"observacoes":${str(it.observacoes)},"totalValue":${it.totalValue},"discountValue":${it.discountValue},"minimumDepositValue":${it.minimumDepositValue},"updatedAt":${it.updatedAt}}""" }},")
@@ -102,6 +125,13 @@ class BackupRepository(
     suspend fun importJson(json: String): BackupImportResult {
         val root = JSONObject(json)
         val now = Clock.nowMillis()
+        val settings = root.optionalArray("configuracoes").mapObjects { item ->
+            AppSettingEntity(
+                chave = item.getString("chave"),
+                valor = item.getString("valor"),
+                updatedAt = item.optLong("updatedAt", now),
+            )
+        }.filter { it.chave.isPortableBackupSetting() }
         val customers = root.array("clientes").mapObjects { item ->
             CustomerEntity(
                 id = item.requiredId(),
@@ -294,6 +324,7 @@ class BackupRepository(
             database.workOrderDao().deleteAll()
             database.serviceProductDao().deleteAll()
             database.customerDao().deleteAll()
+            if (settings.isNotEmpty()) database.settingsDao().upsertAll(settings)
             database.customerDao().upsertBackup(customers)
             database.serviceProductDao().upsertBackup(services)
             database.quoteDao().upsertBackup(quotes)
@@ -324,6 +355,40 @@ class BackupRepository(
             quotes = quotes.size,
             workOrders = workOrders.size,
         )
+    }
+
+    suspend fun saveFullBackupToDrive(): DriveBackupSaveResult {
+        val root = driveRootFolderUri()
+        val backupsFolder = findOrCreateDirectory(root, "Backups")
+        val content = exportJson()
+        val fileName = "backup_completo_${backupTimestamp()}.json"
+        val fileUri = DocumentsContract.createDocument(
+            context.contentResolver,
+            backupsFolder,
+            "application/json",
+            fileName,
+        ) ?: error("Nao foi possivel criar o arquivo de backup no Drive.")
+        context.contentResolver.openOutputStream(fileUri, "wt")?.use { output ->
+            output.write(content.toByteArray(Charsets.UTF_8))
+        } ?: error("Nao foi possivel escrever o backup no Drive.")
+        val savedSize = documentSize(fileUri) ?: content.toByteArray(Charsets.UTF_8).size.toLong()
+        require(findChildFile(backupsFolder, fileName) != null) { "Backup enviado, mas nao confirmado na pasta Backups." }
+        return DriveBackupSaveResult(fileName, savedSize)
+    }
+
+    suspend fun listDriveBackups(): List<DriveBackupFile> {
+        val root = driveRootFolderUri()
+        val backupsFolder = findOrCreateDirectory(root, "Backups")
+        return listChildFiles(backupsFolder)
+            .filter { it.name.endsWith(".json", ignoreCase = true) }
+            .sortedWith(compareByDescending<DriveBackupFile> { it.modifiedAt ?: 0L }.thenByDescending { it.name })
+    }
+
+    suspend fun restoreDriveBackup(uri: String): BackupImportResult {
+        val content = context.contentResolver.openInputStream(Uri.parse(uri))?.use { input ->
+            input.bufferedReader(Charsets.UTF_8).readText()
+        } ?: error("Nao foi possivel abrir o backup selecionado.")
+        return importJson(content)
     }
 
     suspend fun importSettingsJson(json: String): SettingsBackupImportResult {
@@ -590,4 +655,93 @@ class BackupRepository(
     private fun deleteFilesDir(relativePath: String) {
         File(context.filesDir, relativePath).deleteRecursively()
     }
+
+    private suspend fun driveRootFolderUri(): Uri {
+        val uri = settingsRepository.getString(DRIVE_ROOT_URI_KEY)?.takeIf { it.isNotBlank() }
+            ?: error("Configure primeiro a pasta do Google Drive em Configuracoes.")
+        val treeUri = Uri.parse(uri)
+        return DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
+    }
+
+    private fun findOrCreateDirectory(parent: Uri, name: String): Uri =
+        findChild(parent, name, DocumentsContract.Document.MIME_TYPE_DIR)
+            ?: DocumentsContract.createDocument(context.contentResolver, parent, DocumentsContract.Document.MIME_TYPE_DIR, name)
+            ?: error("Nao foi possivel criar pasta $name no Drive.")
+
+    private fun findChildFile(parent: Uri, name: String): Uri? =
+        findChild(parent, name, expectedMimeType = null)
+
+    private fun findChild(parent: Uri, name: String, expectedMimeType: String?): Uri? {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(parent, DocumentsContract.getDocumentId(parent))
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+        )
+        return context.contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            val mimeIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+            var found: Uri? = null
+            while (found == null && cursor.moveToNext()) {
+                val childName = cursor.getString(nameIndex).orEmpty()
+                val mimeType = cursor.getString(mimeIndex).orEmpty()
+                val mimeMatches = expectedMimeType == null || mimeType == expectedMimeType
+                if (childName == name && mimeMatches) {
+                    found = DocumentsContract.buildDocumentUriUsingTree(parent, cursor.getString(idIndex))
+                }
+            }
+            found
+        }
+    }
+
+    private fun listChildFiles(parent: Uri): List<DriveBackupFile> {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(parent, DocumentsContract.getDocumentId(parent))
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+        )
+        return context.contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+            val idIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+            val nameIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            val mimeIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+            val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
+            val modifiedIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+            buildList {
+                while (cursor.moveToNext()) {
+                    val mimeType = cursor.getString(mimeIndex).orEmpty()
+                    if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                    add(
+                        DriveBackupFile(
+                            name = cursor.getString(nameIndex).orEmpty(),
+                            uri = DocumentsContract.buildDocumentUriUsingTree(parent, cursor.getString(idIndex)).toString(),
+                            sizeBytes = if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else null,
+                            modifiedAt = if (modifiedIndex >= 0 && !cursor.isNull(modifiedIndex)) cursor.getLong(modifiedIndex) else null,
+                        ),
+                    )
+                }
+            }
+        }.orEmpty()
+    }
+
+    private fun documentSize(uri: Uri): Long? {
+        val projection = arrayOf(DocumentsContract.Document.COLUMN_SIZE)
+        return context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
+            if (sizeIndex < 0 || cursor.isNull(sizeIndex)) null else cursor.getLong(sizeIndex)
+        }
+    }
+
+    private fun backupTimestamp(): String =
+        SimpleDateFormat("yyyyMMdd_HHmmss", Locale("pt", "BR")).format(Date(Clock.nowMillis()))
+
+    private fun String.isPortableBackupSetting(): Boolean =
+        this != SettingsRepository.DRIVE_ROOT_URI_KEY &&
+            !startsWith("drive_subfolder_") &&
+            !startsWith("drive_work_order_") &&
+            !startsWith("contact_raw_id_customer_")
 }

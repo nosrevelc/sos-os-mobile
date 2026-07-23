@@ -54,7 +54,7 @@ import br.com.sos.osmobile.data.local.entity.WorkOrderWarrantyEntity
         WorkOrderPaymentEntity::class,
         AppointmentEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

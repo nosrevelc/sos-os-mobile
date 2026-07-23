@@ -3,12 +3,15 @@ package br.com.sos.osmobile.feature.workorders
 import android.Manifest
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,11 +84,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -131,6 +138,7 @@ fun WorkOrderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val form = viewModel.formState
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     var pendingStatusMessage by remember { mutableStateOf<ClientMessage?>(null) }
     var pendingPixMessage by remember { mutableStateOf<ClientMessage?>(null) }
@@ -494,21 +502,10 @@ fun WorkOrderScreen(
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
             }
             if (form.editingId != null) {
-                Text("Drive: ${driveStatusText(form.driveSyncStatus, form.driveSyncError)}", style = MaterialTheme.typography.bodySmall, color = driveStatusColor(form.driveSyncStatus))
-                OutlinedButton(
-                    onClick = viewModel::syncDriveNow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.CloudUpload, contentDescription = null)
-                    Text("Sincronizar Drive")
-                }
-                OutlinedButton(
-                    onClick = viewModel::rebuildDriveSyncNow,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.CloudUpload, contentDescription = null)
-                    Text("Refazer sincronizacao Drive")
-                }
+                DriveSyncIndicator(
+                    status = form.driveSyncStatus,
+                    error = form.driveSyncError,
+                )
                 Text("Imagens e documentos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },
@@ -548,11 +545,23 @@ fun WorkOrderScreen(
                                         text = if (isDocument) "Documento${documentLabel?.let { ": $it" }.orEmpty()}" else "Imagem",
                                         style = MaterialTheme.typography.labelLarge,
                                     )
-                                    Text(originalFileName, style = MaterialTheme.typography.bodySmall)
-                                    Text(
-                                        text = "Drive: ${driveStatusText(photo.driveSyncStatus, photo.driveSyncError.orEmpty())}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = driveStatusColor(photo.driveSyncStatus),
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = originalFileName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        DriveSyncStatusIcon(
+                                            status = photo.driveSyncStatus,
+                                            error = photo.driveSyncError.orEmpty(),
+                                        )
+                                    }
+                                    DriveSyncStatusText(
+                                        status = photo.driveSyncStatus,
+                                        error = photo.driveSyncError.orEmpty(),
                                     )
                                 }
                                 IconButton(
@@ -577,18 +586,60 @@ fun WorkOrderScreen(
                         }
                     }
                 }
+                OutlinedButton(
+                    onClick = viewModel::smartSyncDriveNow,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.CloudUpload, contentDescription = null)
+                    Text("Sincronizar Drive")
+                }
+                OutlinedButton(
+                    onClick = viewModel::buildDriveDebugReport,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.Description, contentDescription = null)
+                    Text("Gerar debug Drive")
+                }
+                if (viewModel.driveDebugReport.isNotBlank()) {
+                    OutlinedButton(
+                        onClick = {
+                            clipboard.setText(AnnotatedString(viewModel.driveDebugReport))
+                            thermalPrintMessage = "Debug do Drive copiado."
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Description, contentDescription = null)
+                        Text("Copiar debug Drive")
+                    }
+                    Text(
+                        text = "Copie e envie este debug para analise.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             if (uiState.signatureEnabled && form.editingId != null) {
                 Text("Assinatura", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                viewModel.signature?.let { signature ->
-                    Text("Assinado por: ${signature.signerName}", style = MaterialTheme.typography.bodySmall)
+                val savedSignature = viewModel.signature
+                if (savedSignature != null) {
+                    SavedSignaturePreview(signatureUri = viewModel.signatureUri(savedSignature))
+                    Text("Assinado por: ${savedSignature.signerName}", style = MaterialTheme.typography.bodySmall)
+                    DriveSyncIndicator(
+                        status = savedSignature.driveSyncStatus,
+                        error = savedSignature.driveSyncError.orEmpty(),
+                    )
+                    Text(
+                        text = "Assinatura bloqueada. Remova a assinatura atual para coletar uma nova.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
                             onClick = {
                                 runCatching {
                                     context.startActivity(
                                         Intent(Intent.ACTION_VIEW)
-                                            .setDataAndType(viewModel.signatureUri(signature), "image/png")
+                                            .setDataAndType(viewModel.signatureUri(savedSignature), "image/png")
                                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
                                     )
                                 }.onFailure {
@@ -603,12 +654,13 @@ fun WorkOrderScreen(
                             Text("Remover")
                         }
                     }
+                } else {
+                    SignatureCapture(
+                        signerName = signatureName,
+                        onSignerNameChanged = { signatureName = it },
+                        onSave = { name, bitmap -> viewModel.saveSignature(name, bitmap) },
+                    )
                 }
-                SignatureCapture(
-                    signerName = signatureName,
-                    onSignerNameChanged = { signatureName = it },
-                    onSave = { name, bitmap -> viewModel.saveSignature(name, bitmap) },
-                )
             }
             if (uiState.checklistEnabled && form.editingId != null) {
                 Text("Checklist", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -1631,6 +1683,41 @@ private fun paymentMethodIcon(method: String): ImageVector =
     }
 
 @Composable
+private fun SavedSignaturePreview(signatureUri: Uri) {
+    val context = LocalContext.current
+    val signatureImage = remember(signatureUri) {
+        runCatching {
+            context.contentResolver.openInputStream(signatureUri)?.use { input ->
+                BitmapFactory.decodeStream(input)?.asImageBitmap()
+            }
+        }.getOrNull()
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .background(Color.White)
+            .padding(8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (signatureImage != null) {
+            Image(
+                bitmap = signatureImage,
+                contentDescription = "Assinatura coletada",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Text(
+                text = "Assinatura salva nao encontrada.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SignatureCapture(
     signerName: String,
     onSignerNameChanged: (String) -> Unit,
@@ -1913,6 +2000,52 @@ private fun driveStatusText(status: String, error: String): String =
         status.isBlank() -> "Nao iniciado"
         error.isNotBlank() && status != "Sincronizado" -> "$status - $error"
         else -> status
+    }
+
+@Composable
+private fun DriveSyncIndicator(
+    status: String,
+    error: String,
+) {
+    val color = driveStatusColor(status)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DriveSyncStatusIcon(status = status, error = error)
+        DriveSyncStatusText(status = status, error = error)
+    }
+}
+
+@Composable
+private fun DriveSyncStatusIcon(
+    status: String,
+    error: String,
+) {
+    Icon(
+        imageVector = driveStatusIcon(status),
+        contentDescription = driveStatusText(status, error),
+        tint = driveStatusColor(status),
+    )
+}
+
+@Composable
+private fun DriveSyncStatusText(
+    status: String,
+    error: String,
+) {
+    Text(
+        text = "Drive: ${driveStatusText(status, error)}",
+        style = MaterialTheme.typography.bodySmall,
+        color = driveStatusColor(status),
+    )
+}
+
+private fun driveStatusIcon(status: String): ImageVector =
+    when (status) {
+        "Sincronizado" -> Icons.Filled.CheckCircle
+        "Erro" -> Icons.Filled.Warning
+        else -> Icons.Filled.CloudUpload
     }
 
 private fun attachmentOriginalName(fileName: String): String {

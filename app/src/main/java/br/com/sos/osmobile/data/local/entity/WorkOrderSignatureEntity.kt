@@ -32,6 +32,12 @@ data class WorkOrderSignatureEntity(
     val relativePath: String,
     @ColumnInfo(name = "nome_assinante")
     val signerName: String,
+    @ColumnInfo(name = "drive_file_uri")
+    val driveFileUri: String? = null,
+    @ColumnInfo(name = "drive_sync_status")
+    val driveSyncStatus: String = DriveSyncStatus.PENDING,
+    @ColumnInfo(name = "drive_sync_error")
+    val driveSyncError: String? = null,
     @ColumnInfo(name = "data_criacao")
     val createdAt: Long,
 )

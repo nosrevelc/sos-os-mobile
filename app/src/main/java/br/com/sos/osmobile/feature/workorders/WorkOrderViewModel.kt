@@ -223,6 +223,9 @@ class WorkOrderViewModel(
     var messagePhone by mutableStateOf("")
         private set
 
+    var driveDebugReport by mutableStateOf("")
+        private set
+
     var historyText by mutableStateOf<String?>(null)
         private set
 
@@ -479,6 +482,17 @@ class WorkOrderViewModel(
             loadChecklist(workOrderId)
             loadWarranty(workOrderId)
             loadPayments(workOrderId)
+            val validation = driveSyncRepository.validateWorkOrderFiles(workOrderId)
+            if (validation.checked) {
+                loadPhotos(workOrderId)
+                loadSignature(workOrderId)
+                refreshDriveStatus(workOrderId)
+                if (validation.missingItems > 0) {
+                    formState = formState.copy(
+                        message = "Drive verificado: ${validation.missingItems} item(ns) ausente(s) marcado(s) como pendente(s).",
+                    )
+                }
+            }
         }
     }
 
@@ -598,55 +612,57 @@ class WorkOrderViewModel(
             return
         }
         viewModelScope.launch {
+            var syncError: String? = null
+            var driveWarning: String? = null
             runCatching {
-                val photoId = photoRepository.addPhoto(workOrderId, uri, isDocument, documentDescription)
-                driveSyncRepository.syncWorkOrder(workOrderId)
-                driveSyncRepository.syncPhoto(photoId)
+                photoRepository.addPhoto(workOrderId, uri, isDocument, documentDescription)
+                syncError = driveSyncRepository.syncWorkOrder(workOrderId).exceptionOrNull()?.message
                 loadPhotos(workOrderId)
                 refreshDriveStatus(workOrderId)
+                driveWarning = driveSyncRepository.workOrderDriveWarning(workOrderId)
             }.onSuccess {
-                formState = formState.copy(message = if (isDocument) "Documento anexado." else "Imagem adicionada.")
+                val savedMessage = if (isDocument) "Documento anexado." else "Imagem adicionada."
+                formState = formState.copy(
+                    message = listOfNotNull(syncError?.let { "$savedMessage Sync pendente: $it" } ?: savedMessage, driveWarning).joinToString(" "),
+                )
             }.onFailure {
                 formState = formState.copy(message = "Nao foi possivel adicionar o anexo: ${it.message.orEmpty()}")
             }
         }
     }
 
-    fun syncDriveNow() {
+    fun smartSyncDriveNow() {
         val workOrderId = formState.editingId ?: run {
             formState = formState.copy(message = "Salve a OS antes de sincronizar.")
             return
         }
         viewModelScope.launch {
             formState = formState.copy(message = "Sincronizando Drive...")
-            val result = driveSyncRepository.syncWorkOrder(workOrderId)
+            val result = driveSyncRepository.smartSyncWorkOrder(workOrderId)
             loadPhotos(workOrderId)
+            loadSignature(workOrderId)
             refreshDriveStatus(workOrderId)
             formState = formState.copy(
                 message = result.fold(
-                    onSuccess = { "Drive sincronizado." },
+                    onSuccess = {
+                        val baseMessage = if (it.rebuilt) "Drive reconstruido e sincronizado." else "Drive sincronizado."
+                        listOfNotNull(baseMessage, it.warning).joinToString(" ")
+                    },
                     onFailure = { "Falha ao sincronizar Drive: ${it.message.orEmpty()}" },
                 ),
             )
         }
     }
 
-    fun rebuildDriveSyncNow() {
+    fun buildDriveDebugReport() {
         val workOrderId = formState.editingId ?: run {
-            formState = formState.copy(message = "Salve a OS antes de refazer a sincronizacao.")
+            formState = formState.copy(message = "Salve a OS antes de gerar debug do Drive.")
             return
         }
         viewModelScope.launch {
-            formState = formState.copy(message = "Refazendo sincronizacao do Drive...")
-            val result = driveSyncRepository.rebuildWorkOrderSync(workOrderId)
-            loadPhotos(workOrderId)
-            refreshDriveStatus(workOrderId)
-            formState = formState.copy(
-                message = result.fold(
-                    onSuccess = { "Sincronizacao do Drive refeita." },
-                    onFailure = { "Falha ao refazer Drive: ${it.message.orEmpty()}" },
-                ),
-            )
+            formState = formState.copy(message = "Gerando debug do Drive...")
+            driveDebugReport = driveSyncRepository.buildWorkOrderDebugReport(workOrderId)
+            formState = formState.copy(message = "Debug do Drive gerado. Copie e envie para analise.")
         }
     }
 
@@ -667,9 +683,14 @@ class WorkOrderViewModel(
             return
         }
         viewModelScope.launch {
+            var syncError: String? = null
             signatureRepository.saveSignature(workOrderId, signerName, bitmap)
+            syncError = driveSyncRepository.syncSignature(workOrderId).exceptionOrNull()?.message
             loadSignature(workOrderId)
-            formState = formState.copy(message = "Assinatura salva.")
+            refreshDriveStatus(workOrderId)
+            formState = formState.copy(
+                message = syncError?.let { "Assinatura salva. Sync pendente: $it" } ?: "Assinatura salva e sincronizada.",
+            )
         }
     }
 

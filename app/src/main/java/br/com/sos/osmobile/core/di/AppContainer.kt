@@ -265,6 +265,14 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration15To16 = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE assinaturas_os ADD COLUMN drive_file_uri TEXT")
+            db.execSQL("ALTER TABLE assinaturas_os ADD COLUMN drive_sync_status TEXT NOT NULL DEFAULT 'Pendente'")
+            db.execSQL("ALTER TABLE assinaturas_os ADD COLUMN drive_sync_error TEXT")
+        }
+    }
+
     val database: AppDatabase = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java,
@@ -285,6 +293,7 @@ class AppContainer(context: Context) {
             migration12To13,
             migration13To14,
             migration14To15,
+            migration15To16,
         )
         .build()
 
@@ -331,12 +340,10 @@ class AppContainer(context: Context) {
         context.applicationContext,
         database.workOrderDao(),
         database.workOrderPhotoDao(),
+        database.workOrderSignatureDao(),
         settingsRepository,
         auditRepository,
     )
-    val backupRepository = BackupRepository(database, context.applicationContext)
+    val backupRepository = BackupRepository(database, context.applicationContext, settingsRepository)
 
-    init {
-        driveSyncRepository.startAutoSync()
-    }
 }
