@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -29,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +45,7 @@ import androidx.core.content.ContextCompat
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
 import br.com.sos.osmobile.ui.input.InputMasks
+import kotlinx.coroutines.launch
 
 @Composable
 fun CustomerScreen(viewModel: CustomerViewModel) {
@@ -51,6 +54,8 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
     val context = LocalContext.current
     var pendingContact by remember { mutableStateOf<CustomerEntity?>(null) }
     var pendingAction by remember { mutableStateOf<ContactAction?>(null) }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val contactPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
     ) { grants ->
@@ -78,6 +83,7 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
@@ -135,7 +141,10 @@ fun CustomerScreen(viewModel: CustomerViewModel) {
             items(uiState.customers, key = { it.id }) { customer ->
                 CustomerRow(
                     customer = customer,
-                    onEdit = { viewModel.startEditing(customer) },
+                    onEdit = {
+                        viewModel.startEditing(customer)
+                        coroutineScope.launch { listState.animateScrollToItem(0) }
+                    },
                     onArchive = { viewModel.archiveCustomer(customer.id) },
                     onSyncContact = {
                         if (

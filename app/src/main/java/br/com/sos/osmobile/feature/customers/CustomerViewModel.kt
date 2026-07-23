@@ -116,6 +116,7 @@ class CustomerViewModel(
             email = customer.email.orEmpty(),
             address = customer.endereco.orEmpty(),
             notes = customer.observacoes.orEmpty(),
+            message = "Cliente disponivel para edicao.",
         )
     }
 
@@ -157,7 +158,7 @@ class CustomerViewModel(
                         address = formState.address,
                         notes = formState.notes,
                     )
-                    formState = CustomerFormState(message = "Cliente atualizado com sucesso.")
+                    formState = CustomerFormState(message = "Edicao concluida com sucesso.")
                 }
             } catch (_: SQLiteConstraintException) {
                 formState = formState.copy(message = "CPF/CNPJ ja cadastrado.")
