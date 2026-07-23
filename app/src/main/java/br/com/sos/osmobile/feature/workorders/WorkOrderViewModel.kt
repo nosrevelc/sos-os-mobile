@@ -18,6 +18,7 @@ import br.com.sos.osmobile.data.local.entity.ServiceProductEntity
 import br.com.sos.osmobile.data.local.entity.ServiceProductType
 import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.data.local.model.WorkOrderSummary
+import br.com.sos.osmobile.data.drive.DriveDesignImportCandidate
 import br.com.sos.osmobile.data.drive.DriveSyncRepository
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
@@ -224,6 +225,9 @@ class WorkOrderViewModel(
         private set
 
     var driveDebugReport by mutableStateOf("")
+        private set
+
+    var pendingDesignImportCandidates by mutableStateOf<List<DriveDesignImportCandidate>>(emptyList())
         private set
 
     var historyText by mutableStateOf<String?>(null)
@@ -493,6 +497,7 @@ class WorkOrderViewModel(
                     )
                 }
             }
+            checkDesignImportCandidatesOnOpen(workOrderId)
         }
     }
 
@@ -679,6 +684,36 @@ class WorkOrderViewModel(
         }
     }
 
+    fun importSelectedDesignFromDriveNow(selectedUris: Set<String>, doNotAlertAgain: Boolean) {
+        val workOrderId = formState.editingId ?: return
+        viewModelScope.launch {
+            if (doNotAlertAgain) disableDesignImportAlert(workOrderId)
+            pendingDesignImportCandidates = emptyList()
+            if (selectedUris.isEmpty()) {
+                formState = formState.copy(message = "Nenhum arquivo Design selecionado.")
+                return@launch
+            }
+            formState = formState.copy(message = "Importando arquivos selecionados do Drive...")
+            val result = driveSyncRepository.importDesignFiles(workOrderId, selectedUris)
+            loadPhotos(workOrderId)
+            refreshDriveStatus(workOrderId)
+            formState = formState.copy(
+                message = result.fold(
+                    onSuccess = { "Design importado: ${it.importedFiles} novo(s), ${it.alreadyImportedFiles} ja existente(s)." },
+                    onFailure = { "Falha ao importar Design do Drive: ${it.message.orEmpty()}" },
+                ),
+            )
+        }
+    }
+
+    fun dismissDesignImportPrompt(doNotAlertAgain: Boolean) {
+        val workOrderId = formState.editingId
+        viewModelScope.launch {
+            if (doNotAlertAgain && workOrderId != null) disableDesignImportAlert(workOrderId)
+            pendingDesignImportCandidates = emptyList()
+        }
+    }
+
     fun buildDriveDebugReport() {
         val workOrderId = formState.editingId ?: run {
             formState = formState.copy(message = "Salve a OS antes de gerar debug do Drive.")
@@ -690,6 +725,21 @@ class WorkOrderViewModel(
             formState = formState.copy(message = "Debug do Drive gerado. Copie e envie para analise.")
         }
     }
+
+    private suspend fun checkDesignImportCandidatesOnOpen(workOrderId: Long) {
+        if (settingsRepository.getString(designImportAlertDisabledKey(workOrderId)) == "true") return
+        driveSyncRepository.listDesignImportCandidates(workOrderId)
+            .onSuccess { candidates ->
+                pendingDesignImportCandidates = candidates
+            }
+    }
+
+    private suspend fun disableDesignImportAlert(workOrderId: Long) {
+        settingsRepository.set(designImportAlertDisabledKey(workOrderId), "true")
+    }
+
+    private fun designImportAlertDisabledKey(workOrderId: Long): String =
+        "drive_design_alert_disabled_$workOrderId"
 
     fun deletePhoto(photoId: Long) {
         val workOrderId = formState.editingId ?: return

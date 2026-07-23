@@ -72,7 +72,7 @@ class DriveSyncRepository(
         }
     }
 
-    suspend fun importDesignFiles(workOrderId: Long): Result<DriveImportResult> = syncMutex.withLock {
+    suspend fun listDesignImportCandidates(workOrderId: Long): Result<List<DriveDesignImportCandidate>> = syncMutex.withLock {
         val workOrder = workOrderDao.findById(workOrderId)
             ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
         if (!isConfigured()) return Result.failure(IllegalStateException("Drive nao configurado."))
@@ -82,11 +82,37 @@ class DriveSyncRepository(
             markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, workOrderFolder.toString())
             val designFolder = ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
             val existingPhotos = photoDao.listByWorkOrderAsc(workOrder.id)
-            val remoteFiles = findChildren(designFolder).filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
+            findChildren(designFolder)
+                .filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
+                .filterNot { file -> isDesignAlreadyImported(existingPhotos, file) }
+                .map { file ->
+                    DriveDesignImportCandidate(
+                        name = file.name,
+                        uri = file.uri.toString(),
+                        sizeBytes = file.sizeBytes,
+                        modifiedAt = file.modifiedAt,
+                    )
+                }
+        }
+    }
+
+    suspend fun importDesignFiles(workOrderId: Long, selectedUris: Set<String>? = null): Result<DriveImportResult> = syncMutex.withLock {
+        val workOrder = workOrderDao.findById(workOrderId)
+            ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
+        if (!isConfigured()) return Result.failure(IllegalStateException("Drive nao configurado."))
+        if (!isOnline()) return Result.failure(IllegalStateException("Sem internet."))
+        runCatching {
+            val workOrderFolder = ensureWorkOrderFolders(workOrder)
+            markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, workOrderFolder.toString())
+            val designFolder = ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
+            val existingPhotos = photoDao.listByWorkOrderAsc(workOrder.id)
+            val remoteFiles = findChildren(designFolder)
+                .filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
+                .filter { selectedUris == null || it.uri.toString() in selectedUris }
             var imported = 0
             var alreadyImported = 0
             remoteFiles.forEach { file ->
-                if (existingPhotos.any { it.driveFileUri == file.uri.toString() || it.fileName.endsWith("_${sanitizeFileName(file.name)}") }) {
+                if (isDesignAlreadyImported(existingPhotos, file)) {
                     alreadyImported++
                 } else {
                     importDriveFileAsDocument(workOrder.id, file)
@@ -108,6 +134,12 @@ class DriveSyncRepository(
             )
         }
     }
+
+    private fun isDesignAlreadyImported(existingPhotos: List<WorkOrderPhotoEntity>, file: DriveChild): Boolean =
+        existingPhotos.any {
+            it.driveFileUri == file.uri.toString() ||
+                isDesignAttachment(it.fileName) && it.fileName.endsWith("_${sanitizeFileName(file.name)}")
+        }
 
     private suspend fun syncWorkOrderLocked(workOrderId: Long): Result<Unit> {
         val workOrder = workOrderDao.findById(workOrderId) ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
@@ -803,4 +835,11 @@ data class DriveImportResult(
     val foundFiles: Int,
     val importedFiles: Int,
     val alreadyImportedFiles: Int,
+)
+
+data class DriveDesignImportCandidate(
+    val name: String,
+    val uri: String,
+    val sizeBytes: Long?,
+    val modifiedAt: Long?,
 )

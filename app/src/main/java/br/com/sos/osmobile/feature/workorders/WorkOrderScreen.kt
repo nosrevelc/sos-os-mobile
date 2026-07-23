@@ -309,6 +309,14 @@ fun WorkOrderScreen(
     var showDocumentDialog by remember { mutableStateOf(false) }
     var documentDescription by remember { mutableStateOf("") }
     var selectedDocumentDescription by remember { mutableStateOf("") }
+    var doNotAlertDesignAgain by remember { mutableStateOf(false) }
+    val selectedDesignUris = remember { mutableStateListOf<String>() }
+    val designCandidates = viewModel.pendingDesignImportCandidates
+    LaunchedEffect(designCandidates) {
+        selectedDesignUris.clear()
+        selectedDesignUris.addAll(designCandidates.map { it.uri })
+        doNotAlertDesignAgain = false
+    }
     val photoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
@@ -349,6 +357,75 @@ fun WorkOrderScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDocumentDialog = false }) {
+                    Text("Cancelar")
+                }
+            },
+        )
+    }
+
+    if (designCandidates.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDesignImportPrompt(doNotAlertDesignAgain) },
+            title = { Text("Arquivos Design no Drive") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Selecione os arquivos que deseja importar para esta OS.")
+                    LazyColumn(modifier = Modifier.height(240.dp)) {
+                        items(designCandidates, key = { it.uri }) { file ->
+                            val checked = file.uri in selectedDesignUris
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (checked) selectedDesignUris.remove(file.uri) else selectedDesignUris.add(file.uri)
+                                    },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = checked,
+                                    onCheckedChange = {
+                                        if (it) {
+                                            if (file.uri !in selectedDesignUris) selectedDesignUris.add(file.uri)
+                                        } else {
+                                            selectedDesignUris.remove(file.uri)
+                                        }
+                                    },
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(file.name, style = MaterialTheme.typography.bodyMedium)
+                                    file.sizeBytes?.let {
+                                        Text(formatFileSize(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { doNotAlertDesignAgain = !doNotAlertDesignAgain },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = doNotAlertDesignAgain,
+                            onCheckedChange = { doNotAlertDesignAgain = it },
+                        )
+                        Text("Nao alertar mais nesta OS")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = selectedDesignUris.isNotEmpty(),
+                    onClick = {
+                        viewModel.importSelectedDesignFromDriveNow(selectedDesignUris.toSet(), doNotAlertDesignAgain)
+                    },
+                ) {
+                    Text("Importar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDesignImportPrompt(doNotAlertDesignAgain) }) {
                     Text("Cancelar")
                 }
             },
@@ -2110,3 +2187,10 @@ private fun driveStatusColor(status: String): Color =
 
 private fun formatQuantity(value: Double): String =
     if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(Locale("pt", "BR"), value)
+
+private fun formatFileSize(bytes: Long): String =
+    when {
+        bytes >= 1_048_576L -> "%.1f MB".format(Locale("pt", "BR"), bytes / 1_048_576.0)
+        bytes >= 1_024L -> "%.1f KB".format(Locale("pt", "BR"), bytes / 1_024.0)
+        else -> "$bytes B"
+    }

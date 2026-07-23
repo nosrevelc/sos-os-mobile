@@ -45,15 +45,19 @@ Pasta escolhida
 Regra da funcionalidade:
 
 1. O app nao baixa arquivos do Drive em segundo plano.
-2. Na tela da OS existe o botao `Importar Design do Drive`.
-3. Ao tocar no botao, o app cria a pasta `Design` se ela ainda nao existir.
-4. Se a pasta estiver vazia, o app informa o usuario para colocar os arquivos nela e tentar novamente.
-5. Se houver arquivos, o app baixa para o armazenamento local e registra como documento da OS.
-6. Arquivos ja importados nao sao duplicados.
-7. O arquivo importado recebe tipo visual `Design` e status `Sincronizado`.
-8. Arquivo `Design` nao entra na fila de envio para as pastas `Documentos` ou `Imagens`.
-9. O retorno ao usuario deve informar quantos arquivos foram importados e quantos ja existiam.
-10. Os arquivos importados passam a aparecer na lista de anexos da OS junto com documentos e imagens, mas sem serem confundidos com eles.
+2. Ao abrir a OS, o app verifica se existem arquivos novos na pasta `Design`.
+3. Se existirem arquivos novos, o app mostra um popup com a lista de arquivos e caixas de selecao.
+4. O popup possui botoes `Importar` e `Cancelar`.
+5. O popup possui a opcao `Nao alertar mais nesta OS`; essa decisao vale apenas para a OS aberta.
+6. Na tela da OS tambem existe o botao manual `Importar Design do Drive`.
+7. Ao tocar no botao, o app cria a pasta `Design` se ela ainda nao existir.
+8. Se a pasta estiver vazia, o app informa o usuario para colocar os arquivos nela e tentar novamente.
+9. Se houver arquivos selecionados, o app baixa para o armazenamento local e registra como `Design` da OS.
+10. Arquivos ja importados nao sao duplicados.
+11. O arquivo importado recebe tipo visual `Design` e status `Sincronizado`.
+12. Arquivo `Design` nao entra na fila de envio para as pastas `Documentos` ou `Imagens`.
+13. O retorno ao usuario deve informar quantos arquivos foram importados e quantos ja existiam.
+14. Os arquivos importados passam a aparecer na lista de anexos da OS junto com documentos e imagens, mas sem serem confundidos com eles.
 
 ## Status de sincronizacao
 
