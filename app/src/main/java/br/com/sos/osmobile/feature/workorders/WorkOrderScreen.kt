@@ -505,7 +505,7 @@ fun WorkOrderScreen(
                         paymentValue = ""
                         paymentNote = ""
                         if (shouldAutoPrint) {
-                            viewModel.showThermalDocumentThen(savedId) { printThermalContent(it) }
+                            viewModel.showShelfLabelThen(savedId) { printThermalBlocks(it) }
                         } else if (shouldAskPrint) {
                             pendingPrintWorkOrderId = savedId
                         }
@@ -1046,16 +1046,16 @@ fun WorkOrderScreen(
     pendingPrintWorkOrderId?.let { workOrderId ->
         AlertDialog(
             onDismissRequest = { pendingPrintWorkOrderId = null },
-            title = { Text("Imprimir OS?") },
-            text = { Text("OS criada. Deseja imprimir a entrada agora?") },
+            title = { Text("Imprimir etiqueta da OS?") },
+            text = { Text("OS criada. Deseja imprimir a etiqueta agora?") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.showThermalDocumentThen(workOrderId) { printThermalWithPermission(it) }
+                        viewModel.showShelfLabelThen(workOrderId) { printThermalBlocksWithPermission(it) }
                         pendingPrintWorkOrderId = null
                     },
                 ) {
-                    Text("Imprimir")
+                    Text("Imprimir etiqueta")
                 }
             },
             dismissButton = {

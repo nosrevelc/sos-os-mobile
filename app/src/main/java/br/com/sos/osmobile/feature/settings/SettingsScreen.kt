@@ -344,19 +344,19 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             onSelected = { printBluetoothAddress = it },
         )
         SettingSwitch(
-            label = "Imprimir OS automaticamente",
+            label = "Imprimir etiqueta automaticamente ao criar OS",
             checked = printWorkOrderAuto,
             onCheckedChange = { printWorkOrderAuto = it },
         )
         OutlinedTextField(
             value = printWorkOrderCopies,
             onValueChange = { printWorkOrderCopies = it.filter(Char::isDigit).take(1) },
-            label = { Text("Quantidade de vias da OS") },
+            label = { Text("Quantidade de vias de impressao") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            text = "Use 0 para desativar a impressao da OS. Acima de 0 habilita o botao de imprimir e define a quantidade de vias.",
+            text = "Use 0 para desativar a impressao. Acima de 0 habilita os botoes de imprimir e define a quantidade de vias.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
