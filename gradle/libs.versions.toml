@@ -11,6 +11,8 @@ room = "2.6.1"
 coroutines = "1.9.0"
 documentfile = "1.0.1"
 junit = "4.13.2"
+robolectric = "4.15.1"
+androidxTestCore = "1.6.1"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -30,6 +32,9 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

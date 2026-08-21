@@ -49,6 +49,12 @@ android {
         }
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -86,4 +92,11 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+}
+
+tasks.withType<Test> {
+    maxHeapSize = "2g"
 }
