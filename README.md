@@ -147,6 +147,7 @@ app/src/main/java/br/com/sos/osmobile/
 | --- | --- |
 | [`ESTADO_DO_PROJETO.md`](ESTADO_DO_PROJETO.md) | Estado atual, modulos implementados e proximos passos |
 | [`O_QUE_FALTA.md`](O_QUE_FALTA.md) | Pendencias detalhadas e escopo futuro |
+| [`PLANO_REFACTORING.md`](PLANO_REFACTORING.md) | Plano de refatoracao incremental por fases |
 | [`TESTE_CELULAR.md`](TESTE_CELULAR.md) | Roteiro de teste manual em aparelho real |
 | [`ENTREGA_RETIRADA.md`](ENTREGA_RETIRADA.md) | Especificacao do modulo entrega/retirada |
 | [`LICENCIAMENTO_E_MODELO_COMERCIAL.md`](LICENCIAMENTO_E_MODELO_COMERCIAL.md) | Licenciamento e modelo comercial |

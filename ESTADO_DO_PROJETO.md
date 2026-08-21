@@ -167,6 +167,8 @@ app/build/outputs/bundle/release/app-release.aab
 
 ## Pontos pendentes principais
 
+0. Refatoracao incremental: ver `PLANO_REFACTORING.md` (testes criticos primeiro, depois divisao dos arquivos grandes de OS).
+
 1. UI/UX:
    - melhorar botoes;
    - reduzir poluicao visual;
