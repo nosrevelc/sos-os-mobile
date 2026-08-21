@@ -873,8 +873,8 @@ class WorkOrderViewModel(
         newItems: List<WorkOrderDraftItem>,
     ) {
         val serviceTypes = uiState.value.services.associate { it.id to it.tipo }
-        val originalByService = originalItems.stockControlledTotals(serviceTypes)
-        val newByService = newItems.stockControlledTotals(serviceTypes)
+        val originalByService = WorkOrderStockTotals.of(originalItems, serviceTypes)
+        val newByService = WorkOrderStockTotals.of(newItems, serviceTypes)
         (originalByService.keys + newByService.keys).forEach { serviceProductId ->
             val delta = (newByService[serviceProductId] ?: 0.0) - (originalByService[serviceProductId] ?: 0.0)
             when {
@@ -1012,11 +1012,6 @@ class WorkOrderViewModel(
             }
     }
 }
-
-private fun List<WorkOrderDraftItem>.stockControlledTotals(serviceTypes: Map<Long, String>): Map<Long, Double> =
-    filter { (serviceTypes[it.serviceProductId] ?: it.type) != ServiceProductType.SERVICE }
-        .groupBy { it.serviceProductId }
-        .mapValues { entry -> entry.value.sumOf { it.quantity } }
 
 private fun formatQuantity(value: Double): String =
     if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(value)
