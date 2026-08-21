@@ -4,7 +4,7 @@ Aplicativo Android nativo para gestao offline-first de ordens de servico, orcame
 
 - **Pacote:** `br.com.sos.osmobile`
 - **Versao atual:** `0.1.0` (versionCode 1)
-- **Status:** MVP operacional, em validacao em aparelho real
+- **Status:** MVP operacional, refatorado (6 fases concluidas) e validado em aparelho real com restauracao de backup
 
 ## Funcionalidades
 
@@ -64,9 +64,10 @@ Aplicativo Android nativo para gestao offline-first de ordens de servico, orcame
 
 - Kotlin + Jetpack Compose (Material 3)
 - Room/SQLite (fonte oficial local, offline-first)
-- MVVM com repositories
+- MVVM com repositories e controllers por tela (ViewModels como fachadas)
 - Navigation Compose
 - KSP, Gradle Wrapper, JDK 17
+- CI no GitHub Actions (test + assembleDebug a cada push)
 - ZXing (etiquetas/codigo de barras)
 
 ## Requisitos
@@ -87,6 +88,10 @@ Aplicativo Android nativo para gestao offline-first de ordens de servico, orcame
 # AAB para Play Console
 ./gradlew bundleRelease
 ```
+
+Atencao: o `gradle.properties` versionado tem `org.gradle.java.home` apontando para o
+JBR do Android Studio no Windows. Em Linux/CI, sobrescreva com
+`-Dorg.gradle.java.home="$JAVA_HOME"` (o workflow de CI ja faz isso).
 
 Artefatos gerados:
 
@@ -110,16 +115,17 @@ keyPassword=***
 ```text
 app/src/main/java/br/com/sos/osmobile/
 ├── core/
-│   ├── database/        # AppDatabase (Room)
+│   ├── database/        # AppDatabase (Room) + DatabaseMigrations
 │   ├── di/              # AppContainer (injecao manual)
+│   ├── format/          # Formatters (moeda/data/documento)
 │   └── time/
 ├── data/
-│   ├── backup/          # Exportacao/restauracao JSON
+│   ├── backup/          # BackupRepository + CsvSupport + DriveBackupStorage
 │   ├── document/        # Geracao de documentos
-│   ├── drive/           # Integracao Google Drive
+│   ├── drive/           # DriveSyncRepository + DriveSafClient (primitivas SAF)
 │   ├── local/dao/       # DAOs Room
-│   ├── local/entity/    # Entidades Room
-│   ├── message/         # Templates e mensagens
+│   ├── local/entity/    # Entidades Room (+ AttachmentNames)
+│   ├── message/         # Templates e renderizacao de mensagens
 │   ├── model/           # Modelos de dominio
 │   ├── print/           # Impressao
 │   └── repository/      # Repositorios
@@ -136,9 +142,9 @@ app/src/main/java/br/com/sos/osmobile/
 │   ├── reports/         # Relatorios
 │   ├── sales/           # Vendas
 │   ├── services/        # Servicos/produtos
-│   ├── settings/        # Configuracoes
-│   └── workorders/      # Ordens de servico
-└── ui/                  # Shell do app, navegacao e tema
+│   ├── settings/        # Configuracoes (Screen + Components + TemplatesSection)
+│   └── workorders/      # OS: ViewModel fachada + 6 controllers + telas divididas
+└── ui/                  # Shell, navegacao, tema e ui/components reutilizaveis
 ```
 
 ## Documentacao
@@ -147,7 +153,8 @@ app/src/main/java/br/com/sos/osmobile/
 | --- | --- |
 | [`ESTADO_DO_PROJETO.md`](ESTADO_DO_PROJETO.md) | Estado atual, modulos implementados e proximos passos |
 | [`O_QUE_FALTA.md`](O_QUE_FALTA.md) | Pendencias detalhadas e escopo futuro |
-| [`PLANO_REFACTORING.md`](PLANO_REFACTORING.md) | Plano de refatoracao incremental por fases |
+| [`PLANO_REFACTORING.md`](PLANO_REFACTORING.md) | Plano de refatoracao incremental por fases (concluido) |
+| [`MEMORIA_REFACTORING.md`](MEMORIA_REFACTORING.md) | Memoria de sessao: build, decisoes e armadilhas |
 | [`TESTE_CELULAR.md`](TESTE_CELULAR.md) | Roteiro de teste manual em aparelho real |
 | [`ENTREGA_RETIRADA.md`](ENTREGA_RETIRADA.md) | Especificacao do modulo entrega/retirada |
 | [`LICENCIAMENTO_E_MODELO_COMERCIAL.md`](LICENCIAMENTO_E_MODELO_COMERCIAL.md) | Licenciamento e modelo comercial |
@@ -169,7 +176,7 @@ Modelos de importacao na raiz do repositorio:
 2. Subir AAB no Play Console (Teste interno) e definir versionamento.
 3. Melhorar UI/UX (botoes, estados vazios, detalhes) e layout do PDF.
 4. Impressao direta Bluetooth 58 mm (recibo/garantia).
-5. Testes automatizados: Room/repository, conversao orcamento -> OS, backup/restauracao.
+5. Ampliar testes automatizados para os controllers de OS (repos, conversao, backup, mensagens e estoque ja cobertos).
 
 Detalhes completos em [`O_QUE_FALTA.md`](O_QUE_FALTA.md).
 

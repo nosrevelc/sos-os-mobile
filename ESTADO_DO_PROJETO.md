@@ -17,7 +17,13 @@ Builds validados:
 ./gradlew bundleRelease
 ```
 
-Resultado atual esperado: `BUILD SUCCESSFUL`.
+Resultado atual esperado: `BUILD SUCCESSFUL` (local e CI).
+
+CI: GitHub Actions (`.github/workflows/android.yml`) roda `test assembleDebug`
+a cada push/PR na master - ultimo run: VERDE.
+
+Validacao em aparelho real (ago/2026): APK debug instalado com
+desinstalacao previa e restauracao de backup do Google Drive confirmada.
 
 APK preferencial para teste no celular:
 
@@ -36,7 +42,7 @@ app/build/outputs/bundle/release/app-release.aab
 - Kotlin
 - Jetpack Compose
 - Room/SQLite
-- MVVM
+- MVVM (ViewModels como fachadas + controllers por tela)
 - Repositories
 - Navigation Compose
 - Gradle Wrapper
@@ -167,7 +173,10 @@ app/build/outputs/bundle/release/app-release.aab
 
 ## Pontos pendentes principais
 
-0. Refatoracao incremental: ver `PLANO_REFACTORING.md` (testes criticos primeiro, depois divisao dos arquivos grandes de OS).
+0. ~~Refatoracao incremental~~ CONCLUIDA (ago/2026): 6 fases feitas, ver `PLANO_REFACTORING.md`.
+   Arquivos grandes divididos (WorkOrderViewModel em 6 controllers, WorkOrderScreen em 4 arquivos,
+   SettingsScreen, DriveSyncRepository, BackupRepository) e componentes compartilhados extraidos
+   para `ui/components` (CustomerSection, DocumentItemsEditor, StatusSelectorCompact).
 
 1. UI/UX:
    - melhorar botoes;
@@ -178,13 +187,12 @@ app/build/outputs/bundle/release/app-release.aab
 
 2. Release:
    - subir AAB no Play Console em Teste interno;
-   - configurar versionamento para proximas versoes;
-   - testar instalacao limpa em aparelho real.
+   - configurar versionamento para proximas versoes.
 
 3. Testes:
-   - testes Room/repository;
-   - testes de conversao orcamento -> OS;
-   - testes de backup/exportacao/restauracao.
+   - ja cobertos: repositorios (QuoteConversion, WorkOrder), backup/restauracao,
+     totais de estoque e renderizacao de mensagens (51 testes);
+   - faltam: controllers de OS (Form/Print/Message/Attachment/Drive), CsvSupport e Formatters.
 
 4. PDF:
    - melhorar layout visual do PDF;
@@ -198,17 +206,16 @@ app/build/outputs/bundle/release/app-release.aab
 
 - `app/src/main/java/br/com/sos/osmobile/ui/OSMobileApp.kt`
 - `app/src/main/java/br/com/sos/osmobile/core/database/AppDatabase.kt`
+- `app/src/main/java/br/com/sos/osmobile/core/database/DatabaseMigrations.kt`
 - `app/src/main/java/br/com/sos/osmobile/core/di/AppContainer.kt`
-- `app/src/main/java/br/com/sos/osmobile/feature/dashboard/`
-- `app/src/main/java/br/com/sos/osmobile/feature/customers/`
-- `app/src/main/java/br/com/sos/osmobile/feature/services/`
-- `app/src/main/java/br/com/sos/osmobile/feature/quotes/`
-- `app/src/main/java/br/com/sos/osmobile/feature/workorders/`
-- `app/src/main/java/br/com/sos/osmobile/feature/details/`
-- `app/src/main/java/br/com/sos/osmobile/feature/backup/`
-- `app/src/main/java/br/com/sos/osmobile/data/repository/`
-- `app/src/main/java/br/com/sos/osmobile/data/local/dao/`
-- `app/src/main/java/br/com/sos/osmobile/data/local/entity/`
+- `app/src/main/java/br/com/sos/osmobile/core/format/Formatters.kt`
+- `app/src/main/java/br/com/sos/osmobile/feature/workorders/` (ViewModel fachada + controllers Form/Print/Message/Attachment/Drive)
+- `app/src/main/java/br/com/sos/osmobile/feature/settings/` (Screen + Components + TemplatesSection)
+- `app/src/main/java/br/com/sos/osmobile/data/drive/` (DriveSyncRepository + DriveSafClient)
+- `app/src/main/java/br/com/sos/osmobile/data/backup/` (BackupRepository + CsvSupport + DriveBackupStorage)
+- `app/src/main/java/br/com/sos/osmobile/data/message/WorkOrderMessageRenderer.kt`
+- `app/src/main/java/br/com/sos/osmobile/ui/components/` (CustomerSection, DocumentItemsEditor, StatusSelectorCompact, DriveSyncStatus)
+- `app/src/test/java/br/com/sos/osmobile/` (51 testes)
 
 ## Roteiro de teste no celular
 
@@ -238,4 +245,5 @@ Fluxo minimo:
 
 ## Proximo passo recomendado
 
-Testar em aparelho real com o APK release assinado e, em seguida, subir o AAB no Play Console em Teste interno.
+Ampliar testes dos controllers de OS e, quando o proprietario desejar publicar,
+gerar release assinado e subir o AAB no Play Console em Teste interno.
