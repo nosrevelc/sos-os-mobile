@@ -10,7 +10,18 @@ object MessageTemplateRenderer {
             text.replace("{$key}", value)
         }
 
-    fun itemTokens(items: List<DocumentItem>): Map<String, String> {
+    fun itemTokens(items: List<DocumentItem>): Map<String, String> =
+        itemTokensOf(items.map { ItemData(it.name, it.quantity, it.unitPrice) })
+
+    data class ItemData(
+        val name: String,
+        val quantity: Double,
+        val unitPrice: Double,
+    ) {
+        val subtotal: Double = quantity * unitPrice
+    }
+
+    fun itemTokensOf(items: List<ItemData>): Map<String, String> {
         val formatted = items.joinToString("\n") { item ->
             "- ${item.name}: ${quantity(item.quantity)} x ${money(item.unitPrice)} = ${money(item.subtotal)}"
         }

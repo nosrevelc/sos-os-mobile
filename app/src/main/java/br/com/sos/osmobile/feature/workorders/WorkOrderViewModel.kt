@@ -22,6 +22,7 @@ import br.com.sos.osmobile.data.drive.DriveDesignImportCandidate
 import br.com.sos.osmobile.data.drive.DriveSyncRepository
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
+import br.com.sos.osmobile.data.message.WorkOrderMessageRenderer
 import br.com.sos.osmobile.data.model.DeliveryStatus
 import br.com.sos.osmobile.data.model.DeliveryType
 import br.com.sos.osmobile.data.model.WorkOrderStatus
@@ -593,7 +594,6 @@ class WorkOrderViewModel(
                     workOrderNumber = workOrder.number,
                     status = workOrder.status,
                     totalValue = workOrder.totalValue,
-                    subtotalValue = workOrder.totalValue + discount,
                     discountValue = discount,
                     deliveryType = entity?.deliveryType.orEmpty(),
                     deliveryStatus = entity?.deliveryStatus.orEmpty(),
@@ -931,7 +931,6 @@ class WorkOrderViewModel(
         workOrderNumber: String,
         status: String,
         totalValue: Double,
-        subtotalValue: Double,
         discountValue: Double,
         deliveryType: String,
         deliveryStatus: String,
@@ -939,40 +938,25 @@ class WorkOrderViewModel(
         deliveryFee: Double,
         trackingCode: String,
         paidTotal: Double,
-    ): Map<String, String> {
-        val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
-        val paymentStatus = when {
-            totalValue <= 0.0 || paidTotal <= 0.0 -> "Pendente"
-            paidTotal + 0.009 >= totalValue -> "Pago"
-            else -> "Parcial"
-        }
-        return mapOf(
-            "nome" to customerName,
-            "telefone" to customerPhone,
-            "cpf" to "",
-            "os" to workOrderNumber,
-            "orcamento" to "",
-            "status" to status,
-            "valor" to InputMasks.currencyFromDouble(totalValue),
-            "subtotal" to InputMasks.currencyFromDouble(subtotalValue),
-            "desconto" to InputMasks.currencyFromDouble(discountValue),
-            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${InputMasks.currencyFromDouble(discountValue)}" else "",
-            "valor_minimo_aceite" to uiState.value.quoteMinAcceptanceValue,
-            "tipo_entrega" to deliveryType,
-            "status_entrega" to deliveryStatus,
-            "endereco_entrega" to deliveryAddress,
-            "taxa_entrega" to InputMasks.currencyFromDouble(deliveryFee),
-            "codigo_rastreio" to trackingCode,
-            "valor_pago" to InputMasks.currencyFromDouble(paidTotal),
-            "saldo" to InputMasks.currencyFromDouble(balance),
-            "status_pagamento" to paymentStatus,
-            "empresa" to uiState.value.companyName,
-            "data" to "",
-            "PIX" to PixPayloadGenerator.generate(uiState.value.pixKey, uiState.value.pixName, balance.takeIf { it > 0.0 } ?: totalValue),
-            "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(uiState.value.pixKey, uiState.value.pixName),
-            "PIX_QR" to "",
-        )
-    }
+    ): Map<String, String> = WorkOrderMessageRenderer.tokens(
+        customerName = customerName,
+        customerPhone = customerPhone,
+        customerCpfCnpj = "",
+        workOrderNumber = workOrderNumber,
+        status = status,
+        totalValue = totalValue,
+        discountValue = discountValue,
+        minAcceptanceValue = uiState.value.quoteMinAcceptanceValue,
+        deliveryType = deliveryType,
+        deliveryStatus = deliveryStatus,
+        deliveryAddress = deliveryAddress,
+        deliveryFee = deliveryFee,
+        trackingCode = trackingCode,
+        paidTotal = paidTotal,
+        companyName = uiState.value.companyName,
+        pixName = uiState.value.pixName,
+        pixKey = uiState.value.pixKey,
+    )
 
     companion object {
         private fun statusFromLabel(label: String): WorkOrderStatus =

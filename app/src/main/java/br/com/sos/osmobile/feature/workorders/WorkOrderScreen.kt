@@ -102,6 +102,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.text.KeyboardOptions
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.message.PixPayloadGenerator
+import br.com.sos.osmobile.data.message.WorkOrderMessageRenderer
 import br.com.sos.osmobile.data.model.DeliveryStatus
 import br.com.sos.osmobile.data.model.DeliveryType
 import br.com.sos.osmobile.data.local.entity.CustomerEntity
@@ -166,7 +167,7 @@ fun WorkOrderScreen(
     val openPixPayload = PixPayloadGenerator.generateOpenAmount(uiState.pixKey, uiState.pixName)
     fun renderCurrentWorkOrderTemplate(template: String): String =
         selectedCustomer?.let {
-            renderWorkOrderMessage(
+            WorkOrderMessageRenderer.render(
                 customerName = it.nome,
                 customerPhone = it.telefone,
                 customerCpfCnpj = it.cpfCnpj.orEmpty(),
@@ -185,7 +186,7 @@ fun WorkOrderScreen(
                 pixName = uiState.pixName,
                 pixKey = uiState.pixKey,
                 template = template,
-                items = form.items,
+                items = form.items.map { it.toMessageItem() },
             )
         }.orEmpty()
 
@@ -200,7 +201,7 @@ fun WorkOrderScreen(
         }
     }
     val currentMessage = selectedCustomer?.let {
-        renderWorkOrderMessage(
+        WorkOrderMessageRenderer.render(
             customerName = it.nome,
             customerPhone = it.telefone,
             customerCpfCnpj = it.cpfCnpj.orEmpty(),
@@ -219,7 +220,7 @@ fun WorkOrderScreen(
             pixName = uiState.pixName,
             pixKey = uiState.pixKey,
             template = uiState.workOrderStatusTemplates[form.status.label] ?: uiState.workOrderTemplate,
-            items = form.items,
+            items = form.items.map { it.toMessageItem() },
         )
     }
 
@@ -454,7 +455,7 @@ fun WorkOrderScreen(
                                 phone = customer.telefone,
                                 email = customer.email,
                                 subject = "OS ${form.editingNumber ?: "nova"}",
-                                text = renderWorkOrderMessage(
+                                text = WorkOrderMessageRenderer.render(
                                     customerName = customer.nome,
                                     customerPhone = customer.telefone,
                                     customerCpfCnpj = customer.cpfCnpj.orEmpty(),
@@ -473,7 +474,7 @@ fun WorkOrderScreen(
                                     pixName = uiState.pixName,
                                     pixKey = uiState.pixKey,
                                     template = uiState.workOrderStatusTemplates[status.label] ?: uiState.workOrderTemplate,
-                                    items = form.items,
+                                    items = form.items.map { it.toMessageItem() },
                                 ),
                             )
                             viewModel.saveWorkOrderThen {
@@ -947,7 +948,7 @@ fun WorkOrderScreen(
                                 phone = selectedCustomer.telefone,
                                 email = selectedCustomer.email,
                                 subject = "Avaliacao OS ${form.editingNumber ?: "nova"}",
-                                text = renderWorkOrderMessage(
+                                text = WorkOrderMessageRenderer.render(
                                     customerName = selectedCustomer.nome,
                                     customerPhone = selectedCustomer.telefone,
                                     customerCpfCnpj = selectedCustomer.cpfCnpj.orEmpty(),
@@ -966,7 +967,7 @@ fun WorkOrderScreen(
                                     pixName = uiState.pixName,
                                     pixKey = uiState.pixKey,
                                     template = uiState.reviewRequestTemplate,
-                                    items = form.items,
+                                    items = form.items.map { it.toMessageItem() },
                                 ),
                             )
                         },
@@ -2013,77 +2014,10 @@ private data class ClientMessage(
     val text: String,
 )
 
-private fun renderWorkOrderMessage(
-    customerName: String,
-    customerPhone: String,
-    customerCpfCnpj: String,
-    workOrderNumber: String,
-    status: String,
-    totalValue: Double,
-    discountValue: Double,
-    minAcceptanceValue: String,
-    deliveryType: String = "",
-    deliveryStatus: String = "",
-    deliveryAddress: String = "",
-    deliveryFee: Double = 0.0,
-    trackingCode: String = "",
-    paidTotal: Double,
-    companyName: String,
-    pixName: String,
-    pixKey: String,
-    template: String,
-    items: List<WorkOrderDraftItem> = emptyList(),
-): String {
-    val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
-    val subtotalValue = totalValue + discountValue
-    val paymentStatus = when {
-        totalValue <= 0.0 || paidTotal <= 0.0 -> "Pendente"
-        paidTotal + 0.009 >= totalValue -> "Pago"
-        else -> "Parcial"
-    }
-    return MessageTemplateRenderer.render(
-        template = template,
-        tokens = mapOf(
-            "nome" to customerName,
-            "telefone" to customerPhone,
-            "cpf" to customerCpfCnpj,
-            "os" to workOrderNumber,
-            "orcamento" to "",
-            "status" to status,
-            "valor" to Formatters.currency(totalValue),
-            "subtotal" to Formatters.currency(subtotalValue),
-            "desconto" to Formatters.currency(discountValue),
-            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${Formatters.currency(discountValue)}" else "",
-            "valor_minimo_aceite" to minAcceptanceValue,
-            "tipo_entrega" to deliveryType,
-            "status_entrega" to deliveryStatus,
-            "endereco_entrega" to deliveryAddress,
-            "taxa_entrega" to Formatters.currency(deliveryFee),
-            "codigo_rastreio" to trackingCode,
-            "valor_pago" to Formatters.currency(paidTotal),
-            "saldo" to Formatters.currency(balance),
-            "status_pagamento" to paymentStatus,
-            "empresa" to companyName,
-            "data" to Formatters.dateTimeShort(System.currentTimeMillis()),
-            "PIX" to PixPayloadGenerator.generate(pixKey, pixName, balance.takeIf { it > 0.0 } ?: totalValue),
-            "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(pixKey, pixName),
-            "PIX_QR" to "",
-        ) + draftItemTokens(items),
-    )
-}
+private fun WorkOrderDraftItem.toMessageItem(): MessageTemplateRenderer.ItemData =
+    MessageTemplateRenderer.ItemData(name = name, quantity = quantity, unitPrice = unitPrice)
 
-private fun draftItemTokens(items: List<WorkOrderDraftItem>): Map<String, String> {
-    val formatted = items.joinToString("\n") {
-        "- ${it.name}: ${Formatters.quantity(it.quantity)} x ${Formatters.currency(it.unitPrice)} = ${Formatters.currency(it.subtotal)}"
-    }
-    return mapOf(
-        "itens" to formatted,
-        "servicos" to formatted,
-        "produtos" to formatted,
-        "qtd_itens" to Formatters.quantity(items.sumOf { it.quantity }),
-        "total_itens" to Formatters.currency(items.sumOf { it.subtotal }),
-    )
-}
+
 
 private fun driveStatusText(status: String, error: String): String =
     when {
