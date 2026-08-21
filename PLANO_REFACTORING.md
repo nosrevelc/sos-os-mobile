@@ -28,6 +28,8 @@ Duplicacao confirmada entre `QuoteViewModel` e `WorkOrderViewModel`: `selectCust
 
 Prioridade maxima. Antes de mover qualquer codigo.
 
+**Status: CONCLUIDA.** Ambiente de build Linux configurado (JDK 17 + SDK 35 em `~/tools`); `./gradlew test assembleDebug` verde localmente.
+
 | # | Tarefa | Risco |
 | --- | --- | --- |
 | 0.1 | Adicionar dependencias de teste: `kotlinx-coroutines-test` e Robolectric (para Room in-memory sem aparelho) | Baixo |
