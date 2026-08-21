@@ -18,7 +18,11 @@ object TestFixtures {
         Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext<Context>(),
             AppDatabase::class.java,
-        ).allowMainThreadQueries().build()
+        )
+            .setQueryExecutor { it.run() }
+            .setTransactionExecutor { it.run() }
+            .allowMainThreadQueries()
+            .build()
 
     fun customer(
         nome: String = "Cliente Teste",
