@@ -1,0 +1,125 @@
+codigo,nome,template
+orcamento,Orçamento,"📋 *ORÇAMENTO*
+
+Olá, {nome}!
+
+Segue o orçamento referente à sua solicitação.
+
+📦 *Itens*
+{itens}
+
+💰 Subtotal: R$ {subtotal}
+{linha_desconto}
+💵 *Valor total:* R$ {valor}
+
+✅ A produção será iniciada após o aceite deste orçamento e a confirmação do pagamento do sinal mínimo de *R$ {sinal_minimo}*.
+
+💳 *Pagamento via PIX*
+👤 Beneficiário: Cleverson Batista Vieira
+🔑 Chave PIX:
+{PIX}
+
+📩 Após o pagamento, envie o comprovante respondendo a esta mesma conversa.
+
+⏳ Validade: {dias} dias.
+
+Obrigado pela preferência!
+
+*TOP Estampa 👕*"
+os_aberta,OS Aberta,"📋 *ORDEM DE SERVIÇO ABERTA*
+
+Olá, {nome}!
+
+Sua Ordem de Serviço nº {os} foi aberta com sucesso! 🎉
+
+📦 {itens}
+
+💰 Valor: R$ {valor}
+
+Agradecemos pela confiança.
+
+*TOP Estampa 👕*"
+os_em_andamento,OS em andamento,"🖨️ *PRODUÇÃO EM ANDAMENTO*
+
+Olá, {nome}!
+
+Seu pedido está sendo produzido com todo o cuidado. 😊
+
+Assim que houver novidades avisaremos por aqui.
+
+*TOP Estampa 👕*"
+os_concluida,OS Concluída,"✅ *ORDEM DE SERVIÇO CONCLUÍDA*
+
+Olá, {nome}!
+
+Temos uma ótima notícia! Seu pedido ficou pronto. 🎉
+
+💰 Total: R$ {valor}
+💵 Pago: R$ {valor_pago}
+💳 Saldo: R$ {saldo}
+
+Caso exista saldo pendente:
+
+👤 Cleverson Batista Vieira
+🔑 {PIX}
+
+📩 Envie o comprovante por esta conversa.
+
+*TOP Estampa 👕*"
+pagamento_pendente,Pagamento pendente,"💰 *PAGAMENTO PENDENTE*
+
+Olá, {nome}!
+
+Falta apenas a confirmação do pagamento para darmos continuidade ao seu pedido.
+
+💵 Saldo: R$ {saldo}
+
+💳 PIX
+👤 Cleverson Batista Vieira
+🔑 {PIX}
+
+📩 Envie o comprovante por esta conversa.
+
+Obrigado!
+
+*TOP Estampa 👕*"
+pagamento_confirmado,Pagamento confirmado,"✅ *PAGAMENTO CONFIRMADO*
+
+Olá, {nome}!
+
+Recebemos seu pagamento com sucesso! Muito obrigado. 🙏
+
+Sua Ordem de Serviço nº {os} seguirá para a próxima etapa.
+
+*TOP Estampa 👕*"
+solicitacao_avaliacao,Solicitação de avaliação,"⭐ *SUA OPINIÃO É MUITO IMPORTANTE*
+
+Olá, {nome}!
+
+Esperamos que tenha gostado do nosso atendimento. 😊
+
+Se puder, deixe uma avaliação. Ela nos ajuda a crescer e atender cada vez melhor.
+
+{link_google}
+
+Muito obrigado!
+
+*TOP Estampa 👕*"
+aviso_retirada,Aviso para retirada,"📍 *PEDIDO PRONTO PARA RETIRADA*
+
+Olá, {nome}!
+
+Seu pedido já está pronto e aguardando sua retirada. 😊
+
+Será um prazer recebê-lo(a)!
+
+*TOP Estampa 👕*"
+agradecimento,Agradecimento,"🙏 *MUITO OBRIGADO!*
+
+Olá, {nome}!
+
+Agradecemos sinceramente pela confiança em nosso trabalho.
+
+Esperamos atendê-lo(a) novamente em breve.
+
+*TOP Estampa 👕*"

@@ -1,8 +1,10 @@
 package br.com.sos.osmobile.feature.settings
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +36,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.documentfile.provider.DocumentFile
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
+import br.com.sos.osmobile.data.repository.CalendarAccount
 import br.com.sos.osmobile.data.print.BluetoothPrinterDevice
 import br.com.sos.osmobile.data.print.BluetoothThermalPrinter
 import br.com.sos.osmobile.data.print.ThermalPrintContent
@@ -45,8 +49,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val settings by viewModel.settings.collectAsState()
+    val calendars by viewModel.calendars.collectAsState()
+    val calendarMessage by viewModel.calendarStatusMessage.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val driveRootName = remember(context, settings.driveRootUri) {
+        driveFolderDisplayName(context, settings.driveRootUri)
+    }
     var companyName by remember { mutableStateOf(settings.companyName) }
     var quoteMinAcceptanceValue by remember { mutableStateOf(settings.quoteMinAcceptanceValue) }
     var quoteMinDepositValue by remember { mutableStateOf(settings.quoteMinDepositValue) }
@@ -111,6 +120,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             viewModel.loadContactAccounts()
         }
     }
+    val calendarLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+    ) { granted ->
+        if (granted[Manifest.permission.READ_CALENDAR] == true && granted[Manifest.permission.WRITE_CALENDAR] == true) {
+            viewModel.loadCalendars()
+        }
+    }
     val bluetoothLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -124,6 +140,15 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
         uri?.let {
+            val selectedFolder = DocumentFile.fromTreeUri(context, it)
+            if (selectedFolder == null || !selectedFolder.canWrite()) {
+                viewModel.rejectDriveRootSelection("Nao foi possivel usar esta pasta. Selecione uma pasta gravavel dentro do Meu Drive.")
+                return@let
+            }
+            if (selectedFolder.isDriveRootLike()) {
+                viewModel.rejectDriveRootSelection("Selecione uma pasta dentro do Meu Drive, como ClientesTopEstampa. A raiz Meu Drive nao deve ser usada.")
+                return@let
+            }
             runCatching {
                 context.contentResolver.takePersistableUriPermission(
                     it,
@@ -236,6 +261,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         SettingSwitch("Assinatura", checked = settings.assinatura, onCheckedChange = { viewModel.setModule("modulo_assinatura", it) })
         SettingSwitch("Checklist", checked = settings.checklist, onCheckedChange = { viewModel.setModule("modulo_checklist", it) })
         SettingSwitch("Garantia", checked = settings.garantia, onCheckedChange = { viewModel.setModule("modulo_garantia", it) })
+        SettingSwitch("Agenda/Agendamentos", checked = settings.agenda, onCheckedChange = { viewModel.setModule("modulo_agenda", it) })
         SettingSwitch("Financeiro", checked = settings.financeiro, onCheckedChange = { viewModel.setModule("modulo_financeiro", it) })
         SettingSwitch("Fiscal", checked = settings.fiscal, onCheckedChange = { viewModel.setModule("modulo_fiscal", it) })
 
@@ -261,36 +287,70 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         }
         }
 
-        SettingsSection("Agenda") {
-        OutlinedButton(
-            onClick = {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-                    viewModel.loadContactAccounts()
-                } else {
-                    readContactsLauncher.launch(Manifest.permission.READ_CONTACTS)
+        if (settings.agenda) {
+            SettingsSection("Agenda") {
+                OutlinedButton(
+                    onClick = {
+                        val hasRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+                        val hasWrite = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
+                        if (hasRead && hasWrite) {
+                            viewModel.loadCalendars()
+                        } else {
+                            calendarLauncher.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Buscar calendarios do aparelho")
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Buscar agendas do aparelho")
-        }
-        ContactAccountSelector(
-            selectedAccount = settings.contactsGoogleAccount,
-            accounts = settings.contactAccounts,
-            onSelected = viewModel::setContactsGoogleAccount,
-        )
-        settings.contactsMessage?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.secondary,
-            )
-        }
-        Text(
-            text = "Selecione uma conta configurada no Android ou use a agenda local.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+                CalendarSelector(
+                    selectedCalendarId = settings.calendarId,
+                    selectedCalendarLabel = settings.calendarLabel,
+                    calendars = calendars,
+                    onSelected = viewModel::setDefaultCalendar,
+                )
+                Text(
+                    text = "Agenda padrao: ${settings.calendarLabel.ifBlank { "nenhuma agenda selecionada" }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                calendarMessage?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+                            viewModel.loadContactAccounts()
+                        } else {
+                            readContactsLauncher.launch(Manifest.permission.READ_CONTACTS)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Buscar agendas de contatos do aparelho")
+                }
+                ContactAccountSelector(
+                    selectedAccount = settings.contactsGoogleAccount,
+                    accounts = settings.contactAccounts,
+                    onSelected = viewModel::setContactsGoogleAccount,
+                )
+                settings.contactsMessage?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                Text(
+                    text = "Selecione tambem a agenda de contatos para salvar clientes no aparelho.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         SettingsSection("Google Drive") {
@@ -311,6 +371,11 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         ) {
             Text("Sincronizar pendentes agora")
         }
+        Text(
+            text = "Pasta para receber arquivos: $driveRootName",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         viewModel.driveSyncMessage?.let {
             Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
         }
@@ -791,6 +856,20 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     }
 }
 
+private fun driveFolderDisplayName(context: Context, uriValue: String): String {
+    if (uriValue.isBlank()) return "nenhuma pasta selecionada"
+    return runCatching {
+        DocumentFile.fromTreeUri(context, Uri.parse(uriValue))
+            ?.name
+            ?.takeIf { it.isNotBlank() }
+    }.getOrNull() ?: "pasta configurada"
+}
+
+private fun DocumentFile.isDriveRootLike(): Boolean {
+    val normalized = name.orEmpty().trim().lowercase()
+    return normalized in setOf("meu drive", "my drive", "drive", "arquivos do drive")
+}
+
 @Composable
 private fun SettingsSection(
     title: String,
@@ -844,6 +923,37 @@ private fun ContactAccountSelector(
                 text = { Text(if (account.storageKey == selectedAccount || account.name == selectedAccount) "${account.label} *" else account.label) },
                 onClick = {
                 onSelected(account.storageKey)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarSelector(
+    selectedCalendarId: String,
+    selectedCalendarLabel: String,
+    calendars: List<CalendarAccount>,
+    onSelected: (CalendarAccount) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = calendars.firstOrNull { it.id.toString() == selectedCalendarId }?.label
+        ?: selectedCalendarLabel.takeIf { it.isNotBlank() }
+        ?: "Selecione a agenda padrao"
+
+    OutlinedButton(
+        onClick = { expanded = calendars.isNotEmpty() },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(selectedLabel)
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        calendars.forEach { calendar ->
+            DropdownMenuItem(
+                text = { Text(if (calendar.id.toString() == selectedCalendarId) "${calendar.label} *" else calendar.label) },
+                onClick = {
+                    onSelected(calendar)
                     expanded = false
                 },
             )

@@ -8,9 +8,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.sos.osmobile.data.model.CpfCnpjPolicy
 import br.com.sos.osmobile.data.backup.BackupRepository
+import br.com.sos.osmobile.data.repository.CalendarAccount
+import br.com.sos.osmobile.data.repository.CalendarRepository
 import br.com.sos.osmobile.data.repository.ContactAccount
 import br.com.sos.osmobile.data.repository.ContactsRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CALENDAR_ID_KEY
+import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CALENDAR_LABEL_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CONTACTS_GOOGLE_ACCOUNT_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CPF_CNPJ_POLICY_KEY
@@ -76,6 +80,7 @@ data class SettingsUiState(
     val assinatura: Boolean = false,
     val checklist: Boolean = false,
     val garantia: Boolean = false,
+    val agenda: Boolean = true,
     val financeiro: Boolean = false,
     val fiscal: Boolean = false,
     val cpfCnpjPolicy: CpfCnpjPolicy = CpfCnpjPolicy.Optional,
@@ -129,16 +134,21 @@ data class SettingsUiState(
     val contactsMessage: String? = null,
     val driveSyncEnabled: Boolean = false,
     val driveRootUri: String = "",
+    val calendarId: String = "",
+    val calendarLabel: String = "",
 )
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val contactsRepository: ContactsRepository,
+    private val calendarRepository: CalendarRepository,
     private val backupRepository: BackupRepository,
     private val driveSyncRepository: DriveSyncRepository,
 ) : ViewModel() {
     private val contactAccounts = MutableStateFlow<List<ContactAccount>>(emptyList())
     private val contactsMessage = MutableStateFlow<String?>(null)
+    private val calendarAccounts = MutableStateFlow<List<CalendarAccount>>(emptyList())
+    private val calendarMessage = MutableStateFlow<String?>(null)
 
     var resetMessage by mutableStateOf<String?>(null)
         private set
@@ -150,11 +160,13 @@ class SettingsViewModel(
         settingsRepository.observeAll(),
         contactAccounts,
         contactsMessage,
-    ) { entities, accounts, message ->
-        Triple(entities, accounts, message)
+        calendarAccounts,
+        calendarMessage,
+    ) { entities, accounts, contactMessage, calendars, calendarMessage ->
+        SettingsSources(entities, accounts, contactMessage, calendars, calendarMessage)
     }
-        .map { entities ->
-            val settingsEntities = entities.first
+        .map { sources ->
+            val settingsEntities = sources.settings
             val values = settingsEntities.associate { it.chave to it.valor.toBooleanStrictOrNull() }
             val rawValues = settingsEntities.associate { it.chave to it.valor }
             SettingsUiState(
@@ -163,6 +175,7 @@ class SettingsViewModel(
                 assinatura = values["modulo_assinatura"] ?: false,
                 checklist = values["modulo_checklist"] ?: false,
                 garantia = values["modulo_garantia"] ?: false,
+                agenda = values["modulo_agenda"] ?: true,
                 financeiro = values["modulo_financeiro"] ?: false,
                 fiscal = values["modulo_fiscal"] ?: false,
                 cpfCnpjPolicy = CpfCnpjPolicy.fromStorage(
@@ -214,13 +227,21 @@ class SettingsViewModel(
                 appointmentReminder1DayTemplate = rawValues[TEMPLATE_APPOINTMENT_REMINDER_1D_KEY] ?: MessageTemplateRenderer.appointmentReminder1DayTemplate,
                 appointmentReminderTodayTemplate = rawValues[TEMPLATE_APPOINTMENT_REMINDER_TODAY_KEY] ?: MessageTemplateRenderer.appointmentReminderTodayTemplate,
                 quoteTemplate = rawValues[TEMPLATE_QUOTE_KEY] ?: MessageTemplateRenderer.quoteDefaultTemplate,
-                contactAccounts = entities.second,
-                contactsMessage = entities.third,
+                contactAccounts = sources.contactAccounts,
+                contactsMessage = sources.contactsMessage,
                 driveSyncEnabled = values[DRIVE_SYNC_ENABLED_KEY] ?: false,
                 driveRootUri = rawValues[DRIVE_ROOT_URI_KEY].orEmpty(),
+                calendarId = rawValues[CALENDAR_ID_KEY].orEmpty(),
+                calendarLabel = rawValues[CALENDAR_LABEL_KEY].orEmpty(),
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+
+    val calendars = calendarAccounts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val calendarStatusMessage = calendarMessage
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun setModule(key: String, enabled: Boolean) {
         viewModelScope.launch {
@@ -255,15 +276,20 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.set(DRIVE_ROOT_URI_KEY, uri)
             settingsRepository.set(DRIVE_SYNC_ENABLED_KEY, true.toString())
-            driveSyncMessage = "Pasta do Drive configurada. Sincronizacao pendente sera tentada automaticamente."
+            driveSyncRepository.resetAllDriveSyncReferences()
+            driveSyncMessage = "Pasta do Drive configurada. Referencias antigas foram limpas; sincronize pendentes novamente."
         }
+    }
+
+    fun rejectDriveRootSelection(message: String) {
+        driveSyncMessage = message
     }
 
     fun syncDrivePending() {
         viewModelScope.launch {
             driveSyncMessage = "Sincronizando pendentes do Drive..."
             driveSyncMessage = when (val result = driveSyncRepository.syncAllPending()) {
-                is DriveSyncResult.Done -> "Sincronizacao concluida: ${result.syncedItems} item(ns)."
+                is DriveSyncResult.Done -> driveSyncDoneMessage(result)
                 is DriveSyncResult.Skipped -> result.reason
             }
         }
@@ -272,6 +298,18 @@ class SettingsViewModel(
     fun setCompanyName(value: String) {
         viewModelScope.launch {
             settingsRepository.set(COMPANY_NAME_KEY, value.trim())
+        }
+    }
+
+    private fun driveSyncDoneMessage(result: DriveSyncResult.Done): String {
+        if (result.failedItems <= 0) {
+            return "Sincronizacao concluida: ${result.syncedItems} item(ns)."
+        }
+        val error = result.firstError?.let { " Erro: $it" }.orEmpty()
+        return if (result.syncedItems > 0) {
+            "Sincronizacao parcial: ${result.syncedItems} item(ns) enviado(s), ${result.failedItems} com erro.$error"
+        } else {
+            "Nenhum item sincronizado. ${result.failedItems} item(ns) com erro.$error"
         }
     }
 
@@ -478,18 +516,55 @@ class SettingsViewModel(
         }
     }
 
+    fun loadCalendars() {
+        viewModelScope.launch {
+            runCatching {
+                calendarRepository.listCalendars()
+            }.fold(
+                onSuccess = {
+                    calendarAccounts.value = it
+                    calendarMessage.value = if (it.isEmpty()) {
+                        "Nenhuma agenda encontrada no Android."
+                    } else {
+                        "${it.size} agenda(s) encontrada(s)."
+                    }
+                },
+                onFailure = {
+                    calendarMessage.value = "Nao foi possivel ler agendas: ${it.message ?: "verifique a permissao"}"
+                },
+            )
+        }
+    }
+
+    fun setDefaultCalendar(calendar: CalendarAccount) {
+        viewModelScope.launch {
+            settingsRepository.set(CALENDAR_ID_KEY, calendar.id.toString())
+            settingsRepository.set(CALENDAR_LABEL_KEY, calendar.label)
+            calendarMessage.value = "Agenda padrao definida."
+        }
+    }
+
     companion object {
         fun factory(
             repository: SettingsRepository,
             contactsRepository: ContactsRepository,
+            calendarRepository: CalendarRepository,
             backupRepository: BackupRepository,
             driveSyncRepository: DriveSyncRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(repository, contactsRepository, backupRepository, driveSyncRepository) as T
+                    return SettingsViewModel(repository, contactsRepository, calendarRepository, backupRepository, driveSyncRepository) as T
                 }
             }
     }
 }
+
+private data class SettingsSources(
+    val settings: List<br.com.sos.osmobile.data.local.entity.AppSettingEntity>,
+    val contactAccounts: List<ContactAccount>,
+    val contactsMessage: String?,
+    val calendarAccounts: List<CalendarAccount>,
+    val calendarMessage: String?,
+)

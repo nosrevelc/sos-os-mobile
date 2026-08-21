@@ -85,6 +85,7 @@ class SettingsRepository(
         const val DRIVE_SYNC_ENABLED_KEY = "drive_sync_enabled"
         const val DRIVE_ROOT_URI_KEY = "drive_root_uri"
         const val CALENDAR_ID_KEY = "calendar_id"
+        const val CALENDAR_LABEL_KEY = "calendar_label"
 
         fun contactRawIdKey(customerId: Long): String = "contact_raw_id_customer_$customerId"
     }

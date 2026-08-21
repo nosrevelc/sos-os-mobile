@@ -28,15 +28,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -98,6 +102,7 @@ fun OSMobileApp(appContainer: AppContainer) {
         when (route) {
             AppRoute.Quotes -> moduleValues["modulo_orcamento"] ?: true
             AppRoute.QuoteList -> moduleValues["modulo_orcamento"] ?: true
+            AppRoute.Appointments -> moduleValues["modulo_agenda"] ?: true
             AppRoute.Finance -> moduleValues["modulo_financeiro"] ?: false
             else -> true
         }
@@ -108,13 +113,28 @@ fun OSMobileApp(appContainer: AppContainer) {
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+                drawerContentColor = MaterialTheme.colorScheme.onSurface,
             ) {
-                Text("OS Mobile", modifier = Modifier.padding(24.dp, 20.dp, 16.dp, 12.dp))
+                Text(
+                    text = "OS Mobile",
+                    modifier = Modifier.padding(24.dp, 20.dp, 16.dp, 12.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 visibleRoutes.forEach { route ->
                     NavigationDrawerItem(
                         label = { Text(route.label) },
                         icon = { Icon(imageVector = routeIcon(route), contentDescription = null) },
                         selected = currentRoute == route.route,
+                        colors = NavigationDrawerItemDefaults.colors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                         onClick = {
                             scope.launch { drawerState.close() }
                             navController.navigate(route.route) {
@@ -128,9 +148,16 @@ fun OSMobileApp(appContainer: AppContainer) {
         },
     ) {
         Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
                     title = { Text(currentLabel) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(imageVector = Icons.Filled.Menu, contentDescription = "Abrir menu")
@@ -139,15 +166,19 @@ fun OSMobileApp(appContainer: AppContainer) {
                 )
             },
             bottomBar = {
-                Text(
-                    text = "OS Mobile v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(6.dp),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Text(
+                        text = "OS Mobile v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(6.dp),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
             },
         ) { contentPadding ->
             NavHost(
@@ -327,7 +358,6 @@ fun OSMobileApp(appContainer: AppContainer) {
                         factory = AppointmentViewModel.factory(
                             appointmentRepository = appContainer.appointmentRepository,
                             customerRepository = appContainer.customerRepository,
-                            calendarRepository = appContainer.calendarRepository,
                             settingsRepository = appContainer.settingsRepository,
                         ),
                     )
@@ -408,6 +438,7 @@ fun OSMobileApp(appContainer: AppContainer) {
                         factory = SettingsViewModel.factory(
                             repository = appContainer.settingsRepository,
                             contactsRepository = appContainer.contactsRepository,
+                            calendarRepository = appContainer.calendarRepository,
                             backupRepository = appContainer.backupRepository,
                             driveSyncRepository = appContainer.driveSyncRepository,
                         ),

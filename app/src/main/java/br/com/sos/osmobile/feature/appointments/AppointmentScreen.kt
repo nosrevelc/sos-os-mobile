@@ -1,9 +1,5 @@
 package br.com.sos.osmobile.feature.appointments
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assignment
-import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,10 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import br.com.sos.osmobile.data.local.entity.AppointmentStatus
 import br.com.sos.osmobile.data.local.model.AppointmentSummary
 import br.com.sos.osmobile.data.repository.SettingsRepository
@@ -50,14 +43,6 @@ fun AppointmentScreen(
     onOpenWorkOrder: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    val calendarPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) { result ->
-        if (result[Manifest.permission.READ_CALENDAR] == true && result[Manifest.permission.WRITE_CALENDAR] == true) {
-            viewModel.loadCalendars()
-        }
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -124,26 +109,6 @@ fun AppointmentScreen(
                 Text("Salvar agendamento")
             }
             viewModel.form.message?.let { Text(it, color = MaterialTheme.colorScheme.secondary) }
-        }
-        item {
-            Text("Calendario Android/Google", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            OutlinedButton(
-                onClick = {
-                    val hasRead = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
-                    val hasWrite = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
-                    if (hasRead && hasWrite) viewModel.loadCalendars() else calendarPermissionLauncher.launch(
-                        arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Filled.Event, contentDescription = null)
-                Text("Buscar agendas do aparelho")
-            }
-            viewModel.calendars.forEach { calendar ->
-                AssistChip(onClick = { viewModel.selectCalendar(calendar.id) }, label = { Text(calendar.label) })
-            }
-            viewModel.calendarMessage?.let { Text(it, color = MaterialTheme.colorScheme.secondary) }
         }
         item {
             Text("Proximos agendamentos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

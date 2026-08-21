@@ -1,28 +1,5 @@
 codigo,nome,template
-orcamento,Orçamento,"📋 *ORÇAMENTO*
-
-Olá, {nome}!
-
-Segue o orçamento referente à sua solicitação.
-
-{itens}
-
-Subtotal: R$ {subtotal}
-{linha_desconto}
-Valor total: R$ {valor}
-
-A produção será iniciada somente após o aceite deste orçamento e a confirmação do pagamento do sinal mínimo de R$ {sinal_minimo}.
-
-PIX
-Beneficiário: Cleverson Batista Vieira
-Chave PIX:
-{PIX}
-
-Após o pagamento, envie o comprovante respondendo a esta mesma conversa.
-
-Validade do orçamento: {dias} dias.
-
-TOP Estampa 👕"
+,,""
 os_geral,OS Geral,"📋 *ORDEM DE SERVIÇO*
 
 Olá, {nome}!
@@ -222,7 +199,7 @@ O orçamento Nº {orcamento} expirou.
 Caso ainda tenha interesse, entre em contato para atualizarmos os valores.
 
 TOP Estampa 👕"
-lembrete_orcamento,Lembrete de orçamento,"📋 *LEMBRETE DE ORÇAMENTO*
+lembrete_orcamento,,"📋 *LEMBRETE DE ORÇAMENTO*
 
 Olá, {nome}!
 

@@ -11,11 +11,8 @@ import br.com.sos.osmobile.data.local.entity.CustomerEntity
 import br.com.sos.osmobile.data.local.model.AppointmentSummary
 import br.com.sos.osmobile.data.message.MessageTemplateRenderer
 import br.com.sos.osmobile.data.repository.AppointmentRepository
-import br.com.sos.osmobile.data.repository.CalendarAccount
-import br.com.sos.osmobile.data.repository.CalendarRepository
 import br.com.sos.osmobile.data.repository.CustomerRepository
 import br.com.sos.osmobile.data.repository.SettingsRepository
-import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.CALENDAR_ID_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.COMPANY_NAME_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_APPOINTMENT_CREATED_KEY
 import br.com.sos.osmobile.data.repository.SettingsRepository.Companion.TEMPLATE_APPOINTMENT_REMINDER_1D_KEY
@@ -50,7 +47,6 @@ data class AppointmentUiState(
 class AppointmentViewModel(
     private val appointmentRepository: AppointmentRepository,
     private val customerRepository: CustomerRepository,
-    private val calendarRepository: CalendarRepository,
     private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
     val uiState = combine(
@@ -64,12 +60,6 @@ class AppointmentViewModel(
     var form by mutableStateOf(AppointmentFormState())
         private set
 
-    var calendars by mutableStateOf<List<CalendarAccount>>(emptyList())
-        private set
-
-    var calendarMessage by mutableStateOf<String?>(null)
-        private set
-
     fun selectCustomer(id: Long) {
         form = form.copy(selectedCustomerId = id, message = null)
     }
@@ -80,24 +70,6 @@ class AppointmentViewModel(
     fun onTimeChanged(value: String) { form = form.copy(time = value.take(5), message = null) }
     fun onDurationChanged(value: String) { form = form.copy(durationMinutes = value.filter(Char::isDigit).take(4), message = null) }
     fun onNotesChanged(value: String) { form = form.copy(notes = value, message = null) }
-
-    fun loadCalendars() {
-        viewModelScope.launch {
-            runCatching { calendarRepository.listCalendars() }
-                .onSuccess {
-                    calendars = it
-                    calendarMessage = if (it.isEmpty()) "Nenhuma agenda encontrada no Android." else "${it.size} agenda(s) encontrada(s)."
-                }
-                .onFailure { calendarMessage = "Nao foi possivel ler agendas: ${it.message.orEmpty()}" }
-        }
-    }
-
-    fun selectCalendar(id: Long) {
-        viewModelScope.launch {
-            settingsRepository.set(CALENDAR_ID_KEY, id.toString())
-            calendarMessage = "Agenda selecionada."
-        }
-    }
 
     fun saveAppointment() {
         val customer = uiState.value.customers.firstOrNull { it.id == form.selectedCustomerId }
@@ -183,13 +155,12 @@ class AppointmentViewModel(
         fun factory(
             appointmentRepository: AppointmentRepository,
             customerRepository: CustomerRepository,
-            calendarRepository: CalendarRepository,
             settingsRepository: SettingsRepository,
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    AppointmentViewModel(appointmentRepository, customerRepository, calendarRepository, settingsRepository) as T
+                    AppointmentViewModel(appointmentRepository, customerRepository, settingsRepository) as T
             }
     }
 }
