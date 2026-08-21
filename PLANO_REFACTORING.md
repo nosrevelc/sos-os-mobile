@@ -42,6 +42,8 @@ Validacao da fase: `./gradlew test` verde.
 
 ## Fase 1 - Extracoes de baixo risco
 
+**Status: CONCLUIDA.**
+
 Nao muda API publica de nenhuma classe. Ganho imediato de legibilidade.
 
 | # | Tarefa | De | Para |
@@ -53,6 +55,8 @@ Nao muda API publica de nenhuma classe. Ganho imediato de legibilidade.
 | 1.5 | Status/texto/icone/cor do Drive (`driveStatusText`, `driveStatusIcon`, `driveStatusColor`) | `WorkOrderScreen.kt` | `ui/components/DriveSyncStatus.kt` |
 
 ## Fase 2 - Divisao do WorkOrderViewModel (1022 linhas)
+
+**Status: CONCLUIDA.** ViewModel reduzido a ~440 linhas (fachada + uiState); controllers em arquivos proprios no mesmo pacote.
 
 Estrategia: extrair delegues por responsabilidade mantendo a fachada `WorkOrderViewModel` estavel, para nao obrigar mudanca grande na Screen na mesma etapa.
 
@@ -73,6 +77,8 @@ Regras:
 - Ordem sugerida: Print -> Attachment -> Drive -> Form (o Form por ultimo, e o mais arriscado).
 
 ## Fase 3 - Divisao do WorkOrderScreen (2196 linhas)
+
+**Status: CONCLUIDA (split principal).** `WorkOrderScreen.kt` 1432 linhas (orquestracao + form), `WorkOrderListScreen.kt` 377, `WorkOrderFormSections.kt` 271, `WorkOrderSignature.kt` 379. Pendencia menor: limpar imports nao usados nos arquivos novos.
 
 Depois da Fase 2, dividir por secao visual. Cada arquivo novo e movimentacao de codigo existente, sem redesenho de UI.
 
