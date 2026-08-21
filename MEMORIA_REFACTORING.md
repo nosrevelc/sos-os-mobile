@@ -1,10 +1,10 @@
 # Memoria de Sessao - Refatoracao OS Mobile
 
 > Arquivo de memoria para continuidade entre sessoes. Atualize a cada etapa concluida.
-> Ultima atualizacao: pos-refatoracao, ampliacao de testes (CsvSupport + Formatters, 69 testes no total).
-> Correcoes de producao decorrentes dos novos testes: parseCsv desescapa `\"`/`\\` em campos citados,
-> cabecalho BOM+espaco, blankToNull trima, decodeCsvEscapedLines normaliza CR cru,
-> Formatters.dateTimeShort com padrao fixo `dd/MM/yy HH:mm` (era dependente de locale da JVM).
+> Ultima atualizacao: pos-refatoracao, 91 testes (CsvSupport, Formatters e controllers de OS
+> Form/Print/Message/Attachment). Faltam: WorkOrderDriveController (SAF) e UI Compose.
+> Correcoes de producao dos testes anteriores: parseCsv desescapa `\"`/`\\`, cabecalho BOM+espaco,
+> blankToNull trima, decodeCsvEscapedLines normaliza CR cru, dateTimeShort padrao fixo `dd/MM/yy HH:mm`.
 
 ## Como buildar nesta maquina (Linux)
 
@@ -78,9 +78,9 @@ Extras das fases 0-1: `core/database/DatabaseMigrations.kt` (`ALL_MIGRATIONS`), 
 `data/message/WorkOrderMessageRenderer.kt`, `data/local/AttachmentNames.kt`,
 `ui/components/DriveSyncStatus.kt`, `WorkOrderStockTotals.kt`.
 
-Testes: `app/src/test/...` — 69 no total. CsvSupportTest(13), FormattersTest(5), BackupRepositoryTest(3),
-QuoteConversionRepositoryTest(5), WorkOrderRepositoryTest(8), WorkOrderMessageRendererTest(5),
-WorkOrderStockTotalsTest(5) e validadores/renderizador/documento. Todos verdes.
+Testes: `app/src/test/...` — 91 no total. Controllers de OS: WorkOrderFormControllerTest(11),
+WorkOrderAttachmentControllerTest(6), WorkOrderPrintControllerTest(3), WorkOrderMessageControllerTest(2).
+CsvSupportTest(13), FormattersTest(5), repos/backup/renderizadores/validadores. Todos verdes.
 
 ## Pos-refatoracao: novos testes e correcoes (ago/2026)
 
@@ -92,6 +92,15 @@ WorkOrderStockTotalsTest(5) e validadores/renderizador/documento. Todos verdes.
 - Formatters.dateTimeShort usava DateFormat.getDateTimeInstance (dependia do locale da JVM;
   nesta maquina pt_PT sai `14/11/23, 19:13`, no CI en_US sai com AM/PM). Agora padrao fixo
   `dd/MM/yy HH:mm`, igual ao estilo de `dateTime()`. Teste de data/hora depende de locale = armadilha nova.
+
+### Armadilha nova: controllers + Room em teste
+
+- Controllers lancam corrotinas em `session.scope`; com executor padrao do Room o teste
+  asserta antes do termino (e corrotinas orfas viram `UncaughtExceptionsBeforeTest` no teste seguinte).
+- Solucao em `TestFixtures.inMemoryDatabase()`: `setQueryExecutor { it.run() }` +
+  `setTransactionExecutor { it.run() }` (executor direto) — launches rodam sincronos com
+  `CoroutineScope(UnconfinedTestDispatcher())`.
+- `saveWorkOrderThen(onSaved: () -> Unit)` nao passa id; usar `session.formState.editingId` apos salvar.
 
 ## Proximos passos (opcionais)
 

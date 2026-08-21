@@ -191,8 +191,9 @@ app/build/outputs/bundle/release/app-release.aab
 
 3. Testes:
    - ja cobertos: repositorios (QuoteConversion, WorkOrder), backup/restauracao,
-     CsvSupport, Formatters, totais de estoque e renderizacao de mensagens (69 testes);
-   - faltam: controllers de OS (Form/Print/Message/Attachment/Drive).
+     CsvSupport, Formatters, totais de estoque, renderizacao de mensagens e
+     controllers de OS Form/Print/Message/Attachment (91 testes);
+   - faltam: WorkOrderDriveController (depende de SAF/Drive) e testes de UI Compose.
 
 4. PDF:
    - melhorar layout visual do PDF;
@@ -215,7 +216,7 @@ app/build/outputs/bundle/release/app-release.aab
 - `app/src/main/java/br/com/sos/osmobile/data/backup/` (BackupRepository + CsvSupport + DriveBackupStorage)
 - `app/src/main/java/br/com/sos/osmobile/data/message/WorkOrderMessageRenderer.kt`
 - `app/src/main/java/br/com/sos/osmobile/ui/components/` (CustomerSection, DocumentItemsEditor, StatusSelectorCompact, DriveSyncStatus)
- - `app/src/test/java/br/com/sos/osmobile/` (69 testes)
+ - `app/src/test/java/br/com/sos/osmobile/` (91 testes)
 
 ## Roteiro de teste no celular
 
@@ -245,5 +246,6 @@ Fluxo minimo:
 
 ## Proximo passo recomendado
 
-Ampliar testes dos controllers de OS e, quando o proprietario desejar publicar,
-gerar release assinado e subir o AAB no Play Console em Teste interno.
+Quando o proprietario desejar publicar, gerar release assinado e subir o AAB no
+Play Console em Teste interno; em paralelo, evoluir UI/UX (botoes, estados vazios,
+telas de detalhe).
