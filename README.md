@@ -176,7 +176,7 @@ Modelos de importacao na raiz do repositorio:
 2. Subir AAB no Play Console (Teste interno) e definir versionamento.
 3. Melhorar UI/UX (botoes, estados vazios, detalhes) e layout do PDF.
 4. Impressao direta Bluetooth 58 mm (recibo/garantia).
-5. Ampliar testes automatizados para os controllers de OS (repos, conversao, backup, mensagens e estoque ja cobertos).
+5. Ampliar testes automatizados para os controllers de OS (repos, conversao, backup, mensagens, estoque, CSV e formatadores ja cobertos).
 
 Detalhes completos em [`O_QUE_FALTA.md`](O_QUE_FALTA.md).
 

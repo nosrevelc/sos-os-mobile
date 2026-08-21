@@ -191,8 +191,8 @@ app/build/outputs/bundle/release/app-release.aab
 
 3. Testes:
    - ja cobertos: repositorios (QuoteConversion, WorkOrder), backup/restauracao,
-     totais de estoque e renderizacao de mensagens (51 testes);
-   - faltam: controllers de OS (Form/Print/Message/Attachment/Drive), CsvSupport e Formatters.
+     CsvSupport, Formatters, totais de estoque e renderizacao de mensagens (69 testes);
+   - faltam: controllers de OS (Form/Print/Message/Attachment/Drive).
 
 4. PDF:
    - melhorar layout visual do PDF;
@@ -215,7 +215,7 @@ app/build/outputs/bundle/release/app-release.aab
 - `app/src/main/java/br/com/sos/osmobile/data/backup/` (BackupRepository + CsvSupport + DriveBackupStorage)
 - `app/src/main/java/br/com/sos/osmobile/data/message/WorkOrderMessageRenderer.kt`
 - `app/src/main/java/br/com/sos/osmobile/ui/components/` (CustomerSection, DocumentItemsEditor, StatusSelectorCompact, DriveSyncStatus)
-- `app/src/test/java/br/com/sos/osmobile/` (51 testes)
+ - `app/src/test/java/br/com/sos/osmobile/` (69 testes)
 
 ## Roteiro de teste no celular
 

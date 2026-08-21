@@ -1,8 +1,10 @@
 # Memoria de Sessao - Refatoracao OS Mobile
 
 > Arquivo de memoria para continuidade entre sessoes. Atualize a cada etapa concluida.
-> Ultima atualizacao: PROJETO CONCLUIDO E VALIDADO - 6 fases feitas, CI verde no GitHub,
-> APK debug instalado no celular com restauracao de backup do Drive testada pelo proprietario (ago/2026).
+> Ultima atualizacao: pos-refatoracao, ampliacao de testes (CsvSupport + Formatters, 69 testes no total).
+> Correcoes de producao decorrentes dos novos testes: parseCsv desescapa `\"`/`\\` em campos citados,
+> cabecalho BOM+espaco, blankToNull trima, decodeCsvEscapedLines normaliza CR cru,
+> Formatters.dateTimeShort com padrao fixo `dd/MM/yy HH:mm` (era dependente de locale da JVM).
 
 ## Como buildar nesta maquina (Linux)
 
@@ -76,8 +78,20 @@ Extras das fases 0-1: `core/database/DatabaseMigrations.kt` (`ALL_MIGRATIONS`), 
 `data/message/WorkOrderMessageRenderer.kt`, `data/local/AttachmentNames.kt`,
 `ui/components/DriveSyncStatus.kt`, `WorkOrderStockTotals.kt`.
 
-Testes: `app/src/test/...` — TestFixtures, QuoteConversionRepositoryTest(5), WorkOrderRepositoryTest(8),
-BackupRepositoryTest(3), WorkOrderStockTotalsTest(5), WorkOrderMessageRendererTest(5). Todos verdes.
+Testes: `app/src/test/...` — 69 no total. CsvSupportTest(13), FormattersTest(5), BackupRepositoryTest(3),
+QuoteConversionRepositoryTest(5), WorkOrderRepositoryTest(8), WorkOrderMessageRendererTest(5),
+WorkOrderStockTotalsTest(5) e validadores/renderizador/documento. Todos verdes.
+
+## Pos-refatoracao: novos testes e correcoes (ago/2026)
+
+- CsvSupportTest + FormattersTest criados (18 testes); 5 falhas revelaram bugs reais de producao.
+- parseCsv: agora desescapa `\"` e `\\` dentro de campos citados (round-trip com `esc()` fechado).
+- Cabecalho CSV: `removePrefix(BOM)` antes do `trim()` — BOM seguido de espaco quebrava a chave.
+- blankToNull trima antes de decidir nulo (chamadores ja recebem valores trimados; sem mudanca visivel).
+- decodeCsvEscapedLines normaliza tambem CR/CRLF crus, nao so sequencias escapadas.
+- Formatters.dateTimeShort usava DateFormat.getDateTimeInstance (dependia do locale da JVM;
+  nesta maquina pt_PT sai `14/11/23, 19:13`, no CI en_US sai com AM/PM). Agora padrao fixo
+  `dd/MM/yy HH:mm`, igual ao estilo de `dateTime()`. Teste de data/hora depende de locale = armadilha nova.
 
 ## Proximos passos (opcionais)
 
