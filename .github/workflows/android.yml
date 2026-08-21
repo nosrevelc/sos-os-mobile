@@ -23,4 +23,4 @@ jobs:
       - name: Testes e build de debug
         run: |
           chmod +x gradlew
-          ./gradlew test assembleDebug --console=plain --no-daemon
+          ./gradlew test assembleDebug -Dorg.gradle.java.home="$JAVA_HOME" --console=plain --no-daemon
