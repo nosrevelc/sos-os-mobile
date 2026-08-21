@@ -1,7 +1,8 @@
 # Memoria de Sessao - Refatoracao OS Mobile
 
 > Arquivo de memoria para continuidade entre sessoes. Atualize a cada etapa concluida.
-> Ultima atualizacao: REFATORACAO COMPLETA - todas as 6 fases concluidas.
+> Ultima atualizacao: PROJETO CONCLUIDO E VALIDADO - 6 fases feitas, CI verde no GitHub,
+> APK debug instalado no celular com restauracao de backup do Drive testada pelo proprietario (ago/2026).
 
 ## Como buildar nesta maquina (Linux)
 
@@ -40,9 +41,19 @@ Branch `master`, remote `origin` = github.com/nosrevelc/sos-os-mobile.
 | Fase 5.1 SettingsScreen dividida | CONCLUIDA (1073->550 linhas) | ver git log |
 | Fase 5.2 DriveSafClient extraido | CONCLUIDA (845->659 + 205) | ver git log |
 | Fase 5.3 CsvSupport + DriveBackupStorage | CONCLUIDA (747->577 + 97 + 92) | ver git log |
-| Fase 6 - CI GitHub Actions (.github/workflows/android.yml) | CONCLUIDA | pendente push |
+| Fase 6 - CI GitHub Actions (.github/workflows/android.yml) | CONCLUIDA | `844770a` |
+| CI: fix java home do Windows no workflow | CONCLUIDA (run #2 verde) | `b1c81e6` |
+| APK debug gerado e validado no celular | CONCLUIDA (uninstall -> install -> restore Drive OK) | - |
 
-Build/testes: VERDE (`test assembleDebug`) apos cada etapa.
+Build/testes: VERDE (`test assembleDebug`) apos cada etapa. CI remoto: VERDE.
+
+## Validacao em dispositivo (ago/2026)
+
+- APK debug (`app/build/outputs/apk/debug/app-debug.apk`, 18 MB) instalado pelo proprietario.
+- Assinatura debug desta maquina difere da do Windows: install por cima falha mesmo entre debugs.
+  Caminho que funcionou: desinstalar app antigo -> instalar novo -> restaurar backup do Google Drive.
+- Refatoracao NAO alterou schema do banco nem formato de backup; restore compativel.
+- Proprietario confirmou funcionamento apos restauracao.
 
 ## Estrutura atual (feature/workorders)
 
@@ -68,16 +79,11 @@ Extras das fases 0-1: `core/database/DatabaseMigrations.kt` (`ALL_MIGRATIONS`), 
 Testes: `app/src/test/...` — TestFixtures, QuoteConversionRepositoryTest(5), WorkOrderRepositoryTest(8),
 BackupRepositoryTest(3), WorkOrderStockTotalsTest(5), WorkOrderMessageRendererTest(5). Todos verdes.
 
-## Proximos passos (ordem)
+## Proximos passos (opcionais)
 
-1. **Fase 4** - Deduplicacao Orcamento x OS:
-   - 4.1 `DocumentItemsEditor` (lista de itens + add/remove reutilizavel)
-   - 4.2 `CustomerSection` (seletor de cliente)
-   - 4.3 Reaproveitar `WorkOrderMessageRenderer.ItemData` no Orcamento
-   - 4.4 Unificar `StatusSelector` compacto
-2. **Fase 5**: 5.1 dividir SettingsScreen; 5.2 dividir DriveSyncRepository; 5.3 dividir BackupRepository.
-3. **Fase 6** - CI GitHub Actions (`.github/workflows/android.yml`: test + assembleDebug, JDK 17, SDK 35).
-4. Limpeza final: imports nao usados nos arquivos extraidos da Fase 3 (so warnings hoje).
+- Limpeza de imports nao usados nos arquivos extraidos das Fases 3-5 (so warnings hoje).
+- Gerar `assembleRelease` quando o proprietario solicitar (keystore em `keystore/osmobile-release.jks` + `keystore.properties`).
+- Considerar remover `org.gradle.java.home` do `gradle.properties` se um dia compilar fora do Windows.
 
 ## Armadilhas aprendidas (nao repetir)
 
@@ -90,4 +96,4 @@ BackupRepositoryTest(3), WorkOrderStockTotalsTest(5), WorkOrderMessageRendererTe
 
 ## Pendencias de git
 
-- Fazer PUSH de todos os commits locais (Fases 1, 2 e 3) - ultimo push foi `51d13c2`.
+- Nenhuma. Tudo commitado e enviado a `origin/master` (ultimo push: `b1c81e6`).
