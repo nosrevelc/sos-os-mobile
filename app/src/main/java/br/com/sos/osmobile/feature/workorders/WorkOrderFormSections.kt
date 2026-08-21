@@ -136,75 +136,8 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 import br.com.sos.osmobile.core.format.Formatters
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun WorkOrderStatusSelector(
-    status: WorkOrderStatus,
-    onStatusSelected: (WorkOrderStatus) -> Unit,
-) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        WorkOrderStatus.entries.forEach { option ->
-            val selected = option == status
-            Button(
-                onClick = {
-                    onStatusSelected(option)
-                },
-                colors = if (selected) {
-                    ButtonDefaults.buttonColors()
-                } else {
-                    ButtonDefaults.outlinedButtonColors()
-                },
-            ) {
-                Text(option.label)
-            }
-        }
-    }
-}
 
-@Composable
-internal fun SelectionButton(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedButton(onClick = onClick, modifier = modifier.fillMaxWidth()) {
-        Text(if (selected) "$label *" else label)
-    }
-}
 
-@Composable
-internal fun DraftItemRow(
-    index: Int,
-    item: WorkOrderDraftItem,
-    onRemoveItem: (Int) -> Unit,
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "${item.quantity} x ${Formatters.currency(item.unitPrice)} = ${Formatters.currency(item.subtotal)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            TextButton(onClick = { onRemoveItem(index) }) {
-                Icon(Icons.Filled.Delete, contentDescription = null)
-                Text("Remover")
-            }
-        }
-    }
-}
 
 @Composable
 internal fun PaymentMethodSelector(

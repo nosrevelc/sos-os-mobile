@@ -63,7 +63,11 @@ import br.com.sos.osmobile.data.message.PixPayloadGenerator
 import br.com.sos.osmobile.data.model.QuoteStatus
 import br.com.sos.osmobile.data.print.BluetoothThermalPrinter
 import br.com.sos.osmobile.data.print.ThermalPrintContent
-import br.com.sos.osmobile.ui.components.CustomerSearchSelector
+import br.com.sos.osmobile.ui.components.CustomerSection
+import br.com.sos.osmobile.ui.components.DocumentDraftItemRow
+import br.com.sos.osmobile.ui.components.DocumentItemsEditor
+import br.com.sos.osmobile.ui.components.StatusOption
+import br.com.sos.osmobile.ui.components.StatusSelectorCompact
 import br.com.sos.osmobile.ui.components.MessageActionButtons
 import br.com.sos.osmobile.ui.components.PixQrCode
 import br.com.sos.osmobile.ui.components.PrintDocumentButton
@@ -306,6 +310,14 @@ fun QuoteListScreen(
     }
 }
 
+private fun quoteStatusIcon(status: QuoteStatus): ImageVector =
+    when (status) {
+        QuoteStatus.Pending -> Icons.Filled.HourglassEmpty
+        QuoteStatus.Approved -> Icons.Filled.CheckCircle
+        QuoteStatus.Rejected -> Icons.Filled.Unpublished
+        QuoteStatus.Converted -> Icons.Filled.SyncAlt
+    }
+
 @Composable
 private fun QuoteForm(
     form: QuoteFormState,
@@ -324,21 +336,9 @@ private fun QuoteForm(
     onSave: () -> Unit,
     onCancelEdit: () -> Unit,
 ) {
-    var quantityField by remember { mutableStateOf(TextFieldValue(form.quantity, TextRange(form.quantity.length))) }
-    var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
     var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
     var minimumDepositField by remember { mutableStateOf(TextFieldValue(form.minimumDeposit, TextRange(form.minimumDeposit.length))) }
 
-    LaunchedEffect(form.quantity) {
-        if (quantityField.text != form.quantity) {
-            quantityField = TextFieldValue(form.quantity, TextRange(form.quantity.length))
-        }
-    }
-    LaunchedEffect(form.unitPrice) {
-        if (unitPriceField.text != form.unitPrice) {
-            unitPriceField = TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))
-        }
-    }
     LaunchedEffect(form.discount) {
         if (discountField.text != form.discount) {
             discountField = TextFieldValue(form.discount, TextRange(form.discount.length))
@@ -357,8 +357,7 @@ private fun QuoteForm(
             fontWeight = FontWeight.SemiBold,
         )
 
-        Text("Cliente", style = MaterialTheme.typography.titleSmall)
-        CustomerSearchSelector(
+        CustomerSection(
             customers = customers,
             selectedCustomerId = form.selectedCustomerId,
             onCustomerSelected = onCustomerSelected,
@@ -366,58 +365,32 @@ private fun QuoteForm(
         )
 
         Text("Status", style = MaterialTheme.typography.titleSmall)
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-            QuoteStatus.entries.forEach { status ->
-                SelectionButton(
-                    label = status.label,
-                    icon = quoteStatusIcon(status),
-                    selected = form.status == status,
-                    onClick = { onStatusSelected(status) },
-                )
-            }
-        }
+        StatusSelectorCompact(
+            options = QuoteStatus.entries.map { StatusOption(it, it.label, quoteStatusIcon(it)) },
+            selected = form.status,
+            onSelected = onStatusSelected,
+        )
 
-        Text("Itens", style = MaterialTheme.typography.titleSmall)
-        ServiceProductSearchSelector(
+        DocumentItemsEditor(
             services = services,
             selectedServiceProductId = form.selectedServiceProductId,
             onServiceSelected = onServiceSelected,
-            emptyText = "Cadastre servicos/produtos antes de adicionar itens.",
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = quantityField,
-                onValueChange = {
-                    val masked = InputMasks.decimal(it.text, integerDigits = 5, decimalDigits = 2)
-                    quantityField = TextFieldValue(masked, TextRange(masked.length))
-                    onQuantityChanged(masked)
-                },
-                label = { Text("Qtd") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = unitPriceField,
-                onValueChange = {
-                    val masked = InputMasks.currency(it.text)
-                    unitPriceField = TextFieldValue(masked, TextRange(masked.length))
-                    onUnitPriceChanged(masked)
-                },
-                label = { Text("Valor") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(2f),
-            )
-        }
-
-        OutlinedButton(onClick = onAddItem, modifier = Modifier.fillMaxWidth()) {
-            Text("Adicionar item")
-        }
-
-        form.items.forEachIndexed { index, item ->
-            DraftItemRow(index = index, item = item, onRemoveItem = onRemoveItem)
+            emptyServicesText = "Cadastre servicos/produtos antes de adicionar itens.",
+            quantity = form.quantity,
+            unitPrice = form.unitPrice,
+            onQuantityChanged = onQuantityChanged,
+            onUnitPriceChanged = onUnitPriceChanged,
+            onAddItem = onAddItem,
+        ) {
+            form.items.forEachIndexed { index, item ->
+                DocumentDraftItemRow(
+                    name = item.name,
+                    quantity = item.quantity.toString(),
+                    unitPrice = item.unitPrice,
+                    subtotal = item.subtotal,
+                    onRemoveItem = { onRemoveItem(index) },
+                )
+            }
         }
 
         OutlinedTextField(
@@ -488,61 +461,6 @@ private fun QuoteForm(
     }
 }
 
-@Composable
-private fun SelectionButton(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedButton(onClick = onClick, modifier = modifier.fillMaxWidth()) {
-        Icon(icon, contentDescription = null)
-        Text(if (selected) "$label *" else label)
-    }
-}
-
-private fun quoteStatusIcon(status: QuoteStatus): ImageVector =
-    when (status) {
-        QuoteStatus.Pending -> Icons.Filled.HourglassEmpty
-        QuoteStatus.Approved -> Icons.Filled.CheckCircle
-        QuoteStatus.Rejected -> Icons.Filled.Unpublished
-        QuoteStatus.Converted -> Icons.Filled.SyncAlt
-    }
-
-@Composable
-private fun DraftItemRow(
-    index: Int,
-    item: QuoteDraftItem,
-    onRemoveItem: (Int) -> Unit,
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "${item.quantity} x ${Formatters.currency(item.unitPrice)} = ${Formatters.currency(item.subtotal)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            TextButton(onClick = { onRemoveItem(index) }) {
-                Text("Remover")
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuoteRow(
     quote: QuoteSummary,
@@ -617,19 +535,8 @@ private fun renderQuoteMessage(
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),
             "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(pixKey, pixName),
             "PIX_QR" to "",
-        ) + quoteItemTokens(items),
-    )
-}
-
-private fun quoteItemTokens(items: List<QuoteDraftItem>): Map<String, String> {
-    val formatted = items.joinToString("\n") {
-        "- ${it.name}: ${Formatters.quantity(it.quantity)} x ${Formatters.currency(it.unitPrice)} = ${Formatters.currency(it.subtotal)}"
-    }
-    return mapOf(
-        "itens" to formatted,
-        "servicos" to formatted,
-        "produtos" to formatted,
-        "qtd_itens" to Formatters.quantity(items.sumOf { it.quantity }),
-        "total_itens" to Formatters.currency(items.sumOf { it.subtotal }),
+        ) + MessageTemplateRenderer.itemTokensOf(items.map {
+            MessageTemplateRenderer.ItemData(it.name, it.quantity, it.unitPrice)
+        }),
     )
 }

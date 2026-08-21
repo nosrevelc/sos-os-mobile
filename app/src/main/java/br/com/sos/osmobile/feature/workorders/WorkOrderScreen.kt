@@ -113,7 +113,11 @@ import br.com.sos.osmobile.data.model.WorkOrderStatus
 import br.com.sos.osmobile.data.print.BluetoothThermalPrinter
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalTextBlock
-import br.com.sos.osmobile.ui.components.CustomerSearchSelector
+import br.com.sos.osmobile.ui.components.CustomerSection
+import br.com.sos.osmobile.ui.components.DocumentDraftItemRow
+import br.com.sos.osmobile.ui.components.DocumentItemsEditor
+import br.com.sos.osmobile.ui.components.StatusOption
+import br.com.sos.osmobile.ui.components.StatusSelectorCompact
 import br.com.sos.osmobile.ui.components.DriveSyncIndicator
 import br.com.sos.osmobile.ui.components.DriveSyncStatusIcon
 import br.com.sos.osmobile.ui.components.DriveSyncStatusText
@@ -164,16 +168,8 @@ internal fun WorkOrderForm(
     onSave: () -> Unit,
     onCancelEdit: () -> Unit,
 ) {
-    var quantityField by remember { mutableStateOf(TextFieldValue(form.quantity, TextRange(form.quantity.length))) }
-    var unitPriceField by remember { mutableStateOf(TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))) }
     var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
     var deliveryFeeField by remember { mutableStateOf(TextFieldValue(form.deliveryFee, TextRange(form.deliveryFee.length))) }
-    LaunchedEffect(form.quantity) {
-        if (quantityField.text != form.quantity) quantityField = TextFieldValue(form.quantity, TextRange(form.quantity.length))
-    }
-    LaunchedEffect(form.unitPrice) {
-        if (unitPriceField.text != form.unitPrice) unitPriceField = TextFieldValue(form.unitPrice, TextRange(form.unitPrice.length))
-    }
     LaunchedEffect(form.discount) {
         if (discountField.text != form.discount) discountField = TextFieldValue(form.discount, TextRange(form.discount.length))
     }
@@ -188,8 +184,7 @@ internal fun WorkOrderForm(
             fontWeight = FontWeight.SemiBold,
         )
 
-        Text("Cliente", style = MaterialTheme.typography.titleSmall)
-        CustomerSearchSelector(
+        CustomerSection(
             customers = customers,
             selectedCustomerId = form.selectedCustomerId,
             onCustomerSelected = onCustomerSelected,
@@ -197,50 +192,34 @@ internal fun WorkOrderForm(
         )
 
         Text("Status", style = MaterialTheme.typography.titleSmall)
-        WorkOrderStatusSelector(status = form.status, onStatusSelected = onStatusSelected)
+        StatusSelectorCompact(
+            options = WorkOrderStatus.entries.map { StatusOption(it, it.label) },
+            selected = form.status,
+            onSelected = onStatusSelected,
+        )
 
-        Text("Itens", style = MaterialTheme.typography.titleSmall)
-        ServiceProductSearchSelector(
+        DocumentItemsEditor(
             services = services,
             selectedServiceProductId = form.selectedServiceProductId,
             onServiceSelected = onServiceSelected,
-            emptyText = "Cadastre servicos/produtos antes de adicionar itens.",
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = quantityField,
-                onValueChange = {
-                    val masked = InputMasks.decimal(it.text, integerDigits = 5, decimalDigits = 2)
-                    quantityField = TextFieldValue(masked, TextRange(masked.length))
-                    onQuantityChanged(masked)
-                },
-                label = { Text("Qtd") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = unitPriceField,
-                onValueChange = {
-                    val masked = InputMasks.currency(it.text)
-                    unitPriceField = TextFieldValue(masked, TextRange(masked.length))
-                    onUnitPriceChanged(masked)
-                },
-                label = { Text("Valor") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(2f),
-            )
-        }
-
-        OutlinedButton(onClick = onAddItem, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Text("Adicionar item")
-        }
-
-        form.items.forEachIndexed { index, item ->
-            DraftItemRow(index = index, item = item, onRemoveItem = onRemoveItem)
+            emptyServicesText = "Cadastre servicos/produtos antes de adicionar itens.",
+            quantity = form.quantity,
+            unitPrice = form.unitPrice,
+            onQuantityChanged = onQuantityChanged,
+            onUnitPriceChanged = onUnitPriceChanged,
+            onAddItem = onAddItem,
+            showAddIcon = true,
+        ) {
+            form.items.forEachIndexed { index, item ->
+                DocumentDraftItemRow(
+                    name = item.name,
+                    quantity = item.quantity.toString(),
+                    unitPrice = item.unitPrice,
+                    subtotal = item.subtotal,
+                    onRemoveItem = { onRemoveItem(index) },
+                    showDeleteIcon = true,
+                )
+            }
         }
 
         OutlinedTextField(
