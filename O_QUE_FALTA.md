@@ -274,8 +274,8 @@ Em Compose, isso deve ser feito criando componentes Kotlin reutilizaveis, nao ar
 
 ## Proxima Ordem Recomendada
 
-1. Implementar agenda Android/Google Contatos, porque foi uma expectativa funcional citada e ainda nao existe.
-2. Criar configuracoes de conta Google, empresa, impressao e templates.
+1. Validar agenda Android/Google Contatos em aparelho real com conta Google configurada.
+2. Revisar configuracoes de conta Google, empresa, impressao e templates.
 3. Melhorar PDF/documentos.
 4. Implementar impressao Bluetooth 58 mm.
 5. Fechar testes em aparelho real.

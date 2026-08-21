@@ -1,15 +1,20 @@
 # Estado do Projeto - OS Mobile
 
+## Repositorio
+
+- GitHub: `https://github.com/nosrevelc/sos-os-mobile`
+- Branch principal: `master`
+
 ## Situacao atual
 
 Projeto Android nativo em Kotlin/Jetpack Compose, offline-first, usando Room/SQLite.
 
 Builds validados:
 
-```powershell
-.\gradlew.bat test assembleDebug
-.\gradlew.bat test assembleRelease
-.\gradlew.bat bundleRelease
+```bash
+./gradlew test assembleDebug
+./gradlew test assembleRelease
+./gradlew bundleRelease
 ```
 
 Resultado atual esperado: `BUILD SUCCESSFUL`.
@@ -17,13 +22,13 @@ Resultado atual esperado: `BUILD SUCCESSFUL`.
 APK preferencial para teste no celular:
 
 ```text
-C:\SOS\app\build\outputs\apk\release\app-release.apk
+app/build/outputs/apk/release/app-release.apk
 ```
 
 AAB para Play Console/Teste interno:
 
 ```text
-C:\SOS\app\build\outputs\bundle\release\app-release.aab
+app/build/outputs/bundle/release/app-release.aab
 ```
 
 ## Stack
