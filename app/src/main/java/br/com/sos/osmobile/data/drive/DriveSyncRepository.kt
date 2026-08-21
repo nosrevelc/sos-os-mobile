@@ -31,6 +31,7 @@ class DriveSyncRepository(
     private val auditRepository: AuditRepository,
 ) {
     private val syncMutex = Mutex()
+    private val saf = DriveSafClient(context, settingsRepository)
 
     suspend fun syncAllPending(): DriveSyncResult = syncMutex.withLock {
         if (!isConfigured()) return DriveSyncResult.Skipped("Drive nao configurado.")
@@ -62,7 +63,7 @@ class DriveSyncRepository(
     suspend fun smartSyncWorkOrder(workOrderId: Long): Result<DriveSmartSyncResult> = syncMutex.withLock {
         val workOrder = workOrderDao.findById(workOrderId)
             ?: return Result.failure(IllegalArgumentException("OS nao encontrada."))
-        val mustRebuild = workOrder.driveFolderUri.isNullOrBlank() || !documentExists(workOrder.driveFolderUri)
+        val mustRebuild = workOrder.driveFolderUri.isNullOrBlank() || !saf.documentExists(workOrder.driveFolderUri)
         val result = if (mustRebuild) rebuildWorkOrderSyncLocked(workOrderId) else syncWorkOrderLocked(workOrderId)
         result.map {
             DriveSmartSyncResult(
@@ -80,9 +81,9 @@ class DriveSyncRepository(
         runCatching {
             val workOrderFolder = ensureWorkOrderFolders(workOrder)
             markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, workOrderFolder.toString())
-            val designFolder = ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
+            val designFolder = saf.ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
             val existingPhotos = photoDao.listByWorkOrderAsc(workOrder.id)
-            findChildren(designFolder)
+            saf.findChildren(designFolder)
                 .filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
                 .filterNot { file -> isDesignAlreadyImported(existingPhotos, file) }
                 .map { file ->
@@ -104,9 +105,9 @@ class DriveSyncRepository(
         runCatching {
             val workOrderFolder = ensureWorkOrderFolders(workOrder)
             markWorkOrder(workOrder, DriveSyncStatus.SYNCED, null, workOrderFolder.toString())
-            val designFolder = ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
+            val designFolder = saf.ensureNamedFolder(workOrder.id, workOrderFolder, DRIVE_DESIGN_FOLDER)
             val existingPhotos = photoDao.listByWorkOrderAsc(workOrder.id)
-            val remoteFiles = findChildren(designFolder)
+            val remoteFiles = saf.findChildren(designFolder)
                 .filter { it.mimeType != DocumentsContract.Document.MIME_TYPE_DIR }
                 .filter { selectedUris == null || it.uri.toString() in selectedUris }
             var imported = 0
@@ -138,7 +139,7 @@ class DriveSyncRepository(
     private fun isDesignAlreadyImported(existingPhotos: List<WorkOrderPhotoEntity>, file: DriveChild): Boolean =
         existingPhotos.any {
             it.driveFileUri == file.uri.toString() ||
-                isDesignAttachment(it.fileName) && it.fileName.endsWith("_${sanitizeFileName(file.name)}")
+                saf.isDesignAttachment(it.fileName) && it.fileName.endsWith("_${saf.sanitizeFileName(file.name)}")
         }
 
     private suspend fun syncWorkOrderLocked(workOrderId: Long): Result<Unit> {
@@ -152,19 +153,19 @@ class DriveSyncRepository(
             return Result.failure(IllegalStateException("Sem internet."))
         }
         return runCatching {
-            if (workOrder.driveFolderUri != null && !documentExists(workOrder.driveFolderUri)) {
+            if (workOrder.driveFolderUri != null && !saf.documentExists(workOrder.driveFolderUri)) {
                 workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
                 photoDao.resetDriveSyncByWorkOrder(workOrder.id)
                 signatureDao.resetDriveSyncByWorkOrder(workOrder.id)
-                clearStoredSubFolders(workOrder.id)
+                saf.clearStoredSubFolders(workOrder.id)
             }
             val folders = syncWorkOrderFolder(workOrder)
             val failures = photoDao.listPendingDriveSyncByWorkOrder(workOrder.id)
-                .filterNot { isDesignAttachment(it.fileName) }
+                .filterNot { saf.isDesignAttachment(it.fileName) }
                 .mapNotNull { syncPhoto(it, folders).exceptionOrNull()?.message }
                 .toMutableList()
             signatureDao.findByWorkOrder(workOrder.id)
-                ?.takeUnless { it.driveSyncStatus == DriveSyncStatus.SYNCED && !it.driveFileUri.isNullOrBlank() && documentExists(it.driveFileUri) }
+                ?.takeUnless { it.driveSyncStatus == DriveSyncStatus.SYNCED && !it.driveFileUri.isNullOrBlank() && saf.documentExists(it.driveFileUri) }
                 ?.let { signature ->
                     syncSignature(signature, folders).exceptionOrNull()?.message?.let(failures::add)
                 }
@@ -186,7 +187,7 @@ class DriveSyncRepository(
         workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
         photoDao.resetDriveSyncByWorkOrder(workOrder.id)
         signatureDao.resetDriveSyncByWorkOrder(workOrder.id)
-        clearStoredSubFolders(workOrder.id)
+        saf.clearStoredSubFolders(workOrder.id)
         if (!isConfigured()) {
             markWorkOrder(workOrder, DriveSyncStatus.NOT_CONFIGURED, "Configure a pasta do Drive.", null)
             return Result.failure(IllegalStateException("Drive nao configurado."))
@@ -198,7 +199,7 @@ class DriveSyncRepository(
         return runCatching {
             val folders = syncWorkOrderFolder(workOrder)
             val failures = photoDao.listByWorkOrderAsc(workOrder.id)
-                .filterNot { isDesignAttachment(it.fileName) }
+                .filterNot { saf.isDesignAttachment(it.fileName) }
                 .mapNotNull { syncPhoto(it, folders).exceptionOrNull()?.message }
                 .toMutableList()
             signatureDao.findByWorkOrder(workOrder.id)
@@ -235,8 +236,8 @@ class DriveSyncRepository(
             return Result.failure(IllegalStateException("Sem internet."))
         }
         return runCatching {
-            if (isDesignAttachment(photo.fileName)) {
-                if (!photo.driveFileUri.isNullOrBlank() && documentExists(photo.driveFileUri)) {
+            if (saf.isDesignAttachment(photo.fileName)) {
+                if (!photo.driveFileUri.isNullOrBlank() && saf.documentExists(photo.driveFileUri)) {
                     photoDao.updateDriveSync(photo.id, photo.driveFileUri, DriveSyncStatus.SYNCED, null)
                     return@runCatching
                 }
@@ -247,25 +248,25 @@ class DriveSyncRepository(
             val localFile = File(context.filesDir, photo.relativePath)
                 .takeIf { it.exists() && it.length() > 0L }
                 ?: error("Arquivo local do anexo nao encontrado.")
-            val targetFolder = if (isDocumentAttachment(photo.fileName)) {
-                driveFolders.documents ?: ensureNamedFolder(photo.workOrderId, driveFolders.workOrder, "Documentos")
+            val targetFolder = if (saf.isDocumentAttachment(photo.fileName)) {
+                driveFolders.documents ?: saf.ensureNamedFolder(photo.workOrderId, driveFolders.workOrder, "Documentos")
                     .also { driveFolders.documents = it }
             } else {
-                driveFolders.images ?: ensureNamedFolder(photo.workOrderId, driveFolders.workOrder, "Imagens")
+                driveFolders.images ?: saf.ensureNamedFolder(photo.workOrderId, driveFolders.workOrder, "Imagens")
                     .also { driveFolders.images = it }
             }
             val targetFile = photo.driveFileUri
-                ?.takeIf { it.isNotBlank() && documentExists(it) }
+                ?.takeIf { it.isNotBlank() && saf.documentExists(it) }
                 ?.let(Uri::parse)
-                ?: findChildFile(targetFolder, photo.fileName)
-                ?: createFile(targetFolder, photo.mimeType, photo.fileName)
+                ?: saf.findChildFile(targetFolder, photo.fileName)
+                ?: saf.createFile(targetFolder, photo.mimeType, photo.fileName)
                 ?: error("Nao foi possivel criar arquivo no Drive.")
             localFile.inputStream().use { input ->
                 context.contentResolver.openOutputStream(targetFile, "wt")?.use { output ->
                     input.copyTo(output)
                 } ?: error("Nao foi possivel escrever no Drive.")
             }
-            val confirmedFile = confirmFileInFolder(targetFolder, photo.fileName, localFile.length(), "anexo")
+            val confirmedFile = saf.confirmFileInFolder(targetFolder, photo.fileName, localFile.length(), "anexo")
             photoDao.updateDriveSync(photo.id, confirmedFile.toString(), DriveSyncStatus.SYNCED, null)
             auditRepository.record("Google Drive", "Anexo sincronizado", "ordens_servico", photo.workOrderId, details = photo.fileName)
         }.onFailure {
@@ -286,20 +287,20 @@ class DriveSyncRepository(
             val localFile = File(context.filesDir, signature.relativePath)
                 .takeIf { it.exists() && it.length() > 0L }
                 ?: error("Arquivo local da assinatura nao encontrado.")
-            val targetFolder = folders.signatures ?: ensureNamedFolder(signature.workOrderId, folders.workOrder, "Assinaturas")
+            val targetFolder = folders.signatures ?: saf.ensureNamedFolder(signature.workOrderId, folders.workOrder, "Assinaturas")
                 .also { folders.signatures = it }
             val targetFile = signature.driveFileUri
-                ?.takeIf { it.isNotBlank() && documentExists(it) }
+                ?.takeIf { it.isNotBlank() && saf.documentExists(it) }
                 ?.let(Uri::parse)
-                ?: findChildFile(targetFolder, signature.fileName)
-                ?: createFile(targetFolder, "image/png", signature.fileName)
+                ?: saf.findChildFile(targetFolder, signature.fileName)
+                ?: saf.createFile(targetFolder, "image/png", signature.fileName)
                 ?: error("Nao foi possivel criar assinatura no Drive.")
             localFile.inputStream().use { input ->
                 context.contentResolver.openOutputStream(targetFile, "wt")?.use { output ->
                     input.copyTo(output)
                 } ?: error("Nao foi possivel escrever assinatura no Drive.")
             }
-            val confirmedFile = confirmFileInFolder(targetFolder, signature.fileName, localFile.length(), "assinatura")
+            val confirmedFile = saf.confirmFileInFolder(targetFolder, signature.fileName, localFile.length(), "assinatura")
             signatureDao.updateDriveSync(signature.id, confirmedFile.toString(), DriveSyncStatus.SYNCED, null)
             auditRepository.record("Google Drive", "Assinatura sincronizada", "ordens_servico", signature.workOrderId, details = signature.fileName)
         }.onFailure {
@@ -309,8 +310,8 @@ class DriveSyncRepository(
 
     private suspend fun importDriveFileAsDocument(workOrderId: Long, file: DriveChild) {
         val now = Clock.nowMillis()
-        val originalName = sanitizeFileName(file.name)
-        val mimeType = file.mimeType.ifBlank { mimeTypeFromFileName(originalName) }
+        val originalName = saf.sanitizeFileName(file.name)
+        val mimeType = file.mimeType.ifBlank { saf.mimeTypeFromFileName(originalName) }
         val targetName = "design_${now}_$originalName"
         val relativePath = "work_order_photos/$workOrderId/$targetName"
         val targetFile = File(context.filesDir, relativePath).apply { parentFile?.mkdirs() }
@@ -333,17 +334,17 @@ class DriveSyncRepository(
 
     private suspend fun revalidateSyncedItems() {
         workOrderDao.listAll()
-            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFolderUri != null && !documentExists(it.driveFolderUri) }
+            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFolderUri != null && !saf.documentExists(it.driveFolderUri) }
             .forEach {
             workOrderDao.resetDriveSync(it.id, Clock.nowMillis())
             photoDao.resetDriveSyncByWorkOrder(it.id)
             signatureDao.resetDriveSyncByWorkOrder(it.id)
         }
         photoDao.listAll()
-            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFileUri != null && !documentExists(it.driveFileUri) }
+            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFileUri != null && !saf.documentExists(it.driveFileUri) }
             .forEach { photoDao.updateDriveSync(it.id, null, DriveSyncStatus.PENDING, "Arquivo nao encontrado no Drive.") }
         signatureDao.listAll()
-            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFileUri != null && !documentExists(it.driveFileUri) }
+            .filter { it.driveSyncStatus == DriveSyncStatus.SYNCED && it.driveFileUri != null && !saf.documentExists(it.driveFileUri) }
             .forEach { signatureDao.updateDriveSync(it.id, null, DriveSyncStatus.PENDING, "Assinatura nao encontrada no Drive.") }
     }
 
@@ -357,9 +358,9 @@ class DriveSyncRepository(
             workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
             photoDao.resetDriveSyncByWorkOrder(workOrder.id)
             signatureDao.resetDriveSyncByWorkOrder(workOrder.id)
-            clearStoredSubFolders(workOrder.id)
+            saf.clearStoredSubFolders(workOrder.id)
                 val signatureMissing = if (signatureDao.findByWorkOrder(workOrder.id) != null) 1 else 0
-                val uploadablePhotoMissing = photoDao.listByWorkOrderAsc(workOrder.id).count { !isDesignAttachment(it.fileName) }
+                val uploadablePhotoMissing = photoDao.listByWorkOrderAsc(workOrder.id).count { !saf.isDesignAttachment(it.fileName) }
                 return DriveValidationResult(
                     checked = true,
                     missingItems = 1 + uploadablePhotoMissing + signatureMissing,
@@ -392,67 +393,67 @@ class DriveSyncRepository(
     private suspend fun findExpectedWorkOrderFolder(workOrder: WorkOrderEntity): Uri? {
         val root = rootFolder() ?: return null
         val summary = workOrderDao.findSummaryById(workOrder.id)
-        val customerName = sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
-        val customerPhone = sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
+        val customerName = saf.sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
+        val customerPhone = saf.sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
         val customerFolderName = if (customerPhone.isBlank()) customerName else "${customerName}_$customerPhone"
-        val osFolderName = "OS-${sanitizeName(workOrder.numero)}"
+        val osFolderName = "OS-${saf.sanitizeName(workOrder.numero)}"
         val expectedPath = "$customerFolderName/$osFolderName"
-        val storedRoot = settingsRepository.getString(driveWorkOrderRootKey(workOrder.id)).orEmpty()
-        val storedPath = settingsRepository.getString(driveWorkOrderPathKey(workOrder.id)).orEmpty()
+        val storedRoot = settingsRepository.getString(saf.driveWorkOrderRootKey(workOrder.id)).orEmpty()
+        val storedPath = settingsRepository.getString(saf.driveWorkOrderPathKey(workOrder.id)).orEmpty()
         workOrder.driveFolderUri
-            ?.takeIf { it.isNotBlank() && documentExists(it) }
+            ?.takeIf { it.isNotBlank() && saf.documentExists(it) }
             ?.takeIf { storedRoot == root.treeUri.toString() }
             ?.takeIf { storedPath == expectedPath }
-            ?.takeIf { documentDisplayName(it) == osFolderName }
+            ?.takeIf { saf.documentDisplayName(it) == osFolderName }
             ?.let { return Uri.parse(it) }
-        val customerFolder = findChildDirectory(root.folderUri, customerFolderName) ?: return null
-        return findChildDirectory(customerFolder, osFolderName)
+        val customerFolder = saf.findChildDirectory(root.folderUri, customerFolderName) ?: return null
+        return saf.findChildDirectory(customerFolder, osFolderName)
     }
 
     private suspend fun drivePhotoExistsInExpectedFolder(workOrderFolder: Uri, photo: WorkOrderPhotoEntity): Boolean {
         val folderName = when {
-            isDesignAttachment(photo.fileName) -> DRIVE_DESIGN_FOLDER
-            isDocumentAttachment(photo.fileName) -> "Documentos"
+            saf.isDesignAttachment(photo.fileName) -> DRIVE_DESIGN_FOLDER
+            saf.isDocumentAttachment(photo.fileName) -> "Documentos"
             else -> "Imagens"
         }
-        val targetFolder = findExistingNamedFolder(photo.workOrderId, workOrderFolder, folderName) ?: return false
-        return findChildFile(targetFolder, photo.fileName) != null
-            || photo.driveFileUri?.takeIf { it.isNotBlank() }?.let(::documentExists) == true
+        val targetFolder = saf.findExistingNamedFolder(photo.workOrderId, workOrderFolder, folderName) ?: return false
+        return saf.findChildFile(targetFolder, photo.fileName) != null
+            || photo.driveFileUri?.takeIf { it.isNotBlank() }?.let { saf.documentExists(it) } == true
     }
 
     private suspend fun driveSignatureExistsInExpectedFolder(workOrderFolder: Uri, signature: WorkOrderSignatureEntity): Boolean {
-        val targetFolder = findExistingNamedFolder(signature.workOrderId, workOrderFolder, "Assinaturas") ?: return false
-        return findChildFile(targetFolder, signature.fileName) != null
+        val targetFolder = saf.findExistingNamedFolder(signature.workOrderId, workOrderFolder, "Assinaturas") ?: return false
+        return saf.findChildFile(targetFolder, signature.fileName) != null
     }
 
     private suspend fun ensureWorkOrderFolders(workOrder: WorkOrderEntity): Uri {
         val root = rootFolder() ?: error("Selecione uma pasta dentro do Drive. A raiz Meu Drive nao deve ser usada.")
         val summary = workOrderDao.findSummaryById(workOrder.id)
-        val customerName = sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
-        val customerPhone = sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
+        val customerName = saf.sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
+        val customerPhone = saf.sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
         val customerFolderName = if (customerPhone.isBlank()) customerName else "${customerName}_$customerPhone"
-        val osFolderName = "OS-${sanitizeName(workOrder.numero)}"
+        val osFolderName = "OS-${saf.sanitizeName(workOrder.numero)}"
         val expectedPath = "$customerFolderName/$osFolderName"
-        val storedRoot = settingsRepository.getString(driveWorkOrderRootKey(workOrder.id)).orEmpty()
-        val storedPath = settingsRepository.getString(driveWorkOrderPathKey(workOrder.id)).orEmpty()
+        val storedRoot = settingsRepository.getString(saf.driveWorkOrderRootKey(workOrder.id)).orEmpty()
+        val storedPath = settingsRepository.getString(saf.driveWorkOrderPathKey(workOrder.id)).orEmpty()
         workOrder.driveFolderUri
-            ?.takeIf { it.isNotBlank() && documentExists(it) }
+            ?.takeIf { it.isNotBlank() && saf.documentExists(it) }
             ?.takeIf { storedRoot == root.treeUri.toString() }
             ?.takeIf { storedPath == expectedPath }
-            ?.takeIf { documentDisplayName(it) == osFolderName }
+            ?.takeIf { saf.documentDisplayName(it) == osFolderName }
             ?.let { storedFolderUri ->
-                setSettingIfChanged(driveWorkOrderRootKey(workOrder.id), root.treeUri.toString())
-                setSettingIfChanged(driveWorkOrderPathKey(workOrder.id), expectedPath)
+                saf.setSettingIfChanged(saf.driveWorkOrderRootKey(workOrder.id), root.treeUri.toString())
+                saf.setSettingIfChanged(saf.driveWorkOrderPathKey(workOrder.id), expectedPath)
                 return Uri.parse(storedFolderUri)
             }
 
-        val customerFolder = findOrCreateDirectory(root.folderUri, customerFolderName)
-        val osFolder = findOrCreateDirectory(customerFolder, osFolderName)
+        val customerFolder = saf.findOrCreateDirectory(root.folderUri, customerFolderName)
+        val osFolder = saf.findOrCreateDirectory(customerFolder, osFolderName)
         if (workOrder.driveFolderUri != osFolder.toString()) {
-            clearStoredSubFolders(workOrder.id)
+            saf.clearStoredSubFolders(workOrder.id)
         }
-        setSettingIfChanged(driveWorkOrderRootKey(workOrder.id), root.treeUri.toString())
-        setSettingIfChanged(driveWorkOrderPathKey(workOrder.id), expectedPath)
+        saf.setSettingIfChanged(saf.driveWorkOrderRootKey(workOrder.id), root.treeUri.toString())
+        saf.setSettingIfChanged(saf.driveWorkOrderPathKey(workOrder.id), expectedPath)
         return osFolder
     }
 
@@ -470,7 +471,7 @@ class DriveSyncRepository(
         val treeUri = Uri.parse(uri)
         DocumentFile.fromTreeUri(context, treeUri)
             ?.takeIf { it.canWrite() }
-            ?.takeUnless { it.isDriveRootLike() }
+            ?.takeUnless { saf.isDriveRootLike(it) }
             ?: return null
         return DriveRoot(
             treeUri = treeUri,
@@ -483,9 +484,9 @@ class DriveSyncRepository(
             workOrderDao.resetDriveSync(workOrder.id, Clock.nowMillis())
             photoDao.resetDriveSyncByWorkOrder(workOrder.id)
             signatureDao.resetDriveSyncByWorkOrder(workOrder.id)
-            clearStoredSubFolders(workOrder.id)
-            setSettingIfChanged(driveWorkOrderRootKey(workOrder.id), "")
-            setSettingIfChanged(driveWorkOrderPathKey(workOrder.id), "")
+            saf.clearStoredSubFolders(workOrder.id)
+            saf.setSettingIfChanged(saf.driveWorkOrderRootKey(workOrder.id), "")
+            saf.setSettingIfChanged(saf.driveWorkOrderPathKey(workOrder.id), "")
         }
     }
 
@@ -493,16 +494,16 @@ class DriveSyncRepository(
         val workOrder = workOrderDao.findById(workOrderId) ?: return "Drive debug: OS $workOrderId nao encontrada."
         val summary = workOrderDao.findSummaryById(workOrder.id)
         val root = rootFolder()
-        val customerName = sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
-        val customerPhone = sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
+        val customerName = saf.sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
+        val customerPhone = saf.sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
         val customerFolderName = if (customerPhone.isBlank()) customerName else "${customerName}_$customerPhone"
-        val osFolderName = "OS-${sanitizeName(workOrder.numero)}"
+        val osFolderName = "OS-${saf.sanitizeName(workOrder.numero)}"
         val expectedPath = "$customerFolderName/$osFolderName"
-        val storedRoot = settingsRepository.getString(driveWorkOrderRootKey(workOrder.id)).orEmpty()
-        val storedPath = settingsRepository.getString(driveWorkOrderPathKey(workOrder.id)).orEmpty()
-        val storedImages = settingsRepository.getString(driveSubFolderKey(workOrder.id, "Imagens")).orEmpty()
-        val storedDocuments = settingsRepository.getString(driveSubFolderKey(workOrder.id, "Documentos")).orEmpty()
-        val storedSignatures = settingsRepository.getString(driveSubFolderKey(workOrder.id, "Assinaturas")).orEmpty()
+        val storedRoot = settingsRepository.getString(saf.driveWorkOrderRootKey(workOrder.id)).orEmpty()
+        val storedPath = settingsRepository.getString(saf.driveWorkOrderPathKey(workOrder.id)).orEmpty()
+        val storedImages = settingsRepository.getString(saf.driveSubFolderKey(workOrder.id, "Imagens")).orEmpty()
+        val storedDocuments = settingsRepository.getString(saf.driveSubFolderKey(workOrder.id, "Documentos")).orEmpty()
+        val storedSignatures = settingsRepository.getString(saf.driveSubFolderKey(workOrder.id, "Assinaturas")).orEmpty()
         val photos = photoDao.listByWorkOrderAsc(workOrder.id)
         val signature = signatureDao.findByWorkOrder(workOrder.id)
 
@@ -516,25 +517,25 @@ class DriveSyncRepository(
             appendLine("Status OS: ${workOrder.driveSyncStatus}")
             appendLine("Erro OS: ${workOrder.driveSyncError.orEmpty()}")
             appendLine("URI OS salva: ${workOrder.driveFolderUri.orEmpty()}")
-            appendLine("URI OS existe: ${workOrder.driveFolderUri?.let(::documentExists) ?: false}")
+            appendLine("URI OS existe: ${workOrder.driveFolderUri?.let { saf.documentExists(it) } ?: false}")
             appendLine("Root configurado: ${root?.treeUri ?: "nao configurado/sem escrita"}")
             appendLine("Root salvo na OS: $storedRoot")
             appendLine("Path salvo na OS: $storedPath")
-            appendLine("Subpasta Imagens salva: $storedImages | existe=${storedImages.takeIf { it.isNotBlank() }?.let(::documentExists) ?: false}")
-            appendLine("Subpasta Documentos salva: $storedDocuments | existe=${storedDocuments.takeIf { it.isNotBlank() }?.let(::documentExists) ?: false}")
-            appendLine("Subpasta Assinaturas salva: $storedSignatures | existe=${storedSignatures.takeIf { it.isNotBlank() }?.let(::documentExists) ?: false}")
+            appendLine("Subpasta Imagens salva: $storedImages | existe=${storedImages.takeIf { it.isNotBlank() }?.let { saf.documentExists(it) } ?: false}")
+            appendLine("Subpasta Documentos salva: $storedDocuments | existe=${storedDocuments.takeIf { it.isNotBlank() }?.let { saf.documentExists(it) } ?: false}")
+            appendLine("Subpasta Assinaturas salva: $storedSignatures | existe=${storedSignatures.takeIf { it.isNotBlank() }?.let { saf.documentExists(it) } ?: false}")
             if (root == null) {
                 appendLine("Pastas no Drive: root indisponivel.")
             } else {
-                val customerFolders = findChildren(root.folderUri, customerFolderName, DocumentsContract.Document.MIME_TYPE_DIR)
+                val customerFolders = saf.findChildren(root.folderUri, customerFolderName, DocumentsContract.Document.MIME_TYPE_DIR)
                 appendLine("Pastas cliente com mesmo nome: ${customerFolders.size}")
                 customerFolders.forEachIndexed { index, customer ->
                     appendLine("Cliente[$index]: ${customer.uri}")
-                    val osFolders = findChildren(customer.uri, osFolderName, DocumentsContract.Document.MIME_TYPE_DIR)
+                    val osFolders = saf.findChildren(customer.uri, osFolderName, DocumentsContract.Document.MIME_TYPE_DIR)
                     appendLine("  Pastas OS com mesmo nome: ${osFolders.size}")
                     osFolders.forEachIndexed { osIndex, os ->
                         appendLine("  OS[$osIndex]: ${os.uri}")
-                        val children = findChildren(os.uri, expectedMimeType = DocumentsContract.Document.MIME_TYPE_DIR)
+                        val children = saf.findChildren(os.uri, expectedMimeType = DocumentsContract.Document.MIME_TYPE_DIR)
                         appendLine("    Subpastas: ${children.joinToString { it.name }}")
                         appendLine("    Qtd Documentos: ${children.count { it.name == "Documentos" }}")
                         appendLine("    Qtd Imagens: ${children.count { it.name == "Imagens" }}")
@@ -558,20 +559,20 @@ class DriveSyncRepository(
         val workOrder = workOrderDao.findById(workOrderId) ?: return null
         val root = rootFolder() ?: return "Drive nao configurado ou sem permissao de escrita."
         val summary = workOrderDao.findSummaryById(workOrder.id)
-        val customerName = sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
-        val customerPhone = sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
+        val customerName = saf.sanitizeName(summary?.customerName ?: "Cliente ${workOrder.customerId}")
+        val customerPhone = saf.sanitizeName(summary?.customerPhone.orEmpty().filter { it.isDigit() })
         val customerFolderName = if (customerPhone.isBlank()) customerName else "${customerName}_$customerPhone"
-        val osFolderName = "OS-${sanitizeName(workOrder.numero)}"
-        val customerFolders = findChildren(root.folderUri, customerFolderName, DocumentsContract.Document.MIME_TYPE_DIR)
+        val osFolderName = "OS-${saf.sanitizeName(workOrder.numero)}"
+        val customerFolders = saf.findChildren(root.folderUri, customerFolderName, DocumentsContract.Document.MIME_TYPE_DIR)
         val duplicateOsCount = customerFolders.sumOf { customer ->
-            findChildren(customer.uri, osFolderName, DocumentsContract.Document.MIME_TYPE_DIR).size
+            saf.findChildren(customer.uri, osFolderName, DocumentsContract.Document.MIME_TYPE_DIR).size
         }
         val duplicateSubfolders = workOrder.driveFolderUri
-            ?.takeIf { it.isNotBlank() && documentExists(it) }
+            ?.takeIf { it.isNotBlank() && saf.documentExists(it) }
             ?.let { Uri.parse(it) }
             ?.let { osFolder ->
                 listOf("Documentos", "Imagens", "Assinaturas")
-                    .map { folderName -> folderName to findChildren(osFolder, folderName, DocumentsContract.Document.MIME_TYPE_DIR).size }
+                    .map { folderName -> folderName to saf.findChildren(osFolder, folderName, DocumentsContract.Document.MIME_TYPE_DIR).size }
                     .filter { (_, count) -> count > 1 }
             }
             .orEmpty()
@@ -597,201 +598,13 @@ class DriveSyncRepository(
     private suspend fun markWorkOrder(workOrder: WorkOrderEntity, status: String, error: String?, folderUri: String? = workOrder.driveFolderUri) {
         workOrderDao.updateDriveSync(workOrder.id, folderUri, status, error, Clock.nowMillis())
     }
-
-    private fun DocumentFile.isDriveRootLike(): Boolean {
-        val normalized = name.orEmpty().trim().lowercase()
-        return normalized in setOf("meu drive", "my drive", "drive", "arquivos do drive")
-    }
-
-    private suspend fun ensureNamedFolder(workOrderId: Long, workOrderFolder: Uri, folderName: String): Uri {
-        val key = driveSubFolderKey(workOrderId, folderName)
-        val existingFolders = findChildren(workOrderFolder, folderName, DocumentsContract.Document.MIME_TYPE_DIR)
-        settingsRepository.getString(key)
-            ?.takeIf { it.isNotBlank() && documentExists(it) }
-            ?.takeIf { documentDisplayName(it) == folderName }
-            ?.takeIf { stored -> existingFolders.any { it.uri.toString() == stored } }
-            ?.let { return Uri.parse(it) }
-        val folder = existingFolders.firstOrNull()?.uri
-            ?: DocumentsContract.createDocument(context.contentResolver, workOrderFolder, DocumentsContract.Document.MIME_TYPE_DIR, folderName)
-            ?: error("Nao foi possivel criar pasta $folderName.")
-        setSettingIfChanged(key, folder.toString())
-        return folder
-    }
-
-    private suspend fun findExistingNamedFolder(workOrderId: Long, workOrderFolder: Uri, folderName: String): Uri? {
-        val existingFolders = findChildren(workOrderFolder, folderName, DocumentsContract.Document.MIME_TYPE_DIR)
-        return settingsRepository.getString(driveSubFolderKey(workOrderId, folderName))
-            ?.takeIf { it.isNotBlank() && documentExists(it) }
-            ?.takeIf { documentDisplayName(it) == folderName }
-            ?.takeIf { stored -> existingFolders.any { it.uri.toString() == stored } }
-            ?.let(Uri::parse)
-            ?: existingFolders.firstOrNull()?.uri
-    }
-
-    private suspend fun clearStoredSubFolders(workOrderId: Long) {
-        setSettingIfChanged(driveSubFolderKey(workOrderId, "Imagens"), "")
-        setSettingIfChanged(driveSubFolderKey(workOrderId, "Documentos"), "")
-        setSettingIfChanged(driveSubFolderKey(workOrderId, "Assinaturas"), "")
-    }
-
-    private fun driveSubFolderKey(workOrderId: Long, folderName: String): String =
-        "drive_subfolder_${workOrderId}_${folderName.lowercase()}"
-
-    private fun driveWorkOrderRootKey(workOrderId: Long): String =
-        "drive_work_order_root_$workOrderId"
-
-    private fun driveWorkOrderPathKey(workOrderId: Long): String =
-        "drive_work_order_path_$workOrderId"
-
-    private suspend fun setSettingIfChanged(key: String, value: String) {
-        if (settingsRepository.getString(key) != value) {
-            settingsRepository.set(key, value)
-        }
-    }
-
-    private fun findOrCreateDirectory(parent: Uri, name: String): Uri =
-        findChildDirectory(parent, name)
-            ?: DocumentsContract.createDocument(context.contentResolver, parent, DocumentsContract.Document.MIME_TYPE_DIR, name)
-            ?: error("Nao foi possivel criar pasta $name.")
-
-    private fun findChildDirectory(parent: Uri, name: String): Uri? =
-        findChild(parent, name, DocumentsContract.Document.MIME_TYPE_DIR)
-
-    private fun findChildFile(parent: Uri, name: String): Uri? =
-        findChild(parent, name, expectedMimeType = null)
-
-    private fun createFile(parent: Uri, mimeType: String, name: String): Uri? =
-        DocumentsContract.createDocument(context.contentResolver, parent, mimeType, name)
-
-    private fun confirmFileInFolder(parent: Uri, fileName: String, expectedMinSize: Long, label: String): Uri {
-        val confirmedFile = findChildFile(parent, fileName)
-            ?: error("${label.replaceFirstChar { it.uppercase() }} gravado, mas nao confirmado na pasta do Drive.")
-        if (!documentExists(confirmedFile.toString())) {
-            error("${label.replaceFirstChar { it.uppercase() }} nao confirmado no Drive.")
-        }
-        val remoteSize = documentSize(confirmedFile)
-        if (remoteSize != null && expectedMinSize > 0L && remoteSize < expectedMinSize) {
-            error("${label.replaceFirstChar { it.uppercase() }} criado no Drive, mas ainda sem conteudo.")
-        }
-        return confirmedFile
-    }
-
-    private fun findChild(parent: Uri, name: String, expectedMimeType: String?): Uri? {
-        return findChildren(parent, name, expectedMimeType).firstOrNull()?.uri
-    }
-
-    private fun findChildren(parent: Uri, name: String? = null, expectedMimeType: String? = null): List<DriveChild> {
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(parent, DocumentsContract.getDocumentId(parent))
-        val projection = arrayOf(
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE,
-            DocumentsContract.Document.COLUMN_SIZE,
-            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
-        )
-        return context.contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
-            val idIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-            val nameIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-            val mimeIndex = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
-            val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
-            val modifiedIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-            buildList {
-                while (cursor.moveToNext()) {
-                val childName = cursor.getString(nameIndex).orEmpty()
-                val mimeType = cursor.getString(mimeIndex).orEmpty()
-                    val nameMatches = name == null || childName == name
-                val mimeMatches = expectedMimeType == null || mimeType == expectedMimeType
-                    if (nameMatches && mimeMatches) {
-                        add(
-                            DriveChild(
-                                name = childName,
-                                mimeType = mimeType,
-                                uri = DocumentsContract.buildDocumentUriUsingTree(parent, cursor.getString(idIndex)),
-                                sizeBytes = if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) cursor.getLong(sizeIndex) else null,
-                                modifiedAt = if (modifiedIndex >= 0 && !cursor.isNull(modifiedIndex)) cursor.getLong(modifiedIndex) else null,
-                            ),
-                        )
-                    }
-                }
-            }
-        }.orEmpty()
-    }
-
-    private fun documentExists(uri: String): Boolean {
-        val parsed = Uri.parse(uri)
-        val existsByQuery = runCatching {
-            context.contentResolver.query(
-                parsed,
-                arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
-                null,
-                null,
-                null,
-            )?.use { it.moveToFirst() } == true
-        }.getOrDefault(false)
-        return existsByQuery ||
-            DocumentFile.fromSingleUri(context, parsed)?.exists() == true ||
-            DocumentFile.fromTreeUri(context, parsed)?.exists() == true
-    }
-
-    private fun documentDisplayName(uri: String): String? {
-        val parsed = Uri.parse(uri)
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-        return runCatching {
-            context.contentResolver.query(parsed, projection, null, null, null)?.use { cursor ->
-                if (!cursor.moveToFirst()) return@use null
-                val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-                if (nameIndex < 0 || cursor.isNull(nameIndex)) null else cursor.getString(nameIndex)
-            }
-        }.getOrNull()
-            ?: DocumentFile.fromSingleUri(context, parsed)?.name
-            ?: DocumentFile.fromTreeUri(context, parsed)?.name
-    }
-
-    private fun documentSize(uri: Uri): Long? {
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_SIZE)
-        return context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-            if (!cursor.moveToFirst()) return@use null
-            val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
-            if (sizeIndex < 0 || cursor.isNull(sizeIndex)) null else cursor.getLong(sizeIndex)
-        }
-    }
-
-    private fun sanitizeName(value: String): String =
-        value.replace(Regex("[\\\\/:*?\"<>|]"), "-").trim().take(80).ifBlank { "Sem nome" }
-
-    private fun sanitizeFileName(value: String): String =
-        value
-            .replace(Regex("[\\\\/:*?\"<>|]"), "-")
-            .replace(Regex("\\s+"), "_")
-            .trim('.', '_', ' ')
-            .take(90)
-            .ifBlank { "arquivo" }
-
-    private fun mimeTypeFromFileName(fileName: String): String =
-        when (fileName.substringAfterLast('.', "").lowercase()) {
-            "png" -> "image/png"
-            "jpg", "jpeg" -> "image/jpeg"
-            "webp" -> "image/webp"
-            "pdf" -> "application/pdf"
-            "svg" -> "image/svg+xml"
-            "ai" -> "application/postscript"
-            "cdr" -> "application/octet-stream"
-            else -> "application/octet-stream"
-        }
-
-    private fun isDocumentAttachment(fileName: String): Boolean =
-        fileName.startsWith("documento_") || fileName.startsWith("comprovante_")
-
-    private fun isDesignAttachment(fileName: String): Boolean =
-        fileName.startsWith("design_") ||
-            (fileName.startsWith("documento_") && fileName.split("_", limit = 4).getOrNull(2) == DRIVE_DESIGN_FOLDER)
-
     private companion object {
         const val DRIVE_DESIGN_FOLDER = "Design"
     }
 }
 
-private data class WorkOrderDriveFolders(
+
+internal data class WorkOrderDriveFolders(
     val workOrder: Uri,
     var images: Uri? = null,
     var documents: Uri? = null,
@@ -803,7 +616,7 @@ private data class DriveRoot(
     val folderUri: Uri,
 )
 
-private data class DriveChild(
+internal data class DriveChild(
     val name: String,
     val mimeType: String,
     val uri: Uri,
@@ -843,3 +656,4 @@ data class DriveDesignImportCandidate(
     val sizeBytes: Long?,
     val modifiedAt: Long?,
 )
+
