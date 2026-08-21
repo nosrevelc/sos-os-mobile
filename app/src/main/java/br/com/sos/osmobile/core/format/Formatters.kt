@@ -1,11 +1,9 @@
 package br.com.sos.osmobile.core.format
 
-import java.text.DateFormat
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import java.util.Locale
 
 object Formatters {
@@ -26,7 +24,9 @@ object Formatters {
         }
 
     fun dateTimeShort(timestamp: Long): String =
-        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))
+        Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("dd/MM/yy HH:mm"))
 
     fun dateTime(timestamp: Long): String =
         Instant.ofEpochMilli(timestamp)

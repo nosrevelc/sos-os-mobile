@@ -25,6 +25,11 @@ internal fun parseCsv(csv: String): List<Map<String, String>> {
                 currentField.append('"')
                 index++
             }
+            char == '\\' && quoted && index + 1 < csv.length &&
+                (csv[index + 1] == '"' || csv[index + 1] == '\\') -> {
+                currentField.append(csv[index + 1])
+                index++
+            }
             char == '"' -> quoted = !quoted
             char == ',' && !quoted -> {
                 currentRecord += currentField.toString()
@@ -45,7 +50,7 @@ internal fun parseCsv(csv: String): List<Map<String, String>> {
     if (currentRecord.any { it.isNotBlank() }) records += currentRecord.toList()
 
     require(records.size >= 2) { "CSV precisa de cabecalho e ao menos uma linha." }
-    val headers = records.first().map { it.trim().removePrefix("\uFEFF").lowercase() }
+    val headers = records.first().map { it.removePrefix("\uFEFF").trim().lowercase() }
     return records.drop(1).map { record ->
         headers.mapIndexed { column, header -> header to record.getOrElse(column) { "" }.trim() }.toMap()
     }
@@ -54,7 +59,7 @@ internal fun parseCsv(csv: String): List<Map<String, String>> {
 internal fun Map<String, String>.value(vararg keys: String): String =
     keys.firstNotNullOfOrNull { key -> this[key.lowercase()] }?.trim().orEmpty()
 
-internal fun String.blankToNull(): String? = takeIf { it.isNotBlank() }
+internal fun String.blankToNull(): String? = trim().takeIf { it.isNotBlank() }
 
 internal fun String.parseMoney(): Double {
     val clean = replace(Regex("[^0-9,.-]"), "")
@@ -64,7 +69,11 @@ internal fun String.parseMoney(): Double {
 }
 
 internal fun String.decodeCsvEscapedLines(): String =
-    replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\r", "\n")
+    replace("\\r\\n", "\n")
+        .replace("\\n", "\n")
+        .replace("\\r", "\n")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
 
 internal fun normalizedServiceType(value: String): String =
     when (value.trim().lowercase()) {
