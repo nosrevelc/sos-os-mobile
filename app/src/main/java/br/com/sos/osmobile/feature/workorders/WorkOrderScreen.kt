@@ -129,6 +129,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
+import br.com.sos.osmobile.core.format.Formatters
 
 @Composable
 fun WorkOrderScreen(
@@ -394,7 +395,7 @@ fun WorkOrderScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(file.name, style = MaterialTheme.typography.bodyMedium)
                                     file.sizeBytes?.let {
-                                        Text(formatFileSize(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(Formatters.fileSize(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
@@ -836,7 +837,7 @@ fun WorkOrderScreen(
                 val paidTotal = viewModel.payments.sumOf { it.valor } + pendingPayment
                 val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
                 Text(
-                    "Total: ${formatCurrency(totalValue)} | Pago: ${formatCurrency(paidTotal)} | Saldo: ${formatCurrency(balance)}",
+                    "Total: ${Formatters.currency(totalValue)} | Pago: ${Formatters.currency(paidTotal)} | Saldo: ${Formatters.currency(balance)}",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -888,8 +889,8 @@ fun WorkOrderScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("${formatCurrency(payment.valor)} - ${payment.forma}", fontWeight = FontWeight.SemiBold)
-                            Text(formatDate(payment.paidAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${Formatters.currency(payment.valor)} - ${payment.forma}", fontWeight = FontWeight.SemiBold)
+                            Text(Formatters.dateTimeShort(payment.paidAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             payment.observacao?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall)
                             }
@@ -1328,10 +1329,10 @@ private fun renderPickupMessage(
             "cpf" to "",
             "os" to workOrder.number,
             "orcamento" to "",
-            "valor" to formatCurrency(workOrder.totalValue),
+            "valor" to Formatters.currency(workOrder.totalValue),
             "status" to workOrder.status,
             "empresa" to companyName,
-            "data" to formatDate(System.currentTimeMillis()),
+            "data" to Formatters.dateTimeShort(System.currentTimeMillis()),
             "dias" to days.toString(),
         ),
     )
@@ -1360,7 +1361,7 @@ private fun WorkOrderListRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
-                text = "${formatCurrency(workOrder.totalValue)} - ${formatDate(workOrder.openedAt)}",
+                text = "${Formatters.currency(workOrder.totalValue)} - ${Formatters.dateTimeShort(workOrder.openedAt)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1486,7 +1487,7 @@ private fun WorkOrderForm(
         val subtotal = form.items.sumOf { it.subtotal }
         val discount = WorkOrderFormValidator.parseDecimal(form.discount)?.coerceIn(0.0, subtotal) ?: 0.0
         Text(
-            text = "Subtotal: ${formatCurrency(subtotal)} | Desconto: ${formatCurrency(discount)} | Total: ${formatCurrency((subtotal - discount).coerceAtLeast(0.0))}",
+            text = "Subtotal: ${Formatters.currency(subtotal)} | Desconto: ${Formatters.currency(discount)} | Total: ${Formatters.currency((subtotal - discount).coerceAtLeast(0.0))}",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -1631,7 +1632,7 @@ private fun DraftItemRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${item.quantity} x ${formatCurrency(item.unitPrice)} = ${formatCurrency(item.subtotal)}",
+                    text = "${item.quantity} x ${Formatters.currency(item.unitPrice)} = ${Formatters.currency(item.subtotal)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1667,12 +1668,12 @@ private fun WorkOrderRow(
             Text(workOrder.number, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(workOrder.customerName, style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "${workOrder.status} - ${workOrder.itemCount} item(ns) - ${formatCurrency(workOrder.totalValue)}",
+                text = "${workOrder.status} - ${workOrder.itemCount} item(ns) - ${Formatters.currency(workOrder.totalValue)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = formatDate(workOrder.openedAt),
+                text = Formatters.dateTimeShort(workOrder.openedAt),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1705,11 +1706,7 @@ private fun WorkOrderRow(
     }
 }
 
-private fun formatCurrency(value: Double): String =
-    NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 
-private fun formatDate(timestamp: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))
 
 @Composable
 private fun PaymentMethodSelector(
@@ -2053,21 +2050,21 @@ private fun renderWorkOrderMessage(
             "os" to workOrderNumber,
             "orcamento" to "",
             "status" to status,
-            "valor" to formatCurrency(totalValue),
-            "subtotal" to formatCurrency(subtotalValue),
-            "desconto" to formatCurrency(discountValue),
-            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${formatCurrency(discountValue)}" else "",
+            "valor" to Formatters.currency(totalValue),
+            "subtotal" to Formatters.currency(subtotalValue),
+            "desconto" to Formatters.currency(discountValue),
+            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${Formatters.currency(discountValue)}" else "",
             "valor_minimo_aceite" to minAcceptanceValue,
             "tipo_entrega" to deliveryType,
             "status_entrega" to deliveryStatus,
             "endereco_entrega" to deliveryAddress,
-            "taxa_entrega" to formatCurrency(deliveryFee),
+            "taxa_entrega" to Formatters.currency(deliveryFee),
             "codigo_rastreio" to trackingCode,
-            "valor_pago" to formatCurrency(paidTotal),
-            "saldo" to formatCurrency(balance),
+            "valor_pago" to Formatters.currency(paidTotal),
+            "saldo" to Formatters.currency(balance),
             "status_pagamento" to paymentStatus,
             "empresa" to companyName,
-            "data" to formatDate(System.currentTimeMillis()),
+            "data" to Formatters.dateTimeShort(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, balance.takeIf { it > 0.0 } ?: totalValue),
             "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(pixKey, pixName),
             "PIX_QR" to "",
@@ -2077,14 +2074,14 @@ private fun renderWorkOrderMessage(
 
 private fun draftItemTokens(items: List<WorkOrderDraftItem>): Map<String, String> {
     val formatted = items.joinToString("\n") {
-        "- ${it.name}: ${formatQuantity(it.quantity)} x ${formatCurrency(it.unitPrice)} = ${formatCurrency(it.subtotal)}"
+        "- ${it.name}: ${Formatters.quantity(it.quantity)} x ${Formatters.currency(it.unitPrice)} = ${Formatters.currency(it.subtotal)}"
     }
     return mapOf(
         "itens" to formatted,
         "servicos" to formatted,
         "produtos" to formatted,
-        "qtd_itens" to formatQuantity(items.sumOf { it.quantity }),
-        "total_itens" to formatCurrency(items.sumOf { it.subtotal }),
+        "qtd_itens" to Formatters.quantity(items.sumOf { it.quantity }),
+        "total_itens" to Formatters.currency(items.sumOf { it.subtotal }),
     )
 }
 
@@ -2185,12 +2182,4 @@ private fun driveStatusColor(status: String): Color =
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-private fun formatQuantity(value: Double): String =
-    if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(Locale("pt", "BR"), value)
 
-private fun formatFileSize(bytes: Long): String =
-    when {
-        bytes >= 1_048_576L -> "%.1f MB".format(Locale("pt", "BR"), bytes / 1_048_576.0)
-        bytes >= 1_024L -> "%.1f KB".format(Locale("pt", "BR"), bytes / 1_024.0)
-        else -> "$bytes B"
-    }

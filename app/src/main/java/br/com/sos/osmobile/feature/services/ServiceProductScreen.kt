@@ -40,6 +40,7 @@ import br.com.sos.osmobile.data.local.entity.StockMovementType
 import br.com.sos.osmobile.ui.input.InputMasks
 import java.text.NumberFormat
 import java.util.Locale
+import br.com.sos.osmobile.core.format.Formatters
 
 @Composable
 fun ServiceProductScreen(viewModel: ServiceProductViewModel) {
@@ -285,11 +286,11 @@ private fun ServiceProductRow(
         ) {
             Text(service.nome, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(2.dp))
-            Text("${service.codigo} - ${service.tipo} - ${formatCurrency(service.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
+            Text("${service.codigo} - ${service.tipo} - ${Formatters.currency(service.unitPrice)}", style = MaterialTheme.typography.bodyMedium)
             if (service.tipo != ServiceProductType.SERVICE) {
                 val lowStock = service.minimumStock > 0.0 && item.stock <= service.minimumStock
                 Text(
-                    "Saldo: ${formatQuantity(item.stock)} | Minimo: ${formatQuantity(service.minimumStock)}",
+                    "Saldo: ${Formatters.quantity(item.stock)} | Minimo: ${Formatters.quantity(service.minimumStock)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = if (lowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (lowStock) FontWeight.SemiBold else FontWeight.Normal,
@@ -405,8 +406,4 @@ private fun ServiceProductTypeSelector(
     }
 }
 
-private fun formatCurrency(value: Double): String =
-    NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 
-private fun formatQuantity(value: Double): String =
-    if (value % 1.0 == 0.0) value.toLong().toString() else String.format(Locale("pt", "BR"), "%.2f", value)

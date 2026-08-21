@@ -74,6 +74,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import br.com.sos.osmobile.core.format.Formatters
 
 data class WorkOrderDraftItem(
     val serviceProductId: Long,
@@ -326,7 +327,7 @@ class WorkOrderViewModel(
                 .sumOf { it.quantity }
             val available = (uiState.value.stockByServiceProductId[service.id] ?: 0.0) + originalReserved
             if (alreadyInDraft + quantity > available) {
-                formState = formState.copy(message = "Saldo insuficiente para ${service.nome}. Disponivel: ${formatQuantity(available)}.")
+                formState = formState.copy(message = "Saldo insuficiente para ${service.nome}. Disponivel: ${Formatters.quantity(available)}.")
                 return
             }
         }
@@ -1013,5 +1014,3 @@ class WorkOrderViewModel(
     }
 }
 
-private fun formatQuantity(value: Double): String =
-    if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(value)

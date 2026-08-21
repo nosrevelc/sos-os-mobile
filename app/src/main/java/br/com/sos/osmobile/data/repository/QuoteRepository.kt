@@ -1,5 +1,6 @@
 package br.com.sos.osmobile.data.repository
 
+import br.com.sos.osmobile.core.format.Formatters
 import br.com.sos.osmobile.core.time.Clock
 import br.com.sos.osmobile.data.document.ServiceDocumentGenerator
 import br.com.sos.osmobile.data.local.dao.QuoteDao
@@ -158,14 +159,14 @@ class QuoteRepository(
         val summary = quoteDao.findSummaryById(id) ?: return null
         val tokens = mapOf(
             "empresa" to companyName,
-            "data" to formatDate(quote.createdAt),
+            "data" to Formatters.dateTime(quote.createdAt),
             "os" to "",
             "orcamento" to quote.numero,
             "nome" to summary.customerName,
             "telefone" to summary.customerPhone,
-            "valor" to money(quote.totalValue),
-            "sinal_minimo" to money(quote.minimumDepositValue),
-            "linha_sinal_minimo" to if (quote.minimumDepositValue > 0.0) "Sinal minimo: ${money(quote.minimumDepositValue)}" else "",
+            "valor" to Formatters.currency(quote.totalValue),
+            "sinal_minimo" to Formatters.currency(quote.minimumDepositValue),
+            "linha_sinal_minimo" to if (quote.minimumDepositValue > 0.0) "Sinal minimo: ${Formatters.currency(quote.minimumDepositValue)}" else "",
             "status" to quote.status,
         )
         return ThermalPrintContent(
@@ -200,11 +201,5 @@ class QuoteRepository(
         return "OR$datePart${sequence.toString().padStart(4, '0')}"
     }
 
-    private fun formatDate(value: Long): String {
-        val date = Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault())
-        return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-    }
 
-    private fun money(value: Double): String =
-        NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 }

@@ -1,5 +1,6 @@
 package br.com.sos.osmobile.data.repository
 
+import br.com.sos.osmobile.core.format.Formatters
 import br.com.sos.osmobile.core.time.Clock
 import br.com.sos.osmobile.data.document.ServiceDocumentGenerator
 import br.com.sos.osmobile.data.local.dao.WorkOrderDao
@@ -194,15 +195,15 @@ class WorkOrderRepository(
         val summary = workOrderDao.findSummaryById(id) ?: return null
         val tokens = mapOf(
             "empresa" to companyName,
-            "data" to formatDate(workOrder.openedAt),
+            "data" to Formatters.dateTime(workOrder.openedAt),
             "os" to workOrder.numero,
             "nome" to summary.customerName,
             "telefone" to summary.customerPhone,
-            "valor" to money(workOrder.totalValue),
+            "valor" to Formatters.currency(workOrder.totalValue),
             "tipo_entrega" to workOrder.deliveryType,
             "status_entrega" to workOrder.deliveryStatus,
             "endereco_entrega" to workOrder.deliveryAddress.orEmpty(),
-            "taxa_entrega" to money(workOrder.deliveryFee),
+            "taxa_entrega" to Formatters.currency(workOrder.deliveryFee),
             "codigo_rastreio" to workOrder.trackingCode.orEmpty(),
             "status" to workOrder.status,
         )
@@ -254,12 +255,12 @@ class WorkOrderRepository(
                 bold = true,
             ),
             ThermalTextBlock(
-                text = "Valor: ${money(workOrder.totalValue)}",
+                text = "Valor: ${Formatters.currency(workOrder.totalValue)}",
                 alignment = "center",
                 bold = true,
             ),
             ThermalTextBlock(
-                text = formatDate(workOrder.openedAt),
+                text = Formatters.dateTime(workOrder.openedAt),
                 alignment = "center",
                 font = "B",
             ),
@@ -282,10 +283,10 @@ class WorkOrderRepository(
                 appendLine("OS: ${workOrder.numero}")
                 appendLine("Cliente: ${summary.customerName}")
                 appendLine("Telefone: ${summary.customerPhone}")
-                appendLine("Data: ${formatDate(Clock.nowMillis())}")
+                appendLine("Data: ${Formatters.dateTime(Clock.nowMillis())}")
                 appendLine()
                 appendLine("Recebemos o valor de")
-                appendLine(money(workOrder.totalValue))
+                appendLine(Formatters.currency(workOrder.totalValue))
                 appendLine("referente aos servicos da OS.")
                 workOrder.observacoes?.takeIf { it.isNotBlank() }?.let {
                     appendLine()
@@ -314,14 +315,14 @@ class WorkOrderRepository(
                 appendLine("OS: ${workOrder.numero}")
                 appendLine("Cliente: ${summary.customerName}")
                 appendLine("Telefone: ${summary.customerPhone}")
-                appendLine("Data: ${formatDate(Clock.nowMillis())}")
+                appendLine("Data: ${Formatters.dateTime(Clock.nowMillis())}")
                 warrantyDays?.takeIf { it > 0 }?.let {
                     appendLine("Prazo: $it dias")
                 }
                 appendLine()
                 appendLine(warrantyTerms?.takeIf { it.isNotBlank() } ?: "Garantia vinculada aos servicos descritos nesta OS.")
                 appendLine()
-                appendLine("Valor: ${money(workOrder.totalValue)}")
+                appendLine("Valor: ${Formatters.currency(workOrder.totalValue)}")
             },
             footer = MessageTemplateRenderer.render(footerTemplate, tokens).trim(),
         )
@@ -334,15 +335,15 @@ class WorkOrderRepository(
     ): Map<String, String> =
         mapOf(
             "empresa" to companyName,
-            "data" to formatDate(workOrder.openedAt),
+            "data" to Formatters.dateTime(workOrder.openedAt),
             "os" to workOrder.numero,
             "nome" to summary.customerName,
             "telefone" to summary.customerPhone,
-            "valor" to money(workOrder.totalValue),
+            "valor" to Formatters.currency(workOrder.totalValue),
             "tipo_entrega" to workOrder.deliveryType,
             "status_entrega" to workOrder.deliveryStatus,
             "endereco_entrega" to workOrder.deliveryAddress.orEmpty(),
-            "taxa_entrega" to money(workOrder.deliveryFee),
+            "taxa_entrega" to Formatters.currency(workOrder.deliveryFee),
             "codigo_rastreio" to workOrder.trackingCode.orEmpty(),
             "status" to workOrder.status,
         )
@@ -362,11 +363,5 @@ class WorkOrderRepository(
         return "$datePart${sequence.toString().padStart(4, '0')}"
     }
 
-    private fun formatDate(value: Long): String {
-        val date = Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault())
-        return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-    }
 
-    private fun money(value: Double): String =
-        NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 }

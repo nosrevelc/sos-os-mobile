@@ -78,6 +78,7 @@ import java.text.NumberFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
+import br.com.sos.osmobile.core.format.Formatters
 
 @Composable
 fun QuoteScreen(
@@ -447,7 +448,7 @@ private fun QuoteForm(
         val discount = QuoteFormValidator.parseDecimal(form.discount) ?: 0.0
         val minimumDeposit = QuoteFormValidator.parseDecimal(form.minimumDeposit) ?: 0.0
         Text(
-            text = "Subtotal: ${formatCurrency(subtotal)} | Desconto: ${formatCurrency(discount)} | Sinal: ${formatCurrency(minimumDeposit)} | Total: ${formatCurrency((subtotal - discount).coerceAtLeast(0.0))}",
+            text = "Subtotal: ${Formatters.currency(subtotal)} | Desconto: ${Formatters.currency(discount)} | Sinal: ${Formatters.currency(minimumDeposit)} | Total: ${Formatters.currency((subtotal - discount).coerceAtLeast(0.0))}",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -529,7 +530,7 @@ private fun DraftItemRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    text = "${item.quantity} x ${formatCurrency(item.unitPrice)} = ${formatCurrency(item.subtotal)}",
+                    text = "${item.quantity} x ${Formatters.currency(item.unitPrice)} = ${Formatters.currency(item.subtotal)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -561,12 +562,12 @@ private fun QuoteRow(
             Text(quote.number, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(quote.customerName, style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "${quote.status} - ${quote.itemCount} item(ns) - ${formatCurrency(quote.totalValue)}",
+                text = "${quote.status} - ${quote.itemCount} item(ns) - ${Formatters.currency(quote.totalValue)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = formatDate(quote.createdAt),
+                text = Formatters.dateTimeShort(quote.createdAt),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -575,14 +576,8 @@ private fun QuoteRow(
     }
 }
 
-private fun formatCurrency(value: Double): String =
-    NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
 
-private fun formatQuantity(value: Double): String =
-    if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(Locale("pt", "BR"), value)
 
-private fun formatDate(timestamp: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))
 
 private fun renderQuoteMessage(
     customerName: String,
@@ -610,15 +605,15 @@ private fun renderQuoteMessage(
             "os" to "",
             "orcamento" to quoteNumber,
             "status" to status,
-            "valor" to formatCurrency(totalValue),
-            "subtotal" to formatCurrency(subtotalValue),
-            "desconto" to formatCurrency(discountValue),
-            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${formatCurrency(discountValue)}" else "",
+            "valor" to Formatters.currency(totalValue),
+            "subtotal" to Formatters.currency(subtotalValue),
+            "desconto" to Formatters.currency(discountValue),
+            "linha_desconto" to if (discountValue > 0.0) "Desconto: ${Formatters.currency(discountValue)}" else "",
             "valor_minimo_aceite" to minAcceptanceValue,
-            "sinal_minimo" to formatCurrency(minimumDepositValue),
-            "linha_sinal_minimo" to if (minimumDepositValue > 0.0) "Sinal minimo: ${formatCurrency(minimumDepositValue)}" else "",
+            "sinal_minimo" to Formatters.currency(minimumDepositValue),
+            "linha_sinal_minimo" to if (minimumDepositValue > 0.0) "Sinal minimo: ${Formatters.currency(minimumDepositValue)}" else "",
             "empresa" to companyName,
-            "data" to formatDate(System.currentTimeMillis()),
+            "data" to Formatters.dateTimeShort(System.currentTimeMillis()),
             "PIX" to PixPayloadGenerator.generate(pixKey, pixName, totalValue),
             "PIX_SEM_VALOR" to PixPayloadGenerator.generateOpenAmount(pixKey, pixName),
             "PIX_QR" to "",
@@ -628,13 +623,13 @@ private fun renderQuoteMessage(
 
 private fun quoteItemTokens(items: List<QuoteDraftItem>): Map<String, String> {
     val formatted = items.joinToString("\n") {
-        "- ${it.name}: ${formatQuantity(it.quantity)} x ${formatCurrency(it.unitPrice)} = ${formatCurrency(it.subtotal)}"
+        "- ${it.name}: ${Formatters.quantity(it.quantity)} x ${Formatters.currency(it.unitPrice)} = ${Formatters.currency(it.subtotal)}"
     }
     return mapOf(
         "itens" to formatted,
         "servicos" to formatted,
         "produtos" to formatted,
-        "qtd_itens" to formatQuantity(items.sumOf { it.quantity }),
-        "total_itens" to formatCurrency(items.sumOf { it.subtotal }),
+        "qtd_itens" to Formatters.quantity(items.sumOf { it.quantity }),
+        "total_itens" to Formatters.currency(items.sumOf { it.subtotal }),
     )
 }

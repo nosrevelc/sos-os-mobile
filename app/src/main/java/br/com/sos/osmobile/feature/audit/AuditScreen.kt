@@ -20,6 +20,7 @@ import br.com.sos.osmobile.data.local.entity.AuditLogEntity
 import kotlinx.coroutines.flow.Flow
 import java.text.DateFormat
 import java.util.Date
+import br.com.sos.osmobile.core.format.Formatters
 
 @Composable
 fun AuditScreen(auditFlow: Flow<List<AuditLogEntity>>) {
@@ -51,7 +52,7 @@ private fun AuditRow(log: AuditLogEntity) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(log.acao, fontWeight = FontWeight.SemiBold)
-            Text("${log.modulo} - ${formatDate(log.timestamp)}", style = MaterialTheme.typography.bodySmall)
+            Text("${log.modulo} - ${Formatters.dateTimeShort(log.timestamp)}", style = MaterialTheme.typography.bodySmall)
             log.detalhes?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall)
             }
@@ -59,5 +60,3 @@ private fun AuditRow(log: AuditLogEntity) {
     }
 }
 
-private fun formatDate(timestamp: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(timestamp))

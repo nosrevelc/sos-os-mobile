@@ -36,6 +36,7 @@ import br.com.sos.osmobile.ui.components.MessageActionButtons
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import br.com.sos.osmobile.core.format.Formatters
 
 @Composable
 fun AppointmentScreen(
@@ -139,7 +140,7 @@ private fun AppointmentCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${formatDateTime(appointment.startsAt)} - ${appointment.customerName}", fontWeight = FontWeight.SemiBold)
+            Text("${Formatters.dateTime(appointment.startsAt)} - ${appointment.customerName}", fontWeight = FontWeight.SemiBold)
             Text("${appointment.type} | ${appointment.status} | Calendario: ${appointment.calendarSyncStatus}", style = MaterialTheme.typography.bodySmall)
             appointment.workOrderNumber?.let {
                 Text(
@@ -185,5 +186,3 @@ private fun MessageBlock(label: String, key: String, appointment: AppointmentSum
     }
 }
 
-private fun formatDateTime(value: Long): String =
-    Instant.ofEpochMilli(value).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
