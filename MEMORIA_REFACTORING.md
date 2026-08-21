@@ -34,7 +34,9 @@ Branch `master`, remote `origin` = github.com/nosrevelc/sos-os-mobile.
 | Fase 1.4 AttachmentNames | CONCLUIDA | local |
 | Fase 1.5 DriveSyncStatus em ui/components | CONCLUIDA | local |
 | Fase 2 - WorkOrderViewModel em controllers | CONCLUIDA | local |
-| Fase 3 - Split do WorkOrderScreen | CONCLUIDA | pendente commit |
+| Fase 3 - Split do WorkOrderScreen | CONCLUIDA | `694aa84` |
+| Memoria de sessao | criada | `715d8e4` |
+| Fase 4 - Dedup Orcamento x OS (CustomerSection, DocumentItemsEditor, StatusSelectorCompact, itemTokensOf) | CONCLUIDA | local |
 
 Build/testes: VERDE (`test assembleDebug`) apos cada etapa.
 
