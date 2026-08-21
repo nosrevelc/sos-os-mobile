@@ -98,6 +98,8 @@ Meta: nenhum arquivo de UI acima de ~500 linhas.
 
 ## Fase 4 - Deduplicacao Orcamento x OS
 
+**Status: CONCLUIDA.** Componentes compartilhados em `ui/components/`: CustomerSection, DocumentItemsEditor (+ DocumentDraftItemRow), StatusSelectorCompact; tokens de item do Orcamento reusam `MessageTemplateRenderer.itemTokensOf`.
+
 So depois das Fases 2 e 3, quando os dois lados estiverem legiveis.
 
 | # | Tarefa |
@@ -109,6 +111,8 @@ So depois das Fases 2 e 3, quando os dois lados estiverem legiveis.
 
 ## Fase 5 - Outros pontos quentes
 
+**Status: CONCLUIDA.** SettingsScreen dividida (SettingsComponents + SettingsTemplatesSection); DriveSyncRepository delega primitivas SAF para DriveSafClient; BackupRepository delega CSV para CsvSupport e Drive para DriveBackupStorage.
+
 | # | Tarefa | Meta |
 | --- | --- | --- |
 | 5.1 | Dividir `SettingsScreen.kt` por secao (Geral, Empresa, Mensagens, Agenda, Impressao, Backup) | < 300 linhas/arquivo |
@@ -117,6 +121,8 @@ So depois das Fases 2 e 3, quando os dois lados estiverem legiveis.
 | 5.4 | Padronizar tratamento de erros dos repositorios (resultado explicito em vez de try/catch espalhado) | opcional |
 
 ## Fase 6 - CI no GitHub (opcional, recomendado)
+
+**Status: CONCLUIDA.** Workflow `.github/workflows/android.yml` (test + assembleDebug em ubuntu-latest, JDK 17 Temurin).
 
 O repositorio agora esta no GitHub; um workflow simples elimina a dependencia do Windows para validar cada passo:
 

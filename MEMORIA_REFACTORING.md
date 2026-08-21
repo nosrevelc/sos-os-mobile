@@ -1,7 +1,7 @@
 # Memoria de Sessao - Refatoracao OS Mobile
 
 > Arquivo de memoria para continuidade entre sessoes. Atualize a cada etapa concluida.
-> Ultima atualizacao: Fase 3 (split do WorkOrderScreen) concluida.
+> Ultima atualizacao: REFATORACAO COMPLETA - todas as 6 fases concluidas.
 
 ## Como buildar nesta maquina (Linux)
 
@@ -36,7 +36,11 @@ Branch `master`, remote `origin` = github.com/nosrevelc/sos-os-mobile.
 | Fase 2 - WorkOrderViewModel em controllers | CONCLUIDA | local |
 | Fase 3 - Split do WorkOrderScreen | CONCLUIDA | `694aa84` |
 | Memoria de sessao | criada | `715d8e4` |
-| Fase 4 - Dedup Orcamento x OS (CustomerSection, DocumentItemsEditor, StatusSelectorCompact, itemTokensOf) | CONCLUIDA | local |
+| Fase 4 - Dedup Orcamento x OS | CONCLUIDA | ver git log |
+| Fase 5.1 SettingsScreen dividida | CONCLUIDA (1073->550 linhas) | ver git log |
+| Fase 5.2 DriveSafClient extraido | CONCLUIDA (845->659 + 205) | ver git log |
+| Fase 5.3 CsvSupport + DriveBackupStorage | CONCLUIDA (747->577 + 97 + 92) | ver git log |
+| Fase 6 - CI GitHub Actions (.github/workflows/android.yml) | CONCLUIDA | pendente push |
 
 Build/testes: VERDE (`test assembleDebug`) apos cada etapa.
 
