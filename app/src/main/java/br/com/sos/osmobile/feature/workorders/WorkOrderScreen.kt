@@ -114,6 +114,9 @@ import br.com.sos.osmobile.data.print.BluetoothThermalPrinter
 import br.com.sos.osmobile.data.print.ThermalPrintContent
 import br.com.sos.osmobile.data.print.ThermalTextBlock
 import br.com.sos.osmobile.ui.components.CustomerSearchSelector
+import br.com.sos.osmobile.ui.components.DriveSyncIndicator
+import br.com.sos.osmobile.ui.components.DriveSyncStatusIcon
+import br.com.sos.osmobile.ui.components.DriveSyncStatusText
 import br.com.sos.osmobile.ui.components.MessageActionButtons
 import br.com.sos.osmobile.ui.components.PixQrCode
 import br.com.sos.osmobile.ui.components.ShareFileButton
@@ -2020,68 +2023,5 @@ private fun WorkOrderDraftItem.toMessageItem(): MessageTemplateRenderer.ItemData
 
 
 
-private fun driveStatusText(status: String, error: String): String =
-    when {
-        status.isBlank() -> "Nao iniciado"
-        error.isNotBlank() && status != "Sincronizado" -> "$status - $error"
-        else -> status
-    }
-
-@Composable
-private fun DriveSyncIndicator(
-    status: String,
-    error: String,
-) {
-    val color = driveStatusColor(status)
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        DriveSyncStatusIcon(status = status, error = error)
-        DriveSyncStatusText(status = status, error = error)
-    }
-}
-
-@Composable
-private fun DriveSyncStatusIcon(
-    status: String,
-    error: String,
-) {
-    Icon(
-        imageVector = driveStatusIcon(status),
-        contentDescription = driveStatusText(status, error),
-        tint = driveStatusColor(status),
-    )
-}
-
-@Composable
-private fun DriveSyncStatusText(
-    status: String,
-    error: String,
-) {
-    Text(
-        text = "Drive: ${driveStatusText(status, error)}",
-        style = MaterialTheme.typography.bodySmall,
-        color = driveStatusColor(status),
-    )
-}
-
-private fun driveStatusIcon(status: String): ImageVector =
-    when (status) {
-        "Sincronizado" -> Icons.Filled.CheckCircle
-        "Erro" -> Icons.Filled.Warning
-        else -> Icons.Filled.CloudUpload
-    }
-
-
-
-@Composable
-private fun driveStatusColor(status: String): Color =
-    when (status) {
-        "Sincronizado" -> MaterialTheme.colorScheme.primary
-        "Erro" -> MaterialTheme.colorScheme.error
-        "Pendente", "Sem configuracao" -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
 
 
