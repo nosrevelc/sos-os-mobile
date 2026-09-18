@@ -185,6 +185,7 @@ fun QuoteScreen(
                 onRemoveItem = viewModel::removeItem,
                 onSave = viewModel::saveQuote,
                 onCancelEdit = viewModel::cancelEdit,
+                onConvert = viewModel::convertToWorkOrder,
             )
         }
 
@@ -304,6 +305,7 @@ fun QuoteListScreen(
                 QuoteRow(
                     quote = quote,
                     onEdit = { onEdit(quote.id) },
+                    onConvert = { viewModel.convertToWorkOrder(quote.id) },
                 )
             }
         }
@@ -335,6 +337,7 @@ private fun QuoteForm(
     onRemoveItem: (Int) -> Unit,
     onSave: () -> Unit,
     onCancelEdit: () -> Unit,
+    onConvert: (Long) -> Unit,
 ) {
     var discountField by remember { mutableStateOf(TextFieldValue(form.discount, TextRange(form.discount.length))) }
     var minimumDepositField by remember { mutableStateOf(TextFieldValue(form.minimumDeposit, TextRange(form.minimumDeposit.length))) }
@@ -452,6 +455,12 @@ private fun QuoteForm(
                 OutlinedButton(onClick = onCancelEdit) {
                     Text("Cancelar")
                 }
+                if (form.status == QuoteStatus.Approved) {
+                    TextButton(onClick = { form.editingId?.let(onConvert) }) {
+                        Icon(Icons.Filled.SyncAlt, contentDescription = null)
+                        Text("Converter em OS")
+                    }
+                }
             }
             Button(onClick = onSave) {
                 Icon(Icons.Filled.Save, contentDescription = null)
@@ -465,6 +474,7 @@ private fun QuoteForm(
 private fun QuoteRow(
     quote: QuoteSummary,
     onEdit: () -> Unit,
+    onConvert: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -490,6 +500,17 @@ private fun QuoteRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text("Toque para editar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            if (quote.status == QuoteStatus.Approved.label) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onConvert) {
+                        Icon(Icons.Filled.SyncAlt, contentDescription = null)
+                        Text("Converter em OS")
+                    }
+                }
+            }
         }
     }
 }

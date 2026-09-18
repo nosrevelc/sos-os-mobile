@@ -1035,6 +1035,13 @@ fun WorkOrderScreen(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                 )
+                if (form.editingId != null) {
+                    Text(
+                        "Informe abaixo o valor pago para abater do saldo restante.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = paymentValue,
@@ -1070,11 +1077,18 @@ fun WorkOrderScreen(
                             paymentValue = ""
                             paymentNote = ""
                         },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.Payment, contentDescription = null)
-                    Text("Registrar pagamento")
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Payment, contentDescription = null)
+                        Text("Registrar pagamento")
+                    }
                 }
+                if (viewModel.payments.isNotEmpty()) {
+                    Text(
+                        "Pagamentos registrados",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 viewModel.payments.forEach { payment ->
                     Row(
