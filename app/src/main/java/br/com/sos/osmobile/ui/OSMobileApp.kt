@@ -167,12 +167,12 @@ fun OSMobileApp(appContainer: AppContainer) {
                 )
             },
             bottomBar = {
-                Surface(
+Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ) {
                     Text(
-                        text = "OS Mobile v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                        text = "OS Mobile v${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(6.dp),
