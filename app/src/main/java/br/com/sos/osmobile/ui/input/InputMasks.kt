@@ -1,6 +1,7 @@
 package br.com.sos.osmobile.ui.input
 
 import java.text.NumberFormat
+import java.text.ParseException
 import java.util.Locale
 
 object InputMasks {
@@ -45,6 +46,22 @@ object InputMasks {
     }
 
     fun currency(value: String): String {
+        if (value.isBlank()) return ""
+        val isAlreadyFormatted = value.contains("R$") || value.contains(".")
+        if (isAlreadyFormatted) {
+            return try {
+                val formatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
+                val cleaned = value.replace("R$", "").trim()
+                val parsed = formatter.parse(cleaned) ?: return centsFromDigits(value)
+                currencyFromDouble(parsed.toDouble())
+            } catch (_: ParseException) {
+                centsFromDigits(value)
+            }
+        }
+        return centsFromDigits(value)
+    }
+
+    private fun centsFromDigits(value: String): String {
         val digits = digits(value, 11)
         if (digits.isBlank()) return ""
         val cents = digits.toLongOrNull() ?: 0L

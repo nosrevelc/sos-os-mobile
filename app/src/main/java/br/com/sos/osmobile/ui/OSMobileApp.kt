@@ -2,6 +2,7 @@ package br.com.sos.osmobile.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -184,7 +185,9 @@ fun OSMobileApp(appContainer: AppContainer) {
             NavHost(
                 navController = navController,
                 startDestination = AppRoute.Dashboard.route,
-                modifier = Modifier.padding(contentPadding),
+                modifier = Modifier
+                    .padding(contentPadding)
+                    .imePadding(),
             ) {
                 composable(AppRoute.Dashboard.route) {
                     val dashboardViewModel: DashboardViewModel = viewModel(
