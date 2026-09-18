@@ -349,6 +349,7 @@ fun WorkOrderScreen(
     var warrantyDays by remember { mutableStateOf("90") }
     var warrantyTerms by remember { mutableStateOf("Garantia conforme politica da empresa. Apresente este comprovante para atendimento.") }
     var paymentValue by remember { mutableStateOf("") }
+    var paymentField by remember { mutableStateOf(TextFieldValue("", TextRange(0))) }
     var paymentMethod by remember { mutableStateOf("PIX") }
     var paymentNote by remember { mutableStateOf("") }
     val subtotalValue = form.items.sumOf { item -> item.subtotal }
@@ -709,6 +710,7 @@ fun WorkOrderScreen(
                         initialPaymentNote = paymentNote,
                     ) { savedId ->
                         paymentValue = ""
+                        paymentField = TextFieldValue("", TextRange(0))
                         paymentNote = ""
                         if (shouldAutoPrint) {
                             viewModel.showShelfLabelThen(savedId) { printThermalBlocks(it) }
@@ -1059,8 +1061,12 @@ fun WorkOrderScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = paymentValue,
-                        onValueChange = { paymentValue = InputMasks.currency(it) },
+                        value = paymentField,
+                        onValueChange = {
+                            val masked = InputMasks.currency(it.text)
+                            paymentField = TextFieldValue(masked, TextRange(masked.length))
+                            paymentValue = masked
+                        },
                         label = { Text("Valor pago") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -1090,6 +1096,7 @@ fun WorkOrderScreen(
                         onClick = {
                             viewModel.addPayment(paymentValue, paymentMethod, paymentNote)
                             paymentValue = ""
+                            paymentField = TextFieldValue("", TextRange(0))
                             paymentNote = ""
                         },
                         modifier = Modifier.fillMaxWidth(),

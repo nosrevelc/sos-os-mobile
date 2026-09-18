@@ -73,4 +73,26 @@ class InputMasksCurrencyTest {
         assertEquals("R$${brl}0,00", InputMasks.currency("0"))
         assertEquals("R$${brl}0,00", InputMasks.currency("00"))
     }
+
+    @Test
+    fun typedSequence88Yields88Cents() {
+        assertEquals("R$${brl}0,88", InputMasks.currency("88"))
+    }
+
+    @Test
+    fun typedSequence1234Yields1234() {
+        assertEquals("R$${brl}12,34", InputMasks.currency("1234"))
+    }
+
+    @Test
+    fun appendToMaskedValueKeepsCents() {
+        assertEquals("R$${brl}0,88", InputMasks.currency("R$${brl}0,088"))
+        assertEquals("R$${brl}8,88", InputMasks.currency("R$${brl}0,888"))
+    }
+
+    @Test
+    fun valueWithThousandsSeparatorNormalizes() {
+        assertEquals("R$${brl}1.234,56", InputMasks.currency("R$${brl}1.234,56"))
+        assertEquals("R$${brl}12,34", InputMasks.currency("R$${brl}1.234"))
+    }
 }

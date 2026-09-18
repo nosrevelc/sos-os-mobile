@@ -34,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
@@ -62,7 +64,9 @@ internal fun MessagesSettingsSection(
     fiscalRegime: String,
 ) {
     var quoteMinAcceptanceValue by remember { mutableStateOf(settings.quoteMinAcceptanceValue) }
+    var quoteMinAcceptanceField by remember { mutableStateOf(TextFieldValue(settings.quoteMinAcceptanceValue, TextRange(settings.quoteMinAcceptanceValue.length))) }
     var quoteMinDepositValue by remember { mutableStateOf(settings.quoteMinDepositValue) }
+    var quoteMinDepositField by remember { mutableStateOf(TextFieldValue(settings.quoteMinDepositValue, TextRange(settings.quoteMinDepositValue.length))) }
     var pixName by remember { mutableStateOf(settings.pixName) }
     var pixKey by remember { mutableStateOf(settings.pixKey) }
     var workOrderTemplate by remember { mutableStateOf(settings.workOrderTemplate) }
@@ -91,7 +95,9 @@ internal fun MessagesSettingsSection(
     var quoteTemplate by remember { mutableStateOf(settings.quoteTemplate) }
     LaunchedEffect(settings) {
         quoteMinAcceptanceValue = settings.quoteMinAcceptanceValue
+        quoteMinAcceptanceField = TextFieldValue(settings.quoteMinAcceptanceValue, TextRange(settings.quoteMinAcceptanceValue.length))
         quoteMinDepositValue = settings.quoteMinDepositValue
+        quoteMinDepositField = TextFieldValue(settings.quoteMinDepositValue, TextRange(settings.quoteMinDepositValue.length))
         pixName = settings.pixName
         pixKey = settings.pixKey
         workOrderTemplate = settings.workOrderTemplate
@@ -128,15 +134,23 @@ internal fun MessagesSettingsSection(
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = quoteMinAcceptanceValue,
-            onValueChange = { quoteMinAcceptanceValue = InputMasks.currency(it) },
+            value = quoteMinAcceptanceField,
+            onValueChange = {
+                val masked = InputMasks.currency(it.text)
+                quoteMinAcceptanceField = TextFieldValue(masked, TextRange(masked.length))
+                quoteMinAcceptanceValue = masked
+            },
             label = { Text("Valor minimo para aceite de orcamento") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = quoteMinDepositValue,
-            onValueChange = { quoteMinDepositValue = InputMasks.currency(it) },
+            value = quoteMinDepositField,
+            onValueChange = {
+                val masked = InputMasks.currency(it.text)
+                quoteMinDepositField = TextFieldValue(masked, TextRange(masked.length))
+                quoteMinDepositValue = masked
+            },
             label = { Text("Sinal minimo padrao do orcamento") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
