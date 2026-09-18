@@ -634,6 +634,17 @@ fun WorkOrderScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
+            WorkOrderSummaryHeader(
+                editingNumber = form.editingNumber,
+                status = form.status,
+                customerName = selectedCustomer?.nome,
+                totalValue = totalValue,
+                paidValue = paidTotalForMessage,
+                balance = (totalValue - paidTotalForMessage).coerceAtLeast(0.0),
+                itemCount = form.items.size,
+            )
+        }
+        item {
             WorkOrderForm(
                 form = form,
                 customers = uiState.customers,
@@ -778,7 +789,7 @@ fun WorkOrderScreen(
                     status = form.driveSyncStatus,
                     error = form.driveSyncError,
                 )
-                Text("Imagens e documentos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                SectionCard(title = "Imagens e documentos") {
                 OutlinedButton(
                     onClick = { photoLauncher.launch("image/*") },
                     modifier = Modifier.fillMaxWidth(),
@@ -905,9 +916,10 @@ fun WorkOrderScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                }
             }
             if (uiState.signatureEnabled && form.editingId != null) {
-                Text("Assinatura", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                SectionCard(title = "Assinatura") {
                 val savedSignature = viewModel.signature
                 if (savedSignature != null) {
                     SavedSignaturePreview(signatureUri = viewModel.signatureUri(savedSignature))
@@ -949,9 +961,10 @@ fun WorkOrderScreen(
                         onSave = { name, bitmap -> viewModel.saveSignature(name, bitmap) },
                     )
                 }
+                }
             }
             if (uiState.checklistEnabled && form.editingId != null) {
-                Text("Checklist", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                SectionCard(title = "Checklist") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = checklistDescription,
@@ -991,9 +1004,10 @@ fun WorkOrderScreen(
                         }
                     }
                 }
+                }
             }
             if (uiState.warrantyEnabled && form.editingId != null) {
-                Text("Garantia", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                SectionCard(title = "Garantia") {
                 OutlinedTextField(
                     value = warrantyDays,
                     onValueChange = { warrantyDays = it.filter(Char::isDigit).take(4) },
@@ -1025,9 +1039,10 @@ fun WorkOrderScreen(
                         Text("Remover")
                     }
                 }
+                }
             }
             if (uiState.financeEnabled) {
-                Text("Financeiro", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                SectionCard(title = "Financeiro") {
                 val paidTotal = viewModel.payments.sumOf { it.valor } + pendingPayment
                 val balance = (totalValue - paidTotal).coerceAtLeast(0.0)
                 Text(
@@ -1109,9 +1124,10 @@ fun WorkOrderScreen(
                         }
                     }
                 }
+                }
             }
             if (selectedCustomer != null && currentMessage != null) {
-                Text("Enviar mensagem ao cliente", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                SectionCard(title = "Enviar mensagem ao cliente") {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     MessageActionButtons(
                         phone = selectedCustomer.telefone,
@@ -1243,6 +1259,7 @@ fun WorkOrderScreen(
                 if (pixPayload.isNotBlank()) {
                     Text("QR Code PIX", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     PixQrCode(payload = pixPayload)
+                }
                 }
             }
             viewModel.historyText?.let {
