@@ -10,11 +10,11 @@ Aplicativo Android nativo para gestao offline-first de ordens de servico, orcame
 
 Acesse a pagina de [Releases](https://github.com/nosrevelc/sos-os-mobile/releases) para baixar a versao mais recente.
 
-**Ultima build (v0.0.3 - reforma da tela de OS):**
+**Ultima build (v0.0.4 - versao correta no rodape):**
 
-> https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.3-test/app-debug.apk
+> https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.4-test/app-debug.apk
 
-(Outras versoes: [v0.0.2-test](https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.2-test/app-debug.apk) | [v0.0.1-test](https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.1-test/app-debug.apk))
+(Outras versoes: [v0.0.3-test](https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.3-test/app-debug.apk) | [v0.0.2-test](https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.2-test/app-debug.apk) | [v0.0.1-test](https://github.com/nosrevelc/sos-os-mobile/releases/download/v0.0.1-test/app-debug.apk))
 
 Toque no link acima no navegador do celular para baixar o APK direto (~18 MB).
 
